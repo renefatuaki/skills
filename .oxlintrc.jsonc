@@ -1,0 +1,140 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+
+  // Globs to ignore during linting.
+  "ignorePatterns": [
+    "tests/fixtures/**"
+  ],
+  // JS plugins, allows usage of ESLint plugins with Oxlint.
+  "jsPlugins": [
+    "@stylistic/eslint-plugin"
+  ],
+  "rules": {
+    // Enforce a maximum number of parameters in function definitions which by default is three.
+    // https://oxc.rs/docs/guide/usage/linter/rules/eslint/max-params.html
+    "eslint/max-params": [
+      "error",
+      {
+        "max": 4
+      }
+    ],
+    // Disallow nested ternary expressions.
+    // https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-nested-ternary.html
+    "eslint/no-nested-ternary": "error",
+    // Disallow `else` blocks after `return` statements in `if` statements.
+    // https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-else-return.html
+    "eslint/no-else-return": "error",
+    // This rule enforces the use of curly braces `{}` for all control statements (`if`, `else`, `for`, `while`, `do`, `with`).
+    "eslint/curly": [
+      "error",
+      "all"
+    ],
+    // Require or disallow padding lines between statements.
+    "@stylistic/padding-line-between-statements": [
+      "error",
+      // A blank line after the imports, consecutive imports stay together.
+      {
+        "blankLine": "always",
+        "prev": "import",
+        "next": "*"
+      },
+      {
+        "blankLine": "any",
+        "prev": "import",
+        "next": "import"
+      },
+      // A blank line after a group of declarations, consecutive declarations stay together.
+      {
+        "blankLine": "always",
+        "prev": [
+          "const",
+          "let"
+        ],
+        "next": "*"
+      },
+      {
+        "blankLine": "any",
+        "prev": [
+          "const",
+          "let"
+        ],
+        "next": [
+          "const",
+          "let"
+        ]
+      },
+      // A declaration after a call starts a new paragraph.
+      {
+        "blankLine": "always",
+        "prev": "expression",
+        "next": [
+          "const",
+          "let"
+        ]
+      },
+      // A blank line after a one-line if, for, while or do, consecutive one-line ifs stay together.
+      {
+        "blankLine": "always",
+        "prev": [
+          "if",
+          "for",
+          "while",
+          "do"
+        ],
+        "next": "*"
+      },
+      {
+        "blankLine": "any",
+        "prev": "if",
+        "next": "if"
+      },
+      // A statement that spans several lines ends a paragraph.
+      {
+        "blankLine": "always",
+        "prev": [
+          "multiline-expression",
+          "multiline-const",
+          "multiline-let"
+        ],
+        "next": "*"
+      },
+      // A blank line before and after every block with braces.
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": "block-like"
+      },
+      {
+        "blankLine": "always",
+        "prev": "block-like",
+        "next": "*"
+      },
+      // A blank line before and after every type and interface.
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": [
+          "type",
+          "interface"
+        ]
+      },
+      {
+        "blankLine": "always",
+        "prev": [
+          "type",
+          "interface"
+        ],
+        "next": "*"
+      },
+      // A blank line before return and throw.
+      {
+        "blankLine": "always",
+        "prev": "*",
+        "next": [
+          "return",
+          "throw"
+        ]
+      }
+    ]
+  }
+}
