@@ -1,0 +1,17 @@
+{
+  "name": "renefatuaki-skills",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Claude Code skills for clean code, engineering workflows and project management.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/renefatuaki/skills"
+  },
+  "license": "MIT",
+  "scripts": {
+    "version": "changeset version && node scripts/sync-plugin-version.mjs"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.0"
+  }
+}
