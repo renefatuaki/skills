@@ -1,0 +1,55 @@
+# Versioning with Changesets.
+#
+# Guide:  https://changesets.dev/guide/automating
+# Action: https://github.com/changesets/action
+#
+# Check for current versions:
+#   actions/checkout    https://github.com/actions/checkout/releases
+#   actions/setup-node  https://github.com/actions/setup-node/releases
+#   changesets/action   https://github.com/changesets/action/releases
+#   @changesets/cli     https://www.npmjs.com/package/@changesets/cli
+#   Node LTS            https://nodejs.org/en/about/previous-releases
+
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+# No permissions for the workflow, grant them per job only.
+# https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions
+permissions: {}
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Version
+    runs-on: ubuntu-latest
+    # Required by changesets/action:
+    # https://github.com/changesets/action#requirements
+    permissions:
+      contents: write        # push the version commit and tags
+      pull-requests: write   # create the version PR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create Version Pull Request
+        # https://github.com/changesets/action/releases
+        uses: changesets/action@v2
+        with:
+          # https://github.com/changesets/action#api
+          version-script: npm run version
+          publish-script: npx changeset git-tag
+          commit-message: "chore: version skills"
+          pr-title: "chore: version skills"
