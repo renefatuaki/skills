@@ -1,0 +1,37 @@
+[*.{kt,kts}]
+
+# By default, the ktlint_official code style is applied.
+ktlint_code_style = ktlint_official
+# Maximum length of a (regular) line.
+max_line_length = 80
+# Defines whether a trailing comma (or no trailing comma) should be enforced on the defining site, e.g. parameter-list, type-argument-list, lambda-value-parameters, enum-entries, etc.
+ij_kotlin_allow_trailing_comma = true
+# Defines whether a trailing comma (or no trailing comma) should be enforced on the calling site, e.g. argument-list, when-entries, lambda-arguments, indices, etc.
+ij_kotlin_allow_trailing_comma_on_call_site = true
+# Defines imports order layout for Kotlin files.
+ij_kotlin_imports_layout = *,java.**,javax.**,kotlin.**,^
+# Despite its name, forces a blank line between single line and multiline when-entries when at least one multiline when-entry is found in the when-statement.
+ij_kotlin_line_break_after_multiline_when_entry = true
+
+# Ensures that lines do not exceed the maximum length of a line as specified in .editorconfig property max_line_length.
+ktlint_standard_max-line-length = enabled
+# Enforces consistent removal (default) or adding of trailing commas on declaration site.
+ktlint_standard_trailing-comma-on-declaration-site = enabled
+# Enforces consistent removal (default) or adding of trailing commas on call site.
+ktlint_standard_trailing-comma-on-call-site = enabled
+# Ensures that imports are ordered consistently.
+ktlint_standard_import-ordering = enabled
+# Consistent spacing around curly braces.
+ktlint_standard_curly-spacing = enabled
+# If at least one branch of an if-else statement or an if-else-if statement is wrapped between curly braces, then all branches should be wrapped between braces.
+ktlint_standard_if-else-bracing = enabled
+# Braces required for multiline if/else statements.
+ktlint_standard_multiline-if-else = enabled
+# Braces required for multiline for, while, and do statements.
+ktlint_standard_multiline-loop = enabled
+# Enforces consistent usages of braces inside the when-statement.
+ktlint_standard_when-entry-bracing = enabled
+# Requires a blank line before any class or function declaration.
+ktlint_standard_blank-line-before-declaration = enabled
+# Consistently add or remove a blank line between when-conditions in a when-statement.
+ktlint_standard_blank-line-between-when-conditions = enabled

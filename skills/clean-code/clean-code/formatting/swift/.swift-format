@@ -1,0 +1,150 @@
+{
+  // The version of the configuration file.
+  "version": 1,
+  // The maximum allowed length of a line, in characters.
+  "lineLength": 80,
+  // The kind and amount of whitespace that should be added when indenting one level.
+  "indentation": {
+    // One level of indentation is the given number of spaces.
+    "spaces": 2
+  },
+  // The number of spaces that should be considered equivalent to one tab character.
+  "tabWidth": 8,
+  // The maximum number of consecutive blank lines that are allowed to be present in a source file.
+  "maximumBlankLines": 1,
+  // The number of spaces between the last token on a non-empty line and a line comment starting with `//`.
+  "spacesBeforeEndOfLineComments": 2,
+  // Indicates whether or not existing line breaks in the source code should be honored (if they are valid according to the style guidelines being enforced).
+  "respectsExistingLineBreaks": true,
+  // Determines the line-breaking behavior for control flow keywords that follow a closing brace, like `else` and `catch`.
+  "lineBreakBeforeControlFlowKeywords": false,
+  // Determines the line-breaking behavior for generic arguments and function arguments when a declaration is wrapped onto multiple lines.
+  "lineBreakBeforeEachArgument": true,
+  // Determines the line-breaking behavior for generic requirements when the requirements list is wrapped onto multiple lines.
+  "lineBreakBeforeEachGenericRequirement": false,
+  // Determines the line-breaking behavior for adjacent attributes on declarations.
+  "lineBreakBetweenDeclarationAttributes": false,
+  // Determines if function-like declaration outputs should be prioritized to be together with the function signature's right (closing) parenthesis.
+  "prioritizeKeepingFunctionOutputTogether": false,
+  // Determines if conditional compilation blocks are indented.
+  "indentConditionalCompilationBlocks": true,
+  // Determines whether line breaks should be forced before and after multiline components of dot-chained expressions, such as function calls and subscripts chained together through member access (i.e. "." expressions).
+  "lineBreakAroundMultilineExpressionChainComponents": false,
+  // Declarations at file scope with effective private access should be consistently declared as either `fileprivate` or `private`, determined by configuration.
+  "fileScopedDeclarationPrivacy": {
+    // The formal access level to use when encountering a file-scoped declaration with effective private access.
+    "accessLevel": "private"
+  },
+  // Determines if `case` statements should be indented compared to the containing `switch` block.
+  "indentSwitchCaseLabels": false,
+  // Determines whether whitespace should be forced before and after the range formation operators `...` and `..<`.
+  "spacesAroundRangeFormationOperators": false,
+  // Assignment expressions must be their own statements.
+  "noAssignmentInExpressions": {
+    // A list of function names where assignments are allowed to be embedded in expressions that are passed as parameters to that function.
+    "allowedFunctions": [
+      "XCTAssertNoThrow"
+    ]
+  },
+  // Determines how trailing commas in comma-separated lists should be handled during formatting.
+  "multilineTrailingCommaBehavior": "alwaysUsed",
+  // Determines whether multi-element collection literals should have trailing commas.
+  "multiElementCollectionTrailingCommas": true,
+  // Determines how multiline string literals should reflow when formatted.
+  "reflowMultilineStringLiterals": "never",
+  // Determines whether blank lines should be modified to match the current indentation.
+  "indentBlankLines": false,
+  // Configuration for the `OrderedImports` rule.
+  "orderedImports": {
+    // Determines whether imports within conditional compilation blocks (`#if`, `#elseif`, `#else`) should be ordered.
+    "includeConditionalImports": false
+  },
+  "rules": {
+    // All public or open declarations must have a top-level documentation comment.
+    "AllPublicDeclarationsHaveDocumentation": false,
+    // Never use `[<Type>]()` syntax.
+    "AlwaysUseLiteralForEmptyCollectionInit": false,
+    // All values should be written in lower camel-case (`lowerCamelCase`).
+    "AlwaysUseLowerCamelCase": true,
+    // Overloads with only a closure argument should not be disambiguated by parameter labels.
+    "AmbiguousTrailingClosureOverload": true,
+    // `@retroactive` conformances are forbidden.
+    "AvoidRetroactiveConformances": true,
+    // All documentation comments must begin with a one-line summary of the declaration.
+    "BeginDocumentationCommentWithOneLineSummary": false,
+    // Semicolons should not be present in Swift code.
+    "DoNotUseSemicolons": true,
+    // Static properties of a type that return that type should not include a reference to their type.
+    "DontRepeatTypeInStaticProperties": true,
+    // Declarations at file scope with effective private access should be consistently declared as either `fileprivate` or `private`, determined by configuration.
+    "FileScopedDeclarationPrivacy": true,
+    // If all cases of an enum are `indirect`, the entire enum should be marked `indirect`.
+    "FullyIndirectEnum": true,
+    // Numeric literals should be grouped with `_`s to delimit common separators.
+    "GroupNumericLiterals": true,
+    // All identifiers must be ASCII.
+    "IdentifiersMustBeASCII": true,
+    // Force-unwraps are strongly discouraged and must be documented.
+    "NeverForceUnwrap": false,
+    // Force-try (`try!`) is forbidden.
+    "NeverUseForceTry": false,
+    // Implicitly unwrapped optionals (e.g. `var s: String!`) are forbidden.
+    "NeverUseImplicitlyUnwrappedOptionals": false,
+    // Specifying an access level for an extension declaration is forbidden.
+    "NoAccessLevelOnExtensionDeclaration": true,
+    // Assignment expressions must be their own statements.
+    "NoAssignmentInExpressions": true,
+    // Block comments should be avoided in favor of line comments.
+    "NoBlockComments": true,
+    // Cases that contain only the `fallthrough` statement are forbidden.
+    "NoCasesWithOnlyFallthrough": true,
+    // Empty lines are forbidden after opening braces and before closing braces.
+    "NoEmptyLinesOpeningClosingBraces": false,
+    // Function calls with no arguments and a trailing closure should not have empty parentheses.
+    "NoEmptyTrailingClosureParentheses": true,
+    // Redundant labels are forbidden in case patterns.
+    "NoLabelsInCasePatterns": true,
+    // Identifiers in declarations and patterns should not have leading underscores.
+    "NoLeadingUnderscores": false,
+    // Enforces rules around parentheses in conditions or matched expressions.
+    "NoParensAroundConditions": true,
+    // The playground literals (`#colorLiteral`, `#fileLiteral`, and `#imageLiteral`) are forbidden.
+    "NoPlaygroundLiterals": true,
+    // Functions that return `()` or `Void` should omit the return signature.
+    "NoVoidReturnOnFunctionSignature": true,
+    // Single-expression functions, closures, subscripts can omit `return` statement.
+    "OmitExplicitReturns": false,
+    // Each enum case with associated values or a raw value should appear in its own case declaration.
+    "OneCasePerLine": true,
+    // Each variable declaration, with the exception of tuple destructuring, should declare 1 variable.
+    "OneVariableDeclarationPerLine": true,
+    // Function calls should never mix normal closure arguments and trailing closures.
+    "OnlyOneTrailingClosureArgument": true,
+    // Imports must be lexicographically ordered and logically grouped at the top of each source file.
+    "OrderedImports": true,
+    // Replace `forEach` with `for-in` loop unless its argument is a function reference.
+    "ReplaceForEachWithForLoop": true,
+    // Return `Void`, not `()`, in signatures.
+    "ReturnVoidInsteadOfEmptyTuple": true,
+    // `struct`, `class`, `enum` and `protocol` declarations should have a capitalized name.
+    "TypeNamesShouldBeCapitalized": true,
+    // Early exits should be used whenever possible.
+    "UseEarlyExits": false,
+    // When checking an optional value for `nil`-ness, prefer writing an explicit `nil` check rather than binding and immediately discarding the value.
+    "UseExplicitNilCheckInConditions": true,
+    // Every variable bound in a `case` pattern must have its own `let/var`.
+    "UseLetInEveryBoundCaseVariable": true,
+    // Shorthand type forms must be used wherever possible.
+    "UseShorthandTypeNames": true,
+    // Read-only computed properties must use implicit `get` blocks.
+    "UseSingleLinePropertyGetter": true,
+    // When possible, the synthesized `struct` initializer should be used.
+    "UseSynthesizedInitializer": true,
+    // Documentation comments must use the `///` form.
+    "UseTripleSlashForDocumentationComments": true,
+    // `for` loops that consist of a single `if` statement must use `where` clauses instead.
+    "UseWhereClausesInForLoops": false,
+    // Documentation comments must be complete and valid.
+    "ValidateDocumentationComments": false
+  }
+}

@@ -1,0 +1,27 @@
+#:schema https://www.schemastore.org/ruff.json
+
+# The line length to use when enforcing long-lines violations (like `E501`) and at which `isort` and the formatter prefers to wrap lines.
+line-length = 80
+
+[format]
+# Ruff uses existing trailing commas as an indication that short lines should be left separate.
+skip-magic-trailing-comma = false
+
+[lint]
+# A list of rule codes or prefixes to enable, in addition to those specified by `select`.
+extend-select = [
+  # De-duplicates, groups, and sorts imports based on the provided `isort` settings.
+  "I001",
+  # Checks for compound statements (multiple statements on the same line).
+  "E701",
+  # Checks for multiline statements on one line.
+  "E702",
+  # Checks for function definitions that include too many arguments.
+  "PLR0913",
+  # Checks for `else` statements with a `return` statement in the preceding `if` block.
+  "RET505",
+]
+
+[lint.pylint]
+# Maximum number of arguments allowed for a function or method definition (see `PLR0913`).
+max-args = 4

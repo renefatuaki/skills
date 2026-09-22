@@ -1,0 +1,10 @@
+# Only the rules specified in this list will be enabled.
+only_rules:
+  # Variable declarations should be separated from other statements by a blank line
+  - let_var_whitespace
+  # Number of function parameters should be low.
+  - function_parameter_count
+
+function_parameter_count:
+  warning: 4
+  error: 4
