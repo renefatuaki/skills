@@ -1,0 +1,19 @@
+{
+    "name": "renefatuaki-skills",
+    "description": "Claude Code skills for clean code, engineering workflows and project management.",
+    "version": "1.0.0",
+    "author": {
+        "name": "René El Fatuaki"
+    },
+    "repository": "https://github.com/renefatuaki/skills",
+    "license": "MIT",
+    "keywords": [
+        "engineering",
+        "code-review",
+        "clean-code"
+    ],
+    "skills": [
+        "./skills/clean-code/clean-code",
+        "./skills/clean-code/code-comments"
+    ]
+}
