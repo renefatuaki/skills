@@ -1,0 +1,6 @@
+# Conventional Commits, see https://www.conventionalcommits.org/en/v1.0.0/
+extends:
+  - "@commitlint/config-conventional"
+rules:
+  # 1 = warning: a commit without an issue reference passes with a note.
+  references-empty: [1, never]
