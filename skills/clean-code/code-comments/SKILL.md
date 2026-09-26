@@ -3,7 +3,7 @@ name: code-comments
 description: code-comments, the rules for every code comment. Use when writing code, editing code that carries comments, reviewing comments, or when the user names the code-comments skill.
 ---
 
-Rules for every comment you write or touch. A comment earns its place only when it tells the reader something the code cannot: what a non-obvious symbol does, why a foreign API is used the way it is, or how a complex workflow proceeds. Everything else the code says through its names. The more code an agent writes, the more this discipline matters, because nobody watched the code being written.
+Rules for every comment you write or touch. A comment earns its place only when it tells the reader something the code cannot: what a non-obvious symbol does, why a foreign API is used the way it is, or how a complex workflow proceeds. Everything else the code says through its names.
 
 ## Steps
 

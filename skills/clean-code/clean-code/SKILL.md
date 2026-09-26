@@ -3,7 +3,7 @@ name: clean-code
 description: clean-code, the rules for readable code. Use when writing code, editing or refactoring code, or when the user names the clean-code skill. Covers names, functions, control flow, classes and vertical layout, and delegates comments to code-comments.
 ---
 
-Rules for every symbol you write or touch. Clean code is code a developer reads once and understands. Names carry the meaning, functions do one thing at one level of abstraction, control flow stays flat, classes stay focused, and a comment appears only where the code cannot speak. The more code an agent writes, the more this discipline matters, because nobody watched the code being written.
+Rules for every symbol you write or touch. Names carry the meaning, functions do one thing at one level of abstraction, control flow stays flat, classes stay focused, and a comment appears only where the code cannot speak.
 
 ## Steps
 
