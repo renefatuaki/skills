@@ -1,0 +1,4 @@
+# Hides the blank issue for contributors with Read or Triage roles.
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository.md#configuring-the-template-chooser
+blank_issues_enabled: false
+contact_links: []

@@ -10,12 +10,15 @@
     "keywords": [
         "engineering",
         "code-review",
-        "clean-code"
+        "clean-code",
+        "github",
+        "issues"
     ],
     "skills": [
         "./skills/clean-code/clean-code",
         "./skills/clean-code/code-comments",
         "./skills/git/commit",
+        "./skills/github/issue",
         "./skills/tooling/package-manager"
     ]
 }

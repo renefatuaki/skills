@@ -1,0 +1,80 @@
+# Feature request as an issue form, with the fields an agent needs to implement it.
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms.md
+name: Feature request
+description: Suggest an idea for this project
+# Requires the issue skill to create it, GitHub has no default label of this name.
+# https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels.md#about-default-labels
+labels: ["feature"]
+body:
+  # Field labels as GitHub's template editor writes them.
+  # https://github.com/js-cookie/js-cookie/commit/9bf3b8ea9906d41249325fafe9f182601ad221ea.patch
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem? Please describe.
+      description: A clear and concise description of what the problem is.
+      placeholder: I'm always frustrated when [...]
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: What changes, in one paragraph. The specifics belong in the acceptance criteria.
+    validations:
+      required: true
+  # The acceptance criteria GitHub asks for when an agent implements the issue.
+  # https://docs.github.com/en/copilot/tutorials/cloud-agent/get-the-best-results.md
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be observably true when this is done. Three to seven items, checklist or Given/When/Then.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+
+        Given <context>
+        When <event>
+        Then <observable result>
+    validations:
+      required: true
+  # The check the implementer can run, an agent works best with a pass or fail signal it can read.
+  # https://code.claude.com/docs/en/best-practices.md#give-claude-a-way-to-verify-its-work
+  - type: textarea
+    id: verification
+    attributes:
+      label: How to verify
+      description: The check that proves it, such as a test command, a build, a screenshot to compare, or a manual step.
+    validations:
+      required: false
+  # Optional so the issue stays short, longer issue bodies lower the merge rate of agent pull requests.
+  # https://arxiv.org/abs/2512.21426
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe alternatives you've considered
+      description: The alternatives you rejected, one line each with the reason.
+    validations:
+      required: false
+  # Sources as a list of links, easier to follow than prose.
+  # https://code.claude.com/docs/en/best-practices.md#provide-rich-content
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: The documentation, specifications, designs or code in this repository the change should follow, one Markdown link per line.
+      placeholder: |
+        - [API reference](https://docs.example.com/reference/...)
+        - [Design](https://www.figma.com/design/...)
+    validations:
+      required: false
+  # What stays untouched, agents work best when the issue states it.
+  # https://code.claude.com/docs/en/best-practices.md
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What this issue explicitly does not change.
+    validations:
+      required: false

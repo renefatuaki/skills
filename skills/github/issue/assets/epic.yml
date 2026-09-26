@@ -1,0 +1,44 @@
+# An epic is the parent of sub-issues that together deliver one outcome.
+# https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/adding-sub-issues.md
+name: Epic
+description: Group several issues that together deliver one outcome
+# Requires the issue skill to create it, GitHub has no default label of this name.
+# https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels.md#about-default-labels
+labels: ["epic"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: The outcome this epic delivers, for whom, and why it matters now, in one paragraph.
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: Success criteria
+      description: How you will know the epic is done, measurable on the level of the whole outcome, not of single issues.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What this epic explicitly does not cover.
+    validations:
+      required: false
+  # Sources as a list of links, easier to follow than prose.
+  # https://code.claude.com/docs/en/best-practices.md#provide-rich-content
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: The discussions, designs, specifications or related issues the epic depends on, one Markdown link per line. The parts of the epic become sub-issues, not a list here.
+      placeholder: |
+        - [Discussion #123](https://github.com/owner/repo/discussions/123)
+        - [Design](https://www.figma.com/design/...)
+    validations:
+      required: false
