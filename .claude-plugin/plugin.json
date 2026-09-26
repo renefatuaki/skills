@@ -15,6 +15,7 @@
     "skills": [
         "./skills/clean-code/clean-code",
         "./skills/clean-code/code-comments",
-        "./skills/git/commit"
+        "./skills/git/commit",
+        "./skills/tooling/package-manager"
     ]
 }
