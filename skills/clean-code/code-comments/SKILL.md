@@ -26,6 +26,7 @@ Done when every comment in the touched symbol is one content line, punctuated, f
 ## Links
 
 - Link only what the reader cannot know from the code: framework, library or spec behaviour. Prefer the official documentation.
+- Link the plain-text form of a page when the host serves one, so an agent following the link reads Markdown instead of HTML: `.md` appended to the path on docs.github.com and code.claude.com, `.patch` appended to a GitHub commit URL, `raw.githubusercontent.com` for a file in a repository. Check the variant answers before using it, a `curl -sI` showing `text/markdown` or `text/plain` is enough.
 - In a doc comment on a symbol, use the language's native link syntax from the language guide. It renders as a clickable link in the hover at every call site.
 - In a step comment inside a body, write the bare URL alone on its own comment line. Editors make it clickable in place.
 
