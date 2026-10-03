@@ -25,14 +25,22 @@ permissions: {}
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  # The checks of check.yml must pass on the same commit before anything is versioned or tagged.
+  check:
+    name: Check
+    uses: ./.github/workflows/check.yml
+    permissions:
+      contents: read
+
   release:
     name: Version
+    needs: check
     runs-on: ubuntu-latest
     # Required by changesets/action:
     # https://github.com/changesets/action#requirements
     permissions:
-      contents: write        # push the version commit and tags
-      pull-requests: write   # create the version PR
+      contents: write # push the version commit and tags
+      pull-requests: write # create the version PR
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -42,7 +50,7 @@ jobs:
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -57,5 +65,5 @@ jobs:
           # https://github.com/changesets/action#api
           version-script: pnpm run version
           publish-script: pnpm changeset git-tag
-          commit-message: "chore: version skills"
-          pr-title: "chore: version skills"
+          commit-message: 'chore: version skills'
+          pr-title: 'chore: version skills'
