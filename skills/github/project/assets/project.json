@@ -1,0 +1,94 @@
+{
+  "fields": [
+    {
+      "name": "Status",
+      "options": [
+        {
+          "name": "Backlog",
+          "color": "GRAY",
+          "description": "This item hasn't been started"
+        },
+        {
+          "name": "Blocked",
+          "color": "RED",
+          "description": "Waits on another issue or a decision"
+        },
+        {
+          "name": "Ready",
+          "color": "GREEN",
+          "description": "This is ready to be picked up"
+        },
+        {
+          "name": "In progress",
+          "color": "YELLOW",
+          "description": "This is actively being worked on"
+        },
+        {
+          "name": "In review",
+          "color": "BLUE",
+          "description": "This item is in review"
+        },
+        {
+          "name": "Done",
+          "color": "PURPLE",
+          "description": "This has been completed"
+        }
+      ]
+    },
+    {
+      "name": "Priority",
+      "options": [
+        {
+          "name": "Critical",
+          "color": "RED",
+          "description": "Blocks the release or a core flow. No workaround. Fix now."
+        },
+        {
+          "name": "High",
+          "color": "ORANGE",
+          "description": "Breaks a major function for many users. Workaround is painful. Fix within days."
+        },
+        {
+          "name": "Medium",
+          "color": "YELLOW",
+          "description": "Affects some users or has a reasonable workaround. Schedule it."
+        },
+        {
+          "name": "Low",
+          "color": "BLUE",
+          "description": "Cosmetic or small cleanup. No schedule pressure."
+        }
+      ]
+    },
+    {
+      "name": "Size",
+      "options": [
+        {
+          "name": "XS",
+          "color": "GRAY",
+          "description": "One acceptance criterion in one place"
+        },
+        {
+          "name": "S",
+          "color": "GREEN",
+          "description": "A few acceptance criteria in one area"
+        },
+        {
+          "name": "M",
+          "color": "YELLOW",
+          "description": "Several acceptance criteria across two areas"
+        },
+        {
+          "name": "L",
+          "color": "ORANGE",
+          "description": "Many acceptance criteria across several areas"
+        },
+        {
+          "name": "XL",
+          "color": "RED",
+          "description": "Many acceptance criteria across the whole application, a full day of work"
+        }
+      ]
+    }
+  ]
+}
