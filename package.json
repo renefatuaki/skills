@@ -3,21 +3,34 @@
   "version": "1.0.0",
   "private": true,
   "description": "Claude Code skills for clean code, engineering workflows and project management.",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/renefatuaki/skills"
   },
-  "license": "MIT",
   "scripts": {
     "test": "node tests/code-comments.test.mjs",
     "version": "changeset version && node scripts/sync-plugin-version.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint --deny-warnings",
+    "lint:fix": "oxlint --fix",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.0",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
-    "husky": "^9.1.7"
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "^24.19.1",
+    "husky": "^9.1.7",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=24"
   },
   "packageManager": "pnpm@12.6.0"
 }
