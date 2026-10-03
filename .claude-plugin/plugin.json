@@ -12,7 +12,8 @@
     "code-review",
     "clean-code",
     "github",
-    "issues"
+    "issues",
+    "pull-requests"
   ],
   "skills": [
     "./skills/clean-code/clean-code",
@@ -20,6 +21,7 @@
     "./skills/git/commit",
     "./skills/github/issue",
     "./skills/github/project",
+    "./skills/github/pull-request",
     "./skills/tooling/package-manager"
   ]
 }

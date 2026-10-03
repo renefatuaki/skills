@@ -1,0 +1,3 @@
+- **Start** <commands that set up and run the service with the environment variables and services they need, and the base URL>
+- **Database** <migration and seed commands, or none>
+- **Auth** <how to obtain the token or account the requests use, or none>

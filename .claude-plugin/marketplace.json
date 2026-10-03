@@ -15,7 +15,8 @@
         "code-review",
         "clean-code",
         "github",
-        "issues"
+        "issues",
+        "pull-requests"
       ]
     }
   ]
