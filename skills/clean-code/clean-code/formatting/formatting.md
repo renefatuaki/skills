@@ -1,35 +1,6 @@
 # Formatting
 
-Formatting is vertical here. Line length, indentation and bracket placement belong to the project formatter (Prettier, Black, ktlint, SwiftFormat, google-java-format or whatever the project runs). The skill does not restate the formatter. Where the code file has no formatter, keep lines short enough to read without scrolling and break a long expression into named parts instead of wrapping it. Examples are pseudocode.
-
-## Vertical density and distance
-
-Related statements sit together. Unrelated concepts are separated by a blank line. Inside a function, a blank line marks the switch from one concept to the next, and nothing else.
-
-Before:
-
-```text
-function signUp(email, password)
-  if (isInvalid(email, password))
-    throw Error('Invalid input')
-  user = new User(email, password)
-  user.save()
-```
-
-After:
-
-```text
-function signUp(email, password)
-  if (isInvalid(email, password))
-    throw Error('Invalid input')
-
-  user = new User(email, password)
-  user.save()
-```
-
-Validation and persistence are two concepts, one blank line. Creating the user and saving it are one concept, no blank line.
-
-Between functions, the blank lines the language convention or the formatter prescribes, one in most languages and two at module level in Python. Functions that call each other stay close. Functions that never interact may sit far apart.
+Formatting is vertical here. Line length, indentation and bracket placement belong to the formatter and linter the language guide sets up. The skill does not restate the formatter. Inside a body, where no linter sets it, a blank line follows the imports, a group of declarations and a one-line if or loop, surrounds every block, type and multi-line statement, and precedes `return` and `throw`. Where the code file has no formatter, keep lines short enough to read without scrolling and break a long expression into named parts instead of wrapping it. Examples are pseudocode.
 
 ## Stepdown rule
 

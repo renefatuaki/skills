@@ -16,6 +16,7 @@ Guards are early `return` or `raise` at the top of the function.
 def message_user(user: User | None, message: str | None) -> None:
     if user is None or message is None or not user.accepts_messages:
         return
+
     user.send(message)
 ```
 
@@ -29,6 +30,7 @@ class SignUpError(Exception):
 def validate_input(email: str, password: str) -> None:
     if "@" not in email or len(password) < 8:
         raise SignUpError("Invalid input")
+
     if user_exists(email):
         raise SignUpError("Email taken")
 ```
@@ -83,14 +85,25 @@ total = sum(i.price * i.qty for i in items if i.active and not i.deleted)
 After:
 
 ```python
-active_items = [item for item in items if item.is_active and not item.is_deleted]
+active_items = [
+    item for item in items if item.is_active and not item.is_deleted
+]
+
 total = sum(item.price * item.quantity for item in active_items)
 ```
 
 Before:
 
 ```python
-label = "Anonymous" if not user else "Admin" if user.is_admin else "Guest" if user.is_guest else "Member"
+label = (
+    "Anonymous"
+    if not user
+    else "Admin"
+    if user.is_admin
+    else "Guest"
+    if user.is_guest
+    else "Member"
+)
 ```
 
 After:
@@ -99,10 +112,13 @@ After:
 def role_label(user: User | None) -> str:
     if user is None:
         return "Anonymous"
+
     if user.is_admin:
         return "Admin"
+
     if user.is_guest:
         return "Guest"
+
     return "Member"
 ```
 
@@ -113,6 +129,20 @@ name = user.display_name or user.email or "Anonymous"
 ```
 
 This one stays when every fallback is a string. It becomes a candidate when an empty string or zero is a valid value, then `is None` checks say what is meant.
+
+## Formatting
+
+Ruff formats and lints. If the project has no Ruff configuration, add Ruff as a dev dependency after confirmation and copy [ruff.toml](../formatting/python/ruff.toml) into the project root. The lockfile names the package manager. `uv.lock` takes `uv add --dev ruff`, `poetry.lock` takes `poetry add --group dev ruff`, and pip takes `pip install ruff` plus a line in the dev requirements file. A project that already runs Black, isort or Flake8 switches to Ruff, their packages and configuration are removed after confirmation.
+
+```sh
+ruff format
+ruff check --fix
+```
+
+Under uv or Poetry, prefix both with `uv run` or `poetry run`. After every edit run `ruff format` and `ruff check --fix` on the touched files.
+
+- [Ruff formatter](https://docs.astral.sh/ruff/formatter/)
+- [Ruff linter](https://docs.astral.sh/ruff/linter/)
 
 ## Ordering
 

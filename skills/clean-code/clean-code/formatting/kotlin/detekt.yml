@@ -1,0 +1,8 @@
+complexity:
+  # Reports functions and constructors which have more parameters than a certain threshold.
+  LongParameterList:
+    active: true
+    # number of function parameters required to trigger the rule
+    functionThreshold: 5
+    # number of constructor parameters required to trigger the rule
+    constructorThreshold: 5

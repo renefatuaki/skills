@@ -13,9 +13,15 @@ Types, classes, interfaces and React components `UpperCamelCase`, functions and 
 Guards are early `return` or `throw` at the top of the function.
 
 ```ts
-function messageUser(user: User | undefined, message: string | undefined): void {
-  if (!user || !message || !user.acceptsMessages) return
-  user.send(message)
+function messageUser(
+  user: User | undefined,
+  message: string | undefined,
+): void {
+  if (!user || !message || !user.acceptsMessages) {
+    return;
+  }
+
+  user.send(message);
 }
 ```
 
@@ -25,8 +31,13 @@ Real errors are thrown `Error` subclasses or, where the project already uses res
 class SignUpError extends Error {}
 
 function validateInput(email: string, password: string): void {
-  if (!email.includes('@') || password.length < 8) throw new SignUpError('Invalid input')
-  if (userExists(email)) throw new SignUpError('Email taken')
+  if (!email.includes('@') || password.length < 8) {
+    throw new SignUpError('Invalid input');
+  }
+
+  if (userExists(email)) {
+    throw new SignUpError('Email taken');
+  }
 }
 ```
 
@@ -35,9 +46,9 @@ function validateInput(email: string, password: string): void {
 A data container is a `type` or `interface` with plain fields, used as an object literal. A real object is a `class` with `private` fields and public methods. Group related parameters into one object parameter, destructured in the signature.
 
 ```ts
-type Rectangle = { x: number; y: number; width: number; height: number }
+type Rectangle = { x: number; y: number; width: number; height: number };
 
-function draw({ x, y, width, height }: Rectangle): void
+function draw({ x, y, width, height }: Rectangle): void;
 ```
 
 ## Polymorphism
@@ -46,15 +57,18 @@ An `interface` with one class per variant replaces `if` chains on a type field t
 
 ```ts
 interface Delivery {
-  deliver(): void
-  track(): void
+  deliver(): void;
+  track(): void;
 }
 
 function createDelivery(purchase: Purchase): Delivery {
   switch (purchase.kind) {
-    case 'express': return new ExpressDelivery(purchase)
-    case 'insured': return new InsuredDelivery(purchase)
-    case 'standard': return new StandardDelivery(purchase)
+    case 'express':
+      return new ExpressDelivery(purchase);
+    case 'insured':
+      return new InsuredDelivery(purchase);
+    case 'standard':
+      return new StandardDelivery(purchase);
   }
 }
 ```
@@ -66,46 +80,86 @@ The constructs that tempt: nested ternaries, `&&` and `||` used as control flow,
 Before:
 
 ```ts
-const label = user ? (user.isAdmin ? 'Admin' : user.isGuest ? 'Guest' : 'Member') : 'Anonymous'
+const label = user
+  ? user.isAdmin
+    ? 'Admin'
+    : user.isGuest
+      ? 'Guest'
+      : 'Member'
+  : 'Anonymous';
 ```
 
 After:
 
 ```ts
 function roleLabel(user: User | undefined): string {
-  if (!user) return 'Anonymous'
-  if (user.isAdmin) return 'Admin'
-  if (user.isGuest) return 'Guest'
-  return 'Member'
+  if (!user) {
+    return 'Anonymous';
+  }
+
+  if (user.isAdmin) {
+    return 'Admin';
+  }
+
+  if (user.isGuest) {
+    return 'Guest';
+  }
+
+  return 'Member';
 }
 ```
 
 Before:
 
 ```ts
-const total = items.reduce((a, i) => a + (i.active ? i.price * i.qty : 0), 0)
+const total = items.reduce((a, i) => a + (i.active ? i.price * i.qty : 0), 0);
 ```
 
 After:
 
 ```ts
-const activeItems = items.filter((item) => item.isActive)
-const total = activeItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+const activeItems = items.filter(item => item.isActive);
+const total = activeItems.reduce(
+  (sum, item) => sum + item.price * item.quantity,
+  0,
+);
 ```
 
 Before:
 
 ```ts
-isReady && !isLoading && render()
+isReady && !isLoading && render();
 ```
 
 After:
 
 ```ts
-if (isReady && !isLoading) render()
+if (isReady && !isLoading) {
+  render();
+}
 ```
 
 In JSX, `condition && <Element />` is the idiom and stays. A ternary with a nested ternary inside JSX is extracted into a sub-component or a function that returns the element.
+
+## Formatting
+
+oxfmt formats and oxlint keeps the blank lines and braces the formatter cannot. If the project has neither, install both after confirmation with the "Add dev dependency" command of the `package-manager` skill, copy [.oxfmtrc.jsonc](../formatting/typescript/.oxfmtrc.jsonc) and [.oxlintrc.jsonc](../formatting/typescript/.oxlintrc.jsonc) into the project root, and add the scripts. A project that already runs Prettier or ESLint switches to oxfmt and oxlint, their packages, configuration files and scripts are removed after confirmation.
+
+```sh
+pnpm add -D oxfmt oxlint @stylistic/eslint-plugin
+```
+
+```json
+"format": "oxfmt",
+"format:check": "oxfmt --check",
+"lint": "oxlint",
+"lint:fix": "oxlint --fix"
+```
+
+After every edit run `format` and `lint:fix` on the touched files.
+
+- [Oxfmt](https://oxc.rs/docs/guide/usage/formatter.md)
+- [Oxlint](https://oxc.rs/docs/guide/usage/linter.md)
 
 ## Ordering
 

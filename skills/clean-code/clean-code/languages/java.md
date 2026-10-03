@@ -14,10 +14,11 @@ Guards are early `return` or `throw` at the top of the method, `Objects.requireN
 
 ```java
 void messageUser(User user, String message) {
-    if (user == null || message == null || !user.acceptsMessages()) {
-        return;
-    }
-    user.send(message);
+  if (user == null || message == null || !user.acceptsMessages()) {
+    return;
+  }
+
+  user.send(message);
 }
 ```
 
@@ -25,18 +26,19 @@ Real errors are exceptions. Use an unchecked exception for a caller bug and a ch
 
 ```java
 final class SignUpException extends RuntimeException {
-    SignUpException(String message) {
-        super(message);
-    }
+  SignUpException(String message) {
+    super(message);
+  }
 }
 
 void validateInput(String email, String password) {
-    if (!email.contains("@") || password.length() < 8) {
-        throw new SignUpException("Invalid input");
-    }
-    if (userExists(email)) {
-        throw new SignUpException("Email taken");
-    }
+  if (!email.contains("@") || password.length() < 8) {
+    throw new SignUpException("Invalid input");
+  }
+
+  if (userExists(email)) {
+    throw new SignUpException("Email taken");
+  }
 }
 ```
 
@@ -58,16 +60,17 @@ An `interface` with one implementation per variant replaces `if` and `switch` ch
 
 ```java
 interface Delivery {
-    void deliver();
-    void track();
+  void deliver();
+
+  void track();
 }
 
 static Delivery createDelivery(Purchase purchase) {
-    return switch (purchase.kind()) {
-        case EXPRESS -> new ExpressDelivery(purchase);
-        case INSURED -> new InsuredDelivery(purchase);
-        case STANDARD -> new StandardDelivery(purchase);
-    };
+  return switch (purchase.kind()) {
+    case EXPRESS -> new ExpressDelivery(purchase);
+    case INSURED -> new InsuredDelivery(purchase);
+    case STANDARD -> new StandardDelivery(purchase);
+  };
 }
 ```
 
@@ -78,24 +81,35 @@ The constructs that tempt: a stream pipeline that does several things per stage 
 Before:
 
 ```java
-String label = user == null ? "Anonymous" : user.isAdmin() ? "Admin" : user.isGuest() ? "Guest" : "Member";
+String label =
+    user == null ? "Anonymous" : user.isAdmin() ? "Admin" : user.isGuest() ? "Guest" : "Member";
 ```
 
 After:
 
 ```java
 static String roleLabel(User user) {
-    if (user == null) return "Anonymous";
-    if (user.isAdmin()) return "Admin";
-    if (user.isGuest()) return "Guest";
-    return "Member";
+  if (user == null) {
+    return "Anonymous";
+  }
+
+  if (user.isAdmin()) {
+    return "Admin";
+  }
+
+  if (user.isGuest()) {
+    return "Guest";
+  }
+
+  return "Member";
 }
 ```
 
 Before:
 
 ```java
-int total = items.stream().filter(i -> i.isActive()).mapToInt(i -> i.price() * i.quantity()).sum();
+int total =
+    items.stream().filter(i -> i.isActive()).mapToInt(i -> i.price() * i.quantity()).sum();
 ```
 
 After:
@@ -106,6 +120,58 @@ int total = activeItems.stream().mapToInt(item -> item.price() * item.quantity()
 ```
 
 A short pipeline with method references and one operation per stage stays. It becomes a candidate when a stage holds a block lambda, or when the pipeline collects into a map and reads it back.
+
+## Formatting
+
+google-java-format formats and Checkstyle keeps what the formatter cannot. If the project has neither, add both as build plugins after confirmation. Spotless carries google-java-format. Copy [checkstyle.xml](../formatting/java/checkstyle.xml) to `config/checkstyle/checkstyle.xml`. A project that already runs another formatter or Checkstyle configuration switches to these, its plugins and configuration files are removed after confirmation.
+
+```kotlin
+plugins {
+    checkstyle
+    id("com.diffplug.spotless") version "<version>"
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+    }
+}
+```
+
+```xml
+<plugin>
+  <groupId>com.diffplug.spotless</groupId>
+  <artifactId>spotless-maven-plugin</artifactId>
+  <version>x.y.z</version>
+  <configuration>
+    <java>
+      <googleJavaFormat/>
+    </java>
+  </configuration>
+</plugin>
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-checkstyle-plugin</artifactId>
+  <version>x.y.z</version>
+  <configuration>
+    <configLocation>config/checkstyle/checkstyle.xml</configLocation>
+  </configuration>
+</plugin>
+```
+
+Take the versions from the Gradle plugin portal, https://plugins.gradle.org/plugin/com.diffplug.spotless, and from Maven Central, https://central.sonatype.com/artifact/com.diffplug.spotless/spotless-maven-plugin and https://central.sonatype.com/artifact/org.apache.maven.plugins/maven-checkstyle-plugin.
+
+| Task | Gradle | Maven |
+| --- | --- | --- |
+| format | `./gradlew spotlessApply` | `mvn spotless:apply` |
+| format check | `./gradlew spotlessCheck` | `mvn spotless:check` |
+| lint | `./gradlew checkstyleMain checkstyleTest` | `mvn checkstyle:check` |
+
+After every edit run format and lint. Checkstyle has no fix mode, so fix every violation it reports in the touched files by hand.
+
+- [google-java-format](https://github.com/google/google-java-format)
+- [Spotless](https://github.com/diffplug/spotless)
+- [Checkstyle](https://checkstyle.org/)
 
 ## Ordering
 

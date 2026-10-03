@@ -13,8 +13,12 @@ Classes `UpperCamelCase`, functions and properties `lowerCamelCase`, constants `
 Guards are early `return`, or `require`, `check` and `requireNotNull` when the failed precondition is a caller bug.
 
 ```kotlin
-fun messageUser(user: User?, message: String?) {
+fun messageUser(
+    user: User?,
+    message: String?,
+) {
     if (user == null || message == null || !user.acceptsMessages) return
+
     user.send(message)
 }
 ```
@@ -24,10 +28,14 @@ Real errors are exceptions, or a `sealed` result type or `Result` where the proj
 ```kotlin
 sealed class SignUpError : Exception() {
     object InvalidInput : SignUpError()
+
     object EmailTaken : SignUpError()
 }
 
-fun validateInput(email: String, password: String) {
+fun validateInput(
+    email: String,
+    password: String,
+) {
     if ("@" !in email || password.length < 8) throw SignUpError.InvalidInput
     if (userExists(email)) throw SignUpError.EmailTaken
 }
@@ -38,7 +46,12 @@ fun validateInput(email: String, password: String) {
 A data container is a `data class` with `val` properties and no behaviour. A real object is a `class` with private state and public functions. Named arguments already make a long call readable, so group parameters into a `data class` when the same group travels through several functions.
 
 ```kotlin
-data class Rectangle(val x: Int, val y: Int, val width: Int, val height: Int)
+data class Rectangle(
+    val x: Int,
+    val y: Int,
+    val width: Int,
+    val height: Int,
+)
 
 fun draw(rectangle: Rectangle)
 ```
@@ -50,14 +63,16 @@ A `sealed interface` or `sealed class` with one implementation per variant repla
 ```kotlin
 sealed interface Delivery {
     fun deliver()
+
     fun track()
 }
 
-fun createDelivery(purchase: Purchase): Delivery = when (purchase.kind) {
-    Kind.EXPRESS -> ExpressDelivery(purchase)
-    Kind.INSURED -> InsuredDelivery(purchase)
-    Kind.STANDARD -> StandardDelivery(purchase)
-}
+fun createDelivery(purchase: Purchase): Delivery =
+    when (purchase.kind) {
+        Kind.EXPRESS -> ExpressDelivery(purchase)
+        Kind.INSURED -> InsuredDelivery(purchase)
+        Kind.STANDARD -> StandardDelivery(purchase)
+    }
 ```
 
 ## Explicit over compact
@@ -67,7 +82,9 @@ The constructs that tempt: chained scope functions (`let`, `also`, `apply`, `run
 Before:
 
 ```kotlin
-val name = user?.profile?.let { it.displayName ?: it.email }?.also { log(it) } ?: "Anonymous"
+val name =
+    user?.profile?.let { it.displayName ?: it.email }?.also { log(it) }
+        ?: "Anonymous"
 ```
 
 After:
@@ -76,7 +93,9 @@ After:
 fun displayName(user: User?): String {
     val profile = user?.profile ?: return "Anonymous"
     val name = profile.displayName ?: profile.email
+
     log(name)
+
     return name
 }
 ```
@@ -103,6 +122,33 @@ if (order.isPaid) ship(order) else remind(order)
 ```
 
 The guard replaces `?.let` only when nothing after the block needs to run for a null order. When something does, keep an `if (order != null)` block around the two lines instead.
+
+## Formatting
+
+ktlint formats and lints in one tool and reads its rules from `.editorconfig`. If the project has no ktlint, set it up after confirmation. A Gradle project applies the ktlint Gradle plugin. Any other project uses the ktlint CLI. Copy [.editorconfig](../formatting/kotlin/.editorconfig) into the project root, or add its `[*.{kt,kts}]` section to the existing one. A project that already runs ktlint through Spotless or Kotlinter keeps that plugin and takes only the `.editorconfig`. A project on ktfmt switches to ktlint, its plugin and configuration are removed after confirmation. detekt adds the parameter limit ktlint lacks, apply its Gradle plugin and copy [detekt.yml](../formatting/kotlin/detekt.yml) to `config/detekt/detekt.yml`.
+
+```kotlin
+plugins {
+    id("org.jlleitschuh.gradle.ktlint") version "<version>"
+    id("io.gitlab.arturbosch.detekt") version "<version>"
+}
+```
+
+Take the versions from the plugin portal, https://plugins.gradle.org/plugin/org.jlleitschuh.gradle.ktlint and https://plugins.gradle.org/plugin/io.gitlab.arturbosch.detekt.
+
+```sh
+./gradlew ktlintFormat
+./gradlew ktlintCheck
+./gradlew detekt
+ktlint --format
+ktlint
+```
+
+After every edit run `ktlintFormat`, or `ktlint --format` on the touched files, then `detekt`, which reports and never fixes.
+
+- [ktlint](https://raw.githubusercontent.com/ktlint/ktlint/master/documentation/release-latest/docs/install/cli.md)
+- [ktlint Gradle plugin](https://raw.githubusercontent.com/JLLeitschuh/ktlint-gradle/main/README.md)
+- [detekt](https://detekt.dev/docs/intro)
 
 ## Ordering
 
