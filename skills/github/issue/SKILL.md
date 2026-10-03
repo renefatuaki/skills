@@ -1,7 +1,7 @@
 ---
 name: issue
 description: issue, the rules for every GitHub issue. Use whenever the user wants to create an issue, report a bug, request a feature, plan a task, set up issue templates, or when another skill needs an issue for the work at hand. Use it before every `gh issue create` you run, even when the user did not name the issue skill.
-allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/prefill-url.mjs *)
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/prefill-url.mts *)
 ---
 
 Rules for every GitHub issue you create. This skill ensures templates exist, interviews the user where the request leaves the requirements open, then fills the template's fields and hands them to the user as a prefilled GitHub form, or creates the issue itself when another skill asked for it.
@@ -23,10 +23,21 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
 4. **Pick the template.** Bug when something behaves differently than expected, feature when the user wants something new or changed, chore for work with no user-facing change, epic when the user asks for one or the request has several parts that ship on their own. Ensure the labels the chosen template sets exist, with `gh label list --search "<name>" --json name` per label, matched on the exact name, and create each missing one.
 
    ```sh
-   gh label create bug --color d55e00 --description "Indicates an unexpected problem or unintended behavior"
-   gh label create feature --color 009e73 --description "Indicates a new feature or capability"
-   gh label create chore --color 0072b2 --description "Indicates work without user-facing change"
-   gh label create epic --color cc79a7 --description "Groups sub-issues into one outcome"
+   gh label create bug \
+     --color d55e00 \
+     --description "Indicates an unexpected problem or unintended behavior"
+
+   gh label create feature \
+     --color 009e73 \
+     --description "Indicates a new feature or capability"
+
+   gh label create chore \
+     --color 0072b2 \
+     --description "Indicates work without user-facing change"
+
+   gh label create epic \
+     --color cc79a7 \
+     --description "Groups sub-issues into one outcome"
    ```
 
    Take the issue's language from the last twenty issues, `gh issue list --limit 20 --state all --json title,body`, and from the user when the repository has none.
@@ -38,14 +49,21 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
    - When a third-party library or API is involved and no source is named, find its official documentation yourself and add it to the sources field.
    - Cut pass, once the fields are written. Reread the draft and delete every sentence whose removal changes neither what the implementer does nor how done is judged.
    - Every metadata field is decided, none is left open. Label from the template. Assignee and milestone from the request or the interview, the choices read with `gh api repos/<owner>/<repo>/milestones`. Parent, blocked-by and blocking from the request or the interview. Type in an organization, from `gh api orgs/<owner>/issue-types`.
-   - Project. Every issue belongs to a project, from the request or the interview, chosen among `gh project list --owner <owner> --format json`. A single project is the choice without a question. An owner without a project gets one first, so ask the user which to create. The single-select fields of the project that describe the work, read with `gh project field-list <number> --owner <owner> --format json`, are yours to decide from the request and the interview, size by the number of acceptance criteria and the areas they touch, priority by how many users the problem hits and how often. Status is workflow state and stays with the project.
+   - Project. Every issue belongs to a project, from the request or the interview, chosen among `gh project list --owner <owner> --format json`. A single project is the choice without a question. An owner without a project, or a chosen project without Priority or Size in its field list, gets them from the `project` skill first, which creates or extends the project after confirmation and returns the project number. The single-select fields of the project that describe the work, read with `gh project field-list <number> --owner <owner> --format json`, are yours to decide from the request and the interview, size by the number of acceptance criteria and the areas they touch, priority by how many users the problem hits and how often. Status is workflow state and stays with the project.
    - The epic form is the parent, created first. Then steps 6 to 8 run once per part, from its own template, with the epic as the parent and the epic's interview as the source of answers, without a second interview.
 7. **Present.** Ask for each metadata field still open first. A field stays empty only when the user says so. The project is never left empty. Then the route depends on who invoked this skill.
-   - **Form, when the user did.** GitHub's form is the review, so build the prefill URL with [scripts/prefill-url.mjs](scripts/prefill-url.mjs) and open it in the browser, `open "<url>"` on macOS and `xdg-open "<url>"` on Linux. The script refuses a URL above GitHub's limit and names the bytes to cut, so shorten the values from step 6 and run it again. Parent, blocked-by, blocking, type and the project with its fields have no parameter, so step 8 sets them.
+   - **Form, when the user did.** GitHub's form is the review, so build the prefill URL with [scripts/prefill-url.mts](scripts/prefill-url.mts), with Node 24 or newer, which runs TypeScript directly, and open it in the browser, `open "<url>"` on macOS and `xdg-open "<url>"` on Linux. The script refuses a URL above GitHub's limit and names the bytes to cut, so shorten the values from step 6 and run it again. Parent, blocked-by, blocking, type and the project with its fields have no parameter, so step 8 sets them.
 
      ```sh
-     node ${CLAUDE_SKILL_DIR}/scripts/prefill-url.mjs <<'EOF'
-     {"repo": "<owner>/<repo>", "template": "<file>.yml", "title": "<title>", "fields": {"<id>": "<value>"}, "assignees": ["<login>"], "milestone": "<title>"}
+     node ${CLAUDE_SKILL_DIR}/scripts/prefill-url.mts <<'EOF'
+     {
+       "repo": "<owner>/<repo>",
+       "template": "<file>.yml",
+       "title": "<title>",
+       "fields": {"<id>": "<value>"},
+       "assignees": ["<login>"],
+       "milestone": "<title>"
+     }
      EOF
      ```
 
@@ -55,12 +73,25 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
    - **Form.** Confirm the issue with `gh issue view <number> --json title,url`, then set the fields the URL could not carry.
 
      ```sh
-     gh issue edit <number> --parent <parent> --add-blocked-by <blocker> --add-blocking <blocked> --type "<name>"
+     gh issue edit <number> \
+       --parent <parent> \
+       --add-blocked-by <blocker> \
+       --add-blocking <blocked> \
+       --type "<name>"
      ```
    - **Draft.** The body from a quoted heredoc, every metadata field from step 7 as its flag. Show the URL `gh` prints.
 
      ```sh
-     gh issue create --title "<title>" --label <label> --assignee <login> --milestone "<title>" --parent <number> --blocked-by <number> --blocking <number> --type "<name>" --body-file - <<'EOF'
+     gh issue create \
+       --title "<title>" \
+       --label <label> \
+       --assignee <login> \
+       --milestone "<title>" \
+       --parent <number> \
+       --blocked-by <number> \
+       --blocking <number> \
+       --type "<name>" \
+       --body-file - <<'EOF'
      <body>
      EOF
      ```
@@ -71,7 +102,12 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
 
    ```sh
    gh project item-add <number> --owner <owner> --url <url> --format json
-   gh project item-edit --project-id <project-id> --id <item-id> --field-id <field-id> --single-select-option-id <option-id>
+
+   gh project item-edit \
+     --project-id <project-id> \
+     --id <item-id> \
+     --field-id <field-id> \
+     --single-select-option-id <option-id>
    ```
 
    Then, if an interview ran, post it as the first comment with `gh issue comment <number> --body-file -`, wrapped in `<details><summary>Requirements interview</summary>` and `</details>`, one Markdown block per question with the recommendation and the answer.
