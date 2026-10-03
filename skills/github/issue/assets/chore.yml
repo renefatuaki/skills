@@ -4,7 +4,7 @@ name: Chore
 description: Plan work without a user-facing change, such as refactoring, tooling, dependencies, CI or documentation
 # Requires the issue skill to create it, GitHub has no default label of this name.
 # https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels.md#about-default-labels
-labels: ["chore"]
+labels: ['chore']
 # Follows Bill Wake's SMART criteria for tasks in Goal and Done when.
 # https://xp123.com/articles/invest-in-good-stories-and-smart-tasks/
 body:

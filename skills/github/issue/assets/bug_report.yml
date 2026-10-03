@@ -4,7 +4,7 @@ name: Bug report
 description: Create a report to help us improve
 # Exists in every new repository as a default label.
 # https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels.md#about-default-labels
-labels: ["bug"]
+labels: ['bug']
 body:
   # A hint shown while filling in, not submitted.
   # https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema.md#example-of-markdown

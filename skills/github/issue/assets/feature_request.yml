@@ -4,7 +4,7 @@ name: Feature request
 description: Suggest an idea for this project
 # Requires the issue skill to create it, GitHub has no default label of this name.
 # https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels.md#about-default-labels
-labels: ["feature"]
+labels: ['feature']
 body:
   # Field labels as GitHub's template editor writes them.
   # https://github.com/js-cookie/js-cookie/commit/9bf3b8ea9906d41249325fafe9f182601ad221ea.patch

@@ -1,22 +1,22 @@
 {
-    "name": "renefatuaki",
-    "owner": {
-        "name": "René El Fatuaki",
-        "url": "https://github.com/renefatuaki"
-    },
-    "plugins": [
-        {
-            "name": "renefatuaki-skills",
-            "source": "./",
-            "description": "Claude Code skills for clean code, engineering workflows and project management.",
-            "category": "engineering",
-            "keywords": [
-                "engineering",
-                "code-review",
-                "clean-code",
-                "github",
-                "issues"
-            ]
-        }
-    ]
+  "name": "renefatuaki",
+  "owner": {
+    "name": "René El Fatuaki",
+    "url": "https://github.com/renefatuaki"
+  },
+  "plugins": [
+    {
+      "name": "renefatuaki-skills",
+      "source": "./",
+      "description": "Claude Code skills for clean code, engineering workflows and project management.",
+      "category": "engineering",
+      "keywords": [
+        "engineering",
+        "code-review",
+        "clean-code",
+        "github",
+        "issues"
+      ]
+    }
+  ]
 }

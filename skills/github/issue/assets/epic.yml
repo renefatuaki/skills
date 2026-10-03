@@ -4,7 +4,7 @@ name: Epic
 description: Group several issues that together deliver one outcome
 # Requires the issue skill to create it, GitHub has no default label of this name.
 # https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels.md#about-default-labels
-labels: ["epic"]
+labels: ['epic']
 body:
   - type: textarea
     id: goal
