@@ -1,0 +1,4 @@
+- **Start** <preview URL, or the commands that set up and serve the branch with the environment variables, feature flags and services they need, and the local URL>
+- **Browser** <browser and viewport>
+- **Account** <test account, or none>
+- **State** <what must hold in the application and the browser before the first step and how to get there, or none>

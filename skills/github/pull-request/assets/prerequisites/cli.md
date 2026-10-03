@@ -1,0 +1,3 @@
+- **Run** <commands that prepare the branch and invoke the tool or load the library>
+- **Environment** <operating system and the runtime or toolchain versions the tool needs>
+- **Input** <files, fixtures or environment variables the calls need, or none>
