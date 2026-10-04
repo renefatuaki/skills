@@ -9,7 +9,7 @@
     "url": "https://github.com/renefatuaki/skills"
   },
   "scripts": {
-    "test": "node tests/code-comments.test.mts",
+    "test": "node tests/code-comments.test.mts && node tests/project-docs.test.mts",
     "version": "changeset version && node scripts/sync-plugin-version.mts",
     "prepare": "husky",
     "format": "oxfmt",
@@ -25,6 +25,7 @@
     "@stylistic/eslint-plugin": "^5.10.0",
     "@types/node": "^24.19.1",
     "husky": "^9.1.7",
+    "markdownlint": "^0.41.1",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
     "typescript": "^7.0.2"

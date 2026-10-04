@@ -1,6 +1,6 @@
 ---
 name: clean-code
-description: clean-code, the rules for readable code. Use when writing code, editing or refactoring code, or when the user names the clean-code skill. Covers names, functions, control flow, classes and vertical layout, and delegates comments to code-comments.
+description: clean-code, the rules for readable code. Use when writing code, editing or refactoring code, or when the user names the clean-code skill. Covers names, functions, control flow, classes and vertical layout, and delegates comments to code-comments and documentation to project-docs.
 ---
 
 Rules for every symbol you write or touch. Names carry the meaning, functions do one thing at one level of abstraction, control flow stays flat, classes stay focused, and a comment appears only where the code cannot speak.
@@ -15,8 +15,9 @@ Rules for every symbol you write or touch. Names carry the meaning, functions do
 6. **Keep classes focused.** Each class is a real object (private data, public behaviour) or a data container (public data, no behaviour beyond read-only derived values), never both. One responsibility, high cohesion. Real objects follow the Law of Demeter and are told, not asked. Extension by adding a subclass or implementation, not by editing a growing switch. Details in [references/classes.md](references/classes.md).
 7. **Order the file.** Callers above callees, public API above private helpers. A file that holds unrelated things is split. Line length and indentation belong to the project formatter. Details in [formatting/formatting.md](formatting/formatting.md).
 8. **Apply code-comments.** Every comment in the touched symbol follows the code-comments skill. Nothing else about comments lives here.
+9. **Apply project-docs.** When the change alters a behaviour, a command, an option or a path that the project's documentation describes, bring that documentation in line with the project-docs skill. Nothing else about documentation lives here.
 
-Done when every touched symbol has a descriptive name consistent with the project, every touched function does one thing at one level of abstraction with no unexpected side effect and no expression the reader must decode, no nested control structure remains that a guard or an extraction would flatten, every touched class is a real object or a data container with one responsibility, the file reads top down, and the comments pass code-comments.
+Done when every touched symbol has a descriptive name consistent with the project, every touched function does one thing at one level of abstraction with no unexpected side effect and no expression the reader must decode, no nested control structure remains that a guard or an extraction would flatten, every touched class is a real object or a data container with one responsibility, the file reads top down, the comments pass code-comments, and the documentation still matches the code.
 
 ## Renaming
 
