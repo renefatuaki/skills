@@ -17,7 +17,9 @@
     // Do not transform or elide any imports or exports not marked as type-only, ensuring they are written in the output file's format based on the 'module' setting.
     "verbatimModuleSyntax": true,
     // Do not allow runtime constructs that are not part of ECMAScript.
-    "erasableSyntaxOnly": true
+    "erasableSyntaxOnly": true,
+    // --allowImportingTsExtensions allows TypeScript files to import each other with a TypeScript-specific extension like .ts, .mts, or .tsx.
+    "allowImportingTsExtensions": true
   },
   // Specifies an array of filenames or patterns to include in the program.
   "include": [

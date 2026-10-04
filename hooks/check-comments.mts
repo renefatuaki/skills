@@ -4,18 +4,12 @@
 // https://code.claude.com/docs/en/hooks.md
 
 import { readFileSync } from 'node:fs';
-import { extname, isAbsolute, relative, resolve } from 'node:path';
+import { extname, relative } from 'node:path';
+
+import { readEditedPath, report } from './lib/hook.mts';
 
 /** The comment syntax of a language, slashes and blocks or hashes and docstrings. */
 type Syntax = 'c' | 'python';
-
-/** What the PostToolUse hook receives on stdin, the fields this hook reads. */
-type HookInput = {
-  cwd?: string;
-  tool_input?: {
-    file_path?: unknown;
-  };
-};
 
 /** One content line of a comment, its delimiters removed, with its line number in the file. */
 type CommentLine = {
@@ -98,62 +92,42 @@ const TICKET = /https?:\/\/|\b[A-Z][A-Z0-9]+-\d+\b|#\d+/;
 main();
 
 function main(): void {
-  // 1. Read the hook input from stdin and stay silent when it is no JSON or names no file.
-  let input: HookInput;
+  // 1. Read the edited path and stay silent for a language outside the list and for a file that cannot be read.
+  const edited = readEditedPath();
 
-  try {
-    input = JSON.parse(readFileSync(0, 'utf8'));
-  } catch {
+  if (edited === null) {
     return;
   }
 
-  const filePath = input?.tool_input?.file_path;
-
-  if (typeof filePath !== 'string') {
-    return;
-  }
-
-  // 2. Stay silent for a language outside the list and for a file that cannot be read.
-  const syntax = SYNTAX[extname(filePath).toLowerCase()];
+  const syntax = SYNTAX[extname(edited.absolute).toLowerCase()];
 
   if (!syntax) {
     return;
   }
 
-  const cwd = input.cwd ?? process.cwd();
-  const absolute = isAbsolute(filePath) ? filePath : resolve(cwd, filePath);
   let source: string;
 
   try {
-    source = readFileSync(absolute, 'utf8');
+    source = readFileSync(edited.absolute, 'utf8');
   } catch {
     return;
   }
 
-  // 3. Collect the findings of every rule.
+  // 2. Collect the findings of every rule.
   const findings = check(source, syntax);
 
   if (findings.length === 0) {
     return;
   }
 
-  // 4. Hand the findings to Claude as additional context, which informs and never blocks the edit.
-  // https://code.claude.com/docs/en/hooks.md#posttooluse-decision-control
-  const shown = relative(cwd, absolute) || filePath;
+  // 3. Hand the findings to Claude, one line each.
+  const shown = relative(edited.root, edited.absolute) || edited.absolute;
   const lines = findings.map(f => `${shown}:${f.line} ${f.rule} ${f.message}`);
-  const context = [
+
+  report([
     'Comment rules (code-comments skill) flagged the last edit. Fix each line in your next edit:',
     ...lines,
-  ].join('\n');
-
-  process.stdout.write(
-    JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName: 'PostToolUse',
-        additionalContext: context,
-      },
-    }),
-  );
+  ]);
 }
 
 /** Applies the punctuation rules and the ticket rule to every comment line and the length limit to every comment group. */
