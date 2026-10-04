@@ -13,7 +13,7 @@ Documentation is `README.md` in any folder, every file under `docs/`, and `CONTR
 
 1. **Pick the language.** Read the existing documentation and write in the language most of it uses. English when there is none.
 2. **Pick the type.** Name the one question the file answers and take its type from [Types](#types). New content that answers a second question goes into its own file.
-3. **Place the file.** A new file is `docs/<topic>.md` in kebab-case and gets a row in the README table. An existing structure of the project wins.
+3. **Place the file.** A new file is `docs/<topic>.md` in kebab-case and gets a row in the README table. An existing structure of the project wins. A file that explains one flow or one feature with a diagram is the `README.md` of the folder that holds its code, as the `diagrams` skill places it.
 4. **Open with the question.** One `#` title, then the question the file answers as one sentence. The README opens with its purpose instead. The README table carries the opening sentence of each file word for word.
 5. **Write each block in its form.** Every block follows [Form](#form), every link follows [Links](#links).
 6. **Prune.** Bring the whole file to these rules, and make every statement in it true for the current code. When an existing file answers two questions, name the split in your reply and split after the user agrees.
@@ -40,7 +40,7 @@ Write [GitHub Flavored Markdown](https://docs.github.com/en/get-started/writing-
 - A paragraph only to give a reason, the why behind a choice. Three sentences at most.
 - Short sentences. Where an em-dash, an en-dash or a semicolon would join two clauses, write two sentences.
 - Every command and every example in a fenced code block with a language tag, complete, free of prompt characters, and run once before you write it down.
-- A flow or a structure with three or more participants is a diagram in place of prose. Diagrams follow the diagrams skill.
+- A flow or a structure is a diagram in place of prose. The `diagrams` skill decides when and how.
 - A warning or a note the reader must see is an [alert](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax.md#alerts). `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` or `> [!CAUTION]` stands on a quoted line of its own, the text on the quoted lines under it. Two alerts per file at most, each at the top level with prose between them.
 - The headings are the table of contents. GitHub builds the [outline](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes.md#auto-generated-table-of-contents-for-markdown-files) of every file from them, so a file carries none of its own.
 
