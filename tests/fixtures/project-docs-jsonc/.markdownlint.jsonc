@@ -1,0 +1,6 @@
+{
+  // A string that holds comment characters stays as it is.
+  "$schema": "https://raw.githubusercontent.com/DavidAnson/markdownlint/main/schema/markdownlint-config-schema.json",
+  /* A trailing comma follows. */
+  "MD013": false,
+}
