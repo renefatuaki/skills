@@ -9,6 +9,9 @@ How do I set up the project?
 1. Install Node 24 or newer.
 2. Run the entry point.
 
+> [!WARNING]
+> Node 22 lacks type stripping.
+
 ```sh
 node index.mjs; echo $ done
 ```

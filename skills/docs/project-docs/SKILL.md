@@ -33,12 +33,16 @@ The README is the overview. It holds one sentence of purpose, the quick start wi
 
 ## Form
 
+Write [GitHub Flavored Markdown](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax.md). The rendered view on GitHub is where the reader meets the file.
+
 - A table when the entries share two or more attributes.
 - A numbered list for a sequence. A bullet list for peers. Each item is one sentence.
 - A paragraph only to give a reason, the why behind a choice. Three sentences at most.
 - Short sentences. Where an em-dash, an en-dash or a semicolon would join two clauses, write two sentences.
 - Every command and every example in a fenced code block with a language tag, complete, free of prompt characters, and run once before you write it down.
 - A flow or a structure with three or more participants is a diagram in place of prose. Diagrams follow the diagrams skill.
+- A warning or a note the reader must see is an [alert](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax.md#alerts). `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` or `> [!CAUTION]` stands on a quoted line of its own, the text on the quoted lines under it. Two alerts per file at most, each at the top level with prose between them.
+- The headings are the table of contents. GitHub builds the [outline](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes.md#auto-generated-table-of-contents-for-markdown-files) of every file from them, so a file carries none of its own.
 
 ## Links
 
