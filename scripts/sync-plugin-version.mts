@@ -12,12 +12,12 @@ import { fileURLToPath } from 'node:url';
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..');
 const pluginPath = join(repo, '.claude-plugin', 'plugin.json');
 
-const { version } = JSON.parse(
+const { version }: { version: string } = JSON.parse(
   readFileSync(join(repo, 'package.json'), 'utf8'),
 );
 
 const source = readFileSync(pluginPath, 'utf8');
-const plugin = JSON.parse(source);
+const plugin: { version: string } = JSON.parse(source);
 
 if (plugin.version === version) {
   console.log(`plugin.json version is ${version} (already in sync)`);
@@ -26,7 +26,7 @@ if (plugin.version === version) {
 
 if (process.argv.includes('--check')) {
   console.error(
-    `plugin.json version is ${plugin.version}, package.json is ${version}. Run \`node scripts/sync-plugin-version.mjs\`.`,
+    `plugin.json version is ${plugin.version}, package.json is ${version}. Run \`node scripts/sync-plugin-version.mts\`.`,
   );
 
   process.exit(1);

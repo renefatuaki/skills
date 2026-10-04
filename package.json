@@ -9,8 +9,8 @@
     "url": "https://github.com/renefatuaki/skills"
   },
   "scripts": {
-    "test": "node tests/code-comments.test.mjs",
-    "version": "changeset version && node scripts/sync-plugin-version.mjs",
+    "test": "node tests/code-comments.test.mts",
+    "version": "changeset version && node scripts/sync-plugin-version.mts",
     "prepare": "husky",
     "format": "oxfmt",
     "format:check": "oxfmt --check",

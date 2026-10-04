@@ -10,7 +10,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const script = join(root, 'hooks', 'check-comments.mts');
 const fixtures = join(root, 'tests', 'fixtures');
 
-const EXPECTED = {
+const EXPECTED: Record<string, string[]> = {
   'bad.swift': ['3 em-dash', '6 semicolon', '9 too-long', '14 todo-link'],
   'good.swift': [],
   'bad.py': ['3 em-dash', '7 semicolon', '10 too-long', '16 todo-link'],
@@ -51,7 +51,7 @@ console.log(
 process.exit(failures === 0 ? 0 : 1);
 
 // Feeds one fixture through the hook as Claude Code would and returns "line rule" pairs.
-function run(filePath) {
+function run(filePath: string): string[] {
   const input = JSON.stringify({
     cwd: root,
     hook_event_name: 'PostToolUse',
@@ -69,13 +69,15 @@ function run(filePath) {
     return [];
   }
 
-  const context = JSON.parse(result.stdout).hookSpecificOutput
+  const context: string = JSON.parse(result.stdout).hookSpecificOutput
     .additionalContext;
 
   return context
     .split('\n')
     .slice(1)
-    .map(line => line.match(/:(\d+) (\S+) /))
-    .filter(Boolean)
-    .map(m => `${m[1]} ${m[2]}`);
+    .flatMap(line => {
+      const match = line.match(/:(\d+) (\S+) /);
+
+      return match ? [`${match[1]} ${match[2]}`] : [];
+    });
 }
