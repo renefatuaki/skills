@@ -5,6 +5,10 @@
 
 <!-- One paragraph of at most three sentences. What changes for the user or the system, and why. -->
 
+## Diagram
+
+<!-- Optional. The flow or the structure this pull request changes, as a mermaid code block with its legend and its consequences. Left out when it changes neither. -->
+
 ## Linked issue
 
 <!-- Closes #123 when this pull request finishes the issue, Refs #123 otherwise, None when there is no issue. -->
