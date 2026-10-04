@@ -28,6 +28,7 @@ pnpm install
 - The commit-msg hook runs commitlint.
 - The [Check workflow](.github/workflows/check.yml) runs the checks on every pull request and before every release.
 - Each change ships with a changeset under `.changeset/`.
+- The hooks under `hooks/` run after every edit. [hooks/README.md](hooks/README.md) shows how they work together.
 
 The clean-code skill carries a formatter and linter configuration per language under `skills/clean-code/clean-code/formatting/`. Which rule each tool covers, and where the agent fills the gap, is listed in [coverage.md](skills/clean-code/clean-code/formatting/coverage.md).
 
