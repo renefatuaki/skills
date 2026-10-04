@@ -12,6 +12,7 @@
     "code-review",
     "clean-code",
     "documentation",
+    "diagrams",
     "github",
     "issues",
     "pull-requests"
@@ -19,6 +20,7 @@
   "skills": [
     "./skills/clean-code/clean-code",
     "./skills/clean-code/code-comments",
+    "./skills/docs/diagrams",
     "./skills/docs/project-docs",
     "./skills/git/commit",
     "./skills/github/issue",

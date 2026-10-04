@@ -13,6 +13,11 @@
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-docs.mts\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-diagrams.mts\"",
+            "timeout": 10
           }
         ]
       }

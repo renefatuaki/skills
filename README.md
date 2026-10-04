@@ -22,7 +22,7 @@ pnpm install
 | `pnpm run lint` | runs oxlint |
 | `pnpm run lint:fix` | runs oxlint and applies its fixes |
 | `pnpm run typecheck` | checks the `.mts` files with tsc |
-| `pnpm test` | runs the fixture tests of the comment hook and the documentation hook |
+| `pnpm test` | runs the fixture tests of the comment hook, the documentation hook and the diagram hook |
 
 - The pre-commit hook judges the staged files with oxfmt and oxlint.
 - The commit-msg hook runs commitlint.
