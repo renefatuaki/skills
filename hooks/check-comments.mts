@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 // Scans the file an Edit or Write touched for comment rule violations and reports them to Claude.
-// https://code.claude.com/docs/en/hooks
+// https://code.claude.com/docs/en/hooks.md
 
 import { readFileSync } from 'node:fs';
 import { extname, isAbsolute, relative, resolve } from 'node:path';
 
+/** The comment syntax of a language, slashes and blocks or hashes and docstrings. */
 type Syntax = 'c' | 'python';
 
 /** What the PostToolUse hook receives on stdin, the fields this hook reads. */
@@ -16,17 +17,20 @@ type HookInput = {
   };
 };
 
+/** One content line of a comment, its delimiters removed, with its line number in the file. */
 type CommentLine = {
   number: number;
   text: string;
 };
 
+/** A single-line comment, exempt from the length limit when it opens the file as its header. */
 type LineComment = {
   kind: 'line';
   exempt: boolean;
   lines: CommentLine[];
 };
 
+/** A block comment, exempt from the length limit when it opens the file as its header. */
 type BlockComment = {
   kind: 'block';
   exempt: boolean;
@@ -58,6 +62,7 @@ type Finding = {
   message: string;
 };
 
+/** Maps a file extension to its comment syntax, a file with any other extension is not checked. */
 const SYNTAX: Record<string, Syntax> = {
   '.swift': 'c',
   '.kt': 'c',
@@ -74,17 +79,26 @@ const SYNTAX: Record<string, Syntax> = {
   '.py': 'python',
 };
 
+/** A comment holds a summary line and a link line at most. */
 const MAX_CONTENT_LINES = 2;
+
+/**
+ * A docstring with a link takes a summary line, a blank line and the link line.
+ * @see {@link https://peps.python.org/pep-0257/#multi-line-docstrings | PEP 257, multi-line docstrings}
+ */
 const MAX_DOCSTRING_LINES = 3;
 
+/** Matches a comment that addresses a tool, such as MARK, region, eslint or noqa, which the rules leave alone. */
 const DIRECTIVE =
   /^(MARK:|#?region\b|#?endregion\b|swiftlint:|eslint-|@ts-|prettier-|noqa\b|type:|pylint:|pragma\b|biome-ignore\b)/;
 
+/** Matches a URL, a ticket key such as ABC-123 or an issue number such as #12. */
 const TICKET = /https?:\/\/|\b[A-Z][A-Z0-9]+-\d+\b|#\d+/;
 
 main();
 
 function main(): void {
+  // 1. Read the hook input from stdin and stay silent when it is no JSON or names no file.
   let input: HookInput;
 
   try {
@@ -99,6 +113,7 @@ function main(): void {
     return;
   }
 
+  // 2. Stay silent for a language outside the list and for a file that cannot be read.
   const syntax = SYNTAX[extname(filePath).toLowerCase()];
 
   if (!syntax) {
@@ -115,12 +130,15 @@ function main(): void {
     return;
   }
 
+  // 3. Collect the findings of every rule.
   const findings = check(source, syntax);
 
   if (findings.length === 0) {
     return;
   }
 
+  // 4. Hand the findings to Claude as additional context, which informs and never blocks the edit.
+  // https://code.claude.com/docs/en/hooks.md#posttooluse-decision-control
   const shown = relative(cwd, absolute) || filePath;
   const lines = findings.map(f => `${shown}:${f.line} ${f.rule} ${f.message}`);
   const context = [
@@ -138,6 +156,7 @@ function main(): void {
   );
 }
 
+/** Applies the punctuation rules and the ticket rule to every comment line and the length limit to every comment group. */
 function check(source: string, syntax: Syntax): Finding[] {
   const comments =
     syntax === 'python' ? extractPython(source) : extractCStyle(source);
@@ -198,7 +217,7 @@ function check(source: string, syntax: Syntax): Finding[] {
   return findings.sort((a, b) => a.line - b.line);
 }
 
-// Removes inline code spans, URLs and HTML entities so their punctuation is not judged as prose.
+/** Removes inline code spans, URLs and HTML entities so their punctuation is not judged as prose. */
 function withoutCodeAndUrls(text: string): string {
   return text
     .replace(/`[^`]*`/g, '')
@@ -206,7 +225,7 @@ function withoutCodeAndUrls(text: string): string {
     .replace(/&[a-z]+;/gi, '');
 }
 
-// Merges adjacent line comments into one group, keeps every block comment and docstring as its own group.
+/** Merges adjacent line comments into one group, keeps every block comment and docstring as its own group. */
 function groupComments(comments: Comment[]): Group[] {
   const groups: Group[] = [];
   let current: Group | null = null;
@@ -243,7 +262,7 @@ function groupComments(comments: Comment[]): Group[] {
   return groups;
 }
 
-// Walks C-style source and yields line comments and block comments with their content lines.
+/** Walks C-style source and yields line comments and block comments with their content lines. */
 function extractCStyle(source: string): Comment[] {
   const comments: Comment[] = [];
   let i = 0;
@@ -321,7 +340,7 @@ function extractCStyle(source: string): Comment[] {
   return comments;
 }
 
-// Walks Python source and yields hash comments and docstrings with their content lines.
+/** Walks Python source and yields hash comments and docstrings with their content lines. */
 function extractPython(source: string): Comment[] {
   const comments: Comment[] = [];
   const lines = source.split('\n');
@@ -421,7 +440,7 @@ function extractPython(source: string): Comment[] {
   return comments;
 }
 
-// Returns the text of a trailing hash comment on a code line, or null when the hash sits inside a string.
+/** Returns the text of a trailing hash comment on a code line, or null when the hash sits inside a string. */
 function inlineHashComment(rawLine: string): string | null {
   let quote: string | null = null;
 
@@ -461,7 +480,7 @@ function stripInlineComment(rawLine: string): string {
   );
 }
 
-// Skips a string literal, counting newlines inside multi-line literals, and returns the index after it.
+/** Skips a string literal, counting newlines inside multi-line literals, and returns the index after it. */
 function skipString(
   source: string,
   start: number,

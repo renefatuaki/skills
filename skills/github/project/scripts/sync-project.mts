@@ -29,6 +29,7 @@ type ProjectField = {
   }[];
 };
 
+/** What to write to one field, its options paired with their ids, and the option names the write would drop. */
 type Plan = {
   name: string;
   fieldId: string;
@@ -36,6 +37,7 @@ type Plan = {
   beyondFieldSet: string[];
 };
 
+/** The field as the mutation returns it after the update. */
 type UpdatedField = {
   name: string;
   options: Pick<Option, 'name' | 'color'>[];
@@ -44,7 +46,7 @@ type UpdatedField = {
 const USAGE = 'usage: sync-project.mts <number> --owner <owner> [--drop]';
 
 // 1. Read the project number, the owner and --drop from the command line.
-// https://nodejs.org/api/util.html#utilparseargsconfig
+// https://nodejs.org/api/util.md#utilparseargsconfig
 const { positionals, values } = parseArgs({
   allowPositionals: true,
   options: {
@@ -150,6 +152,10 @@ function updateField({ fieldId, options }: Plan): UpdatedField {
   return response.data.updateProjectV2Field.projectV2Field;
 }
 
+/**
+ * Runs gh with the input on stdin and returns its stdout, while its stderr goes straight to the terminal.
+ * @see {@link https://nodejs.org/api/child_process.md#child_processexecfilesyncfile-args-options | Node.js, child_process.execFileSync}
+ */
 function gh(args: string[], input?: string): string {
   return execFileSync('gh', args, {
     encoding: 'utf8',

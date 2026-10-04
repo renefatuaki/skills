@@ -11,6 +11,7 @@ type Step = {
   passed: boolean;
 };
 
+/** The description with its checkboxes set, and the steps found in the test plan. */
 type MarkedPlan = {
   body: string;
   steps: Step[];
@@ -18,13 +19,17 @@ type MarkedPlan = {
 
 const USAGE = 'usage: mark-steps.mts <number> [--passed 1,2,4]';
 
-// The headings and the checkbox as the pull-request skill's template writes them.
+/** Matches the heading that opens the test plan, as the template of the pull-request skill writes it. */
 const TEST_PLAN_HEADING = /^##\s+Test plan\s*$/i;
+
+/** Matches every second-level heading, the next one ends the test plan. */
 const SECTION_HEADING = /^##\s/;
+
+/** Matches a numbered checkbox and captures the text around its mark and the step number. */
 const STEP_CHECKBOX = /^(\s*[-*] \[)[ xX](\] (\d+)\.)/;
 
 // 1. Read the pull request number and the passed steps from the command line.
-// https://nodejs.org/api/util.html#utilparseargsconfig
+// https://nodejs.org/api/util.md#utilparseargsconfig
 const { positionals, values } = parseArgs({
   allowPositionals: true,
   options: {
@@ -95,6 +100,10 @@ function markSteps(body: string, passed: Set<number>): MarkedPlan {
   return { body: lines.join('\n'), steps };
 }
 
+/**
+ * Runs gh with the input on stdin and returns its stdout, while its stderr goes straight to the terminal.
+ * @see {@link https://nodejs.org/api/child_process.md#child_processexecfilesyncfile-args-options | Node.js, child_process.execFileSync}
+ */
 function gh(args: string[], input?: string): string {
   return execFileSync('gh', args, {
     encoding: 'utf8',

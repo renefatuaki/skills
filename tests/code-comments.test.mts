@@ -50,7 +50,7 @@ console.log(
 
 process.exit(failures === 0 ? 0 : 1);
 
-// Feeds one fixture through the hook as Claude Code would and returns "line rule" pairs.
+/** Feeds one fixture through the hook as Claude Code would and returns "line rule" pairs. */
 function run(filePath: string): string[] {
   const input = JSON.stringify({
     cwd: root,

@@ -13,10 +13,13 @@ type Issue = {
   projects?: string[];
 };
 
-// GitHub answers a longer URL with a server error, measured on 2026-09-26.
+/** GitHub answers a longer URL with a server error, measured on 2026-09-26. */
 const URL_BYTE_LIMIT = 7000;
 
+/** Reports input the script cannot use, the script exits with code 2. */
 class InvalidIssueError extends Error {}
+
+/** Reports a URL above the limit, the script exits with code 1. */
 class UrlTooLongError extends Error {}
 
 try {
