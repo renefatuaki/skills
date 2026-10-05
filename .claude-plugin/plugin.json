@@ -27,6 +27,7 @@
     "./skills/github/project",
     "./skills/github/pull-request",
     "./skills/github/pull-request-review",
+    "./skills/github/today-issues",
     "./skills/tooling/package-manager"
   ]
 }

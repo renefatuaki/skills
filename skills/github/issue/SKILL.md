@@ -50,10 +50,17 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
    - When a third-party library or API is involved and no source is named, find its official documentation yourself and add it to the sources field.
    - Cut pass, once the fields are written. Reread the draft and delete every sentence whose removal changes neither what the implementer does nor how done is judged.
    - Every metadata field is decided, none is left open. Label from the template. Assignee and milestone from the request or the interview, the choices read with `gh api repos/<owner>/<repo>/milestones`. Parent, blocked-by and blocking from the request or the interview. Type in an organization, from `gh api orgs/<owner>/issue-types`.
+   - App labels. In a repository that holds several applications or packages, such as the workspaces of its package manager or the folders under `apps/` and `packages/`, the issue carries one `app: <name>` label per application or package it touches, named after its folder, so the `today-issues` skill can run issues of different applications side by side. Which ones it touches comes from the request, the interview and the code. A label the repository lacks is created after confirmation.
+
+     ```sh
+     gh label create "app: <name>" \
+       --color 56b4e9 \
+       --description "Touches <path>"
+     ```
    - Project. Every issue belongs to a project, from the request or the interview, chosen among `gh project list --owner <owner> --format json`. A single project is the choice without a question. An owner without a project, or a chosen project without Priority or Size in its field list, gets them from the `project` skill first, which creates or extends the project after confirmation and returns the project number. The single-select fields of the project that describe the work, read with `gh project field-list <number> --owner <owner> --format json`, are yours to decide from the request and the interview, size by the number of acceptance criteria and the areas they touch, priority by how many users the problem hits and how often. Status is workflow state and stays with the project.
    - The epic form is the parent, created first. Then steps 6 to 8 run once per part, from its own template, with the epic as the parent and the epic's interview as the source of answers, without a second interview.
 7. **Present.** Ask for each metadata field still open first. A field stays empty only when the user says so. The project is never left empty. Then the route depends on who invoked this skill.
-   - **Form, when the user did.** GitHub's form is the review, so build the prefill URL with [scripts/prefill-url.mts](scripts/prefill-url.mts), with Node 24 or newer, which runs TypeScript directly, and open it in the browser, `open "<url>"` on macOS and `xdg-open "<url>"` on Linux. The script refuses a URL above GitHub's limit and names the bytes to cut. Take the diagram out of its field first, which step 8 then posts as a comment, otherwise shorten the values from step 6, and run it again. Parent, blocked-by, blocking, type and the project with its fields have no parameter, so step 8 sets them.
+   - **Form, when the user did.** GitHub's form is the review, so build the prefill URL with [scripts/prefill-url.mts](scripts/prefill-url.mts), with Node 24 or newer, which runs TypeScript directly, and open it in the browser, `open "<url>"` on macOS and `xdg-open "<url>"` on Linux. The script refuses a URL above GitHub's limit and names the bytes to cut. Take the diagram out of its field first, which step 8 then posts as a comment, otherwise shorten the values from step 6, and run it again. Parent, blocked-by, blocking, type and the project with its fields have no parameter, so step 8 sets them, together with the app labels.
 
      ```sh
      node ${CLAUDE_SKILL_DIR}/scripts/prefill-url.mts <<'EOF'
@@ -75,6 +82,7 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
 
      ```sh
      gh issue edit <number> \
+       --add-label "app: <name>" \
        --parent <parent> \
        --add-blocked-by <blocker> \
        --add-blocking <blocked> \
@@ -86,6 +94,7 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
      gh issue create \
        --title "<title>" \
        --label <label> \
+       --label "app: <name>" \
        --assignee <login> \
        --milestone "<title>" \
        --parent <number> \
