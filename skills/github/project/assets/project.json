@@ -86,7 +86,7 @@
         {
           "name": "XL",
           "color": "RED",
-          "description": "Too large for one issue, split it into an epic"
+          "description": "Many acceptance criteria across the whole application, a full day of work"
         }
       ]
     }
