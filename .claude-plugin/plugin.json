@@ -23,6 +23,7 @@
     "./skills/docs/diagrams",
     "./skills/docs/project-docs",
     "./skills/git/commit",
+    "./skills/github/implement-issue",
     "./skills/github/issue",
     "./skills/github/project",
     "./skills/github/pull-request",
