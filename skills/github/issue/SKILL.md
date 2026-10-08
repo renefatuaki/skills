@@ -40,7 +40,7 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
      --description "Groups sub-issues into one outcome"
    ```
 
-   Take the issue's language from the last twenty issues, `gh issue list --limit 20 --state all --json title,body`, and from the user when the repository has none.
+   The issue is written in English, whatever language the existing issues use.
 5. **Interview.** One runs when the request leaves a field of the template open, so almost always for a feature or epic, whose criteria and out-of-scope list come from the user, rarely for a chore, never for a bug. When it runs, run the `grilling` skill on the request before writing anything. Put every round to the user with the AskUserQuestion tool, one entry per question with its choices as the options and the recommended answer first, marked "(Recommended)". A round with more than four questions takes several calls.
 6. **Write the draft.** Search for duplicates first with `gh issue list --search "<keywords>" --state all`. If one matches, show it and stop. Then write the title in one sentence and one value per field of the template, in template order, each filled the way its `description` says. Required fields are never empty, empty optional fields are left out.
    - Content comes only from the request, the interview, the code and the conversation. What none of them settles is asked, never guessed. One goal per issue.
