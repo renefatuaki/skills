@@ -1,0 +1,31 @@
+{
+  "name": "github-workflow",
+  "description": "Claude Code skills for a GitHub workflow, from the issue on the project board to the reviewed pull request. Requires the gh CLI and GitHub Projects.",
+  "version": "0.0.0",
+  "author": {
+    "name": "René El Fatuaki"
+  },
+  "repository": "https://github.com/renefatuaki/skills",
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "gh",
+    "github-projects",
+    "issues",
+    "pull-requests",
+    "code-review",
+    "commits"
+  ],
+  "dependencies": [
+    "clean-code"
+  ],
+  "skills": [
+    "./skills/git/commit",
+    "./skills/github/implement-issue",
+    "./skills/github/issue",
+    "./skills/github/project",
+    "./skills/github/pull-request",
+    "./skills/github/pull-request-review",
+    "./skills/github/today-issues"
+  ]
+}

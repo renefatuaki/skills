@@ -7,7 +7,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const script = join(root, 'hooks', 'check-comments.mts');
+const hooks = join(root, 'plugins', 'clean-code', 'hooks');
+const script = join(hooks, 'check-comments.mts');
 const fixtures = join(root, 'tests', 'fixtures');
 
 const EXPECTED: Record<string, string[]> = {

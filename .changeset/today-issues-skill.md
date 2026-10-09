@@ -1,5 +1,5 @@
 ---
-"renefatuaki-skills": minor
+"github-workflow": minor
 ---
 
 Add the today-issues skill. It reads the open tickets of a GitHub Project through a bundled script, with Status, Priority, Size, labels, epic, open blockers and open pull requests, from every repository the project holds, and keeps the tickets assigned to the user or to nobody. It asks for three budgets, total run time, time for questions and time for reviews, with the time of day as context, estimates each ticket from its Size and its body, ranks reviews first, then Critical, work in progress, a begun epic, the order an application is built in, the remaining priorities and short tickets, and groups the tickets into tracks that run side by side when they touch different repositories or applications, which it reads from the repository of each ticket and from its `app: <name>` labels. An epic runs alone, and a ticket waits for the merge of its blocker. The plan is one table per track with the linked ticket, run, questions, review and reason, the sums against the budgets, what stays out and what the tickets lack. The skill only reads. The issue skill sets one `app: <name>` label per application or package an issue touches in a repository that holds several, and creates a missing label after confirmation.

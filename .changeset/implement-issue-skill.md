@@ -1,5 +1,5 @@
 ---
-"renefatuaki-skills": minor
+"github-workflow": minor
 ---
 
 Add the implement-issue skill, which works one GitHub issue from the board to a draft pull request. It refuses a closed issue, an epic, a ticket with an open blocker or Status Blocked, and one assigned to someone else, creates the ticket with the issue skill when the request has none, branches `<type>/<number>-<slug>` from `dev` or resumes an existing branch and draft, sets the Status to In progress through a bundled script and assigns the user. Open points of the criteria or the approach are grilled before the first commit and written back to the issue, every acceptance criterion gets one test named after it in Given/When/Then before the code and its own commit through the commit skill, a hook or test still red after three attempts gets a read-only diagnosis from Codex, the diff gets a Codex review with the ticket as instruction, and the pull-request skill opens the draft. A criterion that needs something outside the repository, or a contradiction the user cannot resolve, pushes the branch, opens the draft with the obstacle, comments on the issue and sets the Status to Blocked.
