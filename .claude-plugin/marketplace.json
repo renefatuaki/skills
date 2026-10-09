@@ -1,0 +1,47 @@
+{
+  "name": "renefatuaki",
+  "description": "Claude Code plugins for a GitHub workflow and for clean code.",
+  "owner": {
+    "name": "René El Fatuaki",
+    "url": "https://github.com/renefatuaki"
+  },
+  "plugins": [
+    {
+      "name": "github-workflow",
+      "source": "./plugins/github-workflow",
+      "description": "Claude Code skills for a GitHub workflow, from the issue on the project board to the reviewed pull request. Requires the gh CLI and GitHub Projects.",
+      "category": "engineering",
+      "keywords": [
+        "github",
+        "gh",
+        "github-projects",
+        "issues",
+        "pull-requests",
+        "code-review",
+        "commits"
+      ],
+      "dependencies": [
+        "clean-code"
+      ]
+    },
+    {
+      "name": "clean-code",
+      "source": "./plugins/clean-code",
+      "description": "Claude Code skills for clean code, code comments, project documentation and diagrams, with language guides for Swift, Kotlin, Java, TypeScript and Python.",
+      "category": "engineering",
+      "keywords": [
+        "clean-code",
+        "code-comments",
+        "documentation",
+        "diagrams",
+        "formatting",
+        "linting",
+        "swift",
+        "kotlin",
+        "java",
+        "typescript",
+        "python"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+- **Build** <scheme and configuration, the command or Xcode action that builds and launches the branch, and the backend it talks to when that is a choice>
+- **Device** <simulator or device and the iOS version, with the signing setup a physical device needs>
+- **Account** <test account, or none>
+- **State** <what must hold before the first step and how to get there, such as a fresh install, a granted permission, a system setting or seeded data, or none>

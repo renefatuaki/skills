@@ -1,0 +1,48 @@
+# Chore as an issue form for work without a user-facing change.
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository.md
+name: Chore
+description: Plan work without a user-facing change, such as refactoring, tooling, dependencies, CI or documentation
+# Requires the issue skill to create it, GitHub has no default label of this name.
+# https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels.md#about-default-labels
+labels: ['chore']
+# Follows Bill Wake's SMART criteria for tasks in Goal and Done when.
+# https://xp123.com/articles/invest-in-good-stories-and-smart-tasks/
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What should be different afterwards, and why.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: A checklist. Every item is something you can tick off without discussion.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  # Sources as a list of links, easier to follow than prose.
+  # https://code.claude.com/docs/en/best-practices.md#provide-rich-content
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: The issues, pull requests, docs or code in this repository the work depends on, one Markdown link per line.
+      placeholder: |
+        - [Pull request #123](https://github.com/owner/repo/pull/123)
+        - [API reference](https://docs.example.com/reference/...)
+    validations:
+      required: false
+  # What stays untouched, agents work best when the issue states it.
+  # https://code.claude.com/docs/en/best-practices.md
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What this issue explicitly does not change.
+    validations:
+      required: false

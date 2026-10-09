@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+# Judges the staged files with oxfmt and oxlint before every commit, without touching the index or the working tree.
+
+# 1. Re-run under bash, because husky starts every hook with sh, which has no arrays and no process substitution.
+# https://raw.githubusercontent.com/typicode/husky/main/husky
+{ [ -n "${BASH_VERSION:-}" ] && ! shopt -oq posix; } || exec bash "$0" "$@"
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+bin="$repo_root/node_modules/.bin"
+cd "$repo_root"
+
+# 2. Skip with a note when the tools are not installed, a missing dependency must never block a commit.
+if [ ! -x "$bin/oxfmt" ] || [ ! -x "$bin/oxlint" ]; then
+  echo "pre-commit: oxfmt or oxlint not installed, run pnpm install. Skipping." >&2
+  exit 0
+fi
+
+# 3. Collect the staged files each tool handles, added, changed, renamed or type-changed ones, through files so a failing git diff stops the hook instead of emptying the list.
+lint_specs=('*.js' '*.jsx' '*.mjs' '*.cjs' '*.ts' '*.tsx' '*.mts' '*.cts')
+format_specs=("${lint_specs[@]}" '*.json' '*.jsonc' '*.yaml' '*.yml' '*.toml'
+  '*.css' '*.scss' '*.less' '*.html' '*.vue' '*.md' '*.mdx')
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/pre-commit.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+git diff --cached -z --name-only --diff-filter=ACMRT -- "${format_specs[@]}" > "$work/format-files"
+git diff --cached -z --name-only --diff-filter=ACMRT -- "${lint_specs[@]}" > "$work/lint-files"
+format_files=()
+while IFS= read -r -d '' file; do
+  format_files+=("$file")
+done < "$work/format-files"
+lint_files=()
+while IFS= read -r -d '' file; do
+  lint_files+=("$file")
+done < "$work/lint-files"
+
+if [ "${#format_files[@]}" -eq 0 ]; then
+  echo "pre-commit: no staged file for oxfmt or oxlint, skipping."
+  exit 0
+fi
+
+# 4. Copy the index into a snapshot, so the staged version of a partly staged file is judged and the configs of the stage apply, skip-worktree entries included.
+# https://git-scm.com/docs/git-checkout-index
+snapshot="$work/snapshot"
+git checkout-index --all --ignore-skip-worktree-bits --prefix="$snapshot/"
+ln -s "$repo_root/node_modules" "$snapshot/node_modules"
+cd "$snapshot"
+
+# 5. Check formatting and lint inside the snapshot, each tool on its own file list.
+fail=0
+
+if ! "$bin/oxfmt" --check --no-error-on-unmatched-pattern -- "${format_files[@]}"; then
+  echo "" >&2
+  echo "pre-commit: oxfmt found unformatted staged files." >&2
+  echo "Fix with: pnpm run format" >&2
+  fail=1
+fi
+
+if [ "${#lint_files[@]}" -gt 0 ] &&
+  ! "$bin/oxlint" --deny-warnings --no-error-on-unmatched-pattern -- "${lint_files[@]}"; then
+  echo "" >&2
+  echo "pre-commit: oxlint found problems in staged files." >&2
+  echo "Fix with: pnpm run lint:fix" >&2
+  fail=1
+fi
+
+# 6. Block the commit on any finding, the fix commands were printed above.
+if [ "$fail" -ne 0 ]; then
+  echo "then re-stage and commit." >&2
+  exit 1
+fi

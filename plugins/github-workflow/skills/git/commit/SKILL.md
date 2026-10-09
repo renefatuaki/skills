@@ -1,0 +1,25 @@
+---
+name: commit
+description: commit, the rules for every git commit. Use whenever the user wants to commit, save, check in or "commit that", asks for a commit message, wants a messy stage split into clean commits, asks for Conventional Commits, or when a task ends with committing the work. Use it before every `git commit` you run, even when the user did not name the commit skill.
+---
+
+Rules for every commit you create. A commit is one topic with a message that follows Conventional Commits and references the GitHub issue when there is one, so the history stays reviewable and every change links back to its discussion. Git enforces the message through commitlint in a husky `commit-msg` hook. The message and its validation follow two upstream skills, this skill covers what they leave open, which is enforcement and the skills being present, the issue, the split and the plan.
+
+## Steps
+
+1. **Ensure enforcement.** Look for a commitlint configuration (`commitlint.config.*`, `.commitlintrc*`, or a `commitlint` key in `package.json`) and a `commit-msg` hook that runs it (`.husky/commit-msg`, or a `commit-msg` command in `lefthook.yml`). If both are present, continue. If they are missing and the repository has a `package.json`, follow commitlint's [Getting started](https://commitlint.js.org/guides/getting-started.md) and [Local setup](https://commitlint.js.org/guides/local-setup.md) guides with the commands from the `package-manager` skill, then replace the generated configuration with a copy of [assets/.commitlintrc.yaml](assets/.commitlintrc.yaml). It extends `@commitlint/config-conventional` and adds `references-empty` as a warning, so a commit without an issue reference passes with a note. Commit the setup on its own as `build: add commitlint and husky`. If there is no `package.json`, ask whether to create one, otherwise follow the rules below by hand and say so in your reply. Never install anything without confirmation.
+2. **Ensure the upstream skills.** Look for `conventional-commit-message` and `committing-with-commitlint` under `.claude/skills/` of the repository or of the user. If they are missing, install them after confirmation, with the "Run a one-off tool" command from the `package-manager` skill.
+
+   ```sh
+   pnpx skills add https://github.com/conventional-changelog/conventional-changelog --skill conventional-commit-message
+   pnpx skills add https://github.com/conventional-changelog/commitlint --skill committing-with-commitlint
+   ```
+3. **Read the stage.** Run `git status --porcelain`, `git diff --cached` and `git log --oneline -20`. Only staged changes are in scope. If nothing is staged, list the unstaged files and stop. Never run `git add -A` or `git add .` unless asked. Every message is written in English, whatever language the log uses.
+4. **Find the issue.** Look in the prompt, the branch name, the open pull request of the branch (`gh pr view --json number,body`), then an issue linked there. If nothing is found, ask whether to create an issue from the diff with the `issue` skill or to commit without one. Commit without a reference only when the user or the calling skill says the work has no issue, never silently. Write `Refs: #123` for a reference and `Closes #123` when the commit finishes the issue, which closes once the commit reaches the default branch. `Fixes` and `Resolves` do the same, keep the one the log already uses.
+5. **Group by topic.** One commit per coherent change, one type per commit. Split the stage along those lines before writing any message. Stage each group by applying patches to the index (`git apply --cached`), never with the interactive `git add -p`, and never overwrite the working file, so unstaged changes of the user survive.
+6. **Write each message** with the `conventional-commit-message` skill, which sets the type by release impact, the scope from the repository, a changelog-ready description and footers as trailers. Add the issue as a footer. The person running the session is the author, so there is no `Co-Authored-By` or "Generated with" line naming an AI and no session link.
+7. **Validate** with the `committing-with-commitlint` skill. Read the resolved rules, pipe the complete message through commitlint before committing, and fix only the rules named in brackets. A warning from `references-empty` is expected when the user chose to commit without an issue.
+8. **Present the plan.** A table with one row per commit, holding number, files and subject. Wait for the user to confirm. If there is exactly one commit and no open question, commit directly. If no user can answer, print the plan and continue.
+9. **Commit.** Per group `git add` the files, then `git commit -F -` with a quoted heredoc so quotes in the body survive. commitlint runs in the `commit-msg` hook and prints the broken rules on rejection, so fix the message and commit again. Never `--no-verify`, never `HUSKY=0`, never `--amend` unless asked. Afterwards show `git log --oneline -n <count>`.
+
+Done when the stage is empty and every new commit passed commitlint.

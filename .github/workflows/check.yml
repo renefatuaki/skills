@@ -1,0 +1,61 @@
+# Formatting, linting, type check and tests on every pull request, and before every release through workflow_call.
+#
+# Formatter: https://oxc.rs/docs/guide/usage/formatter
+# Linter:    https://oxc.rs/docs/guide/usage/linter
+#
+# Check for current versions:
+#   actions/checkout    https://github.com/actions/checkout/releases
+#   actions/setup-node  https://github.com/actions/setup-node/releases
+#   pnpm/action-setup   https://github.com/pnpm/action-setup/releases
+#   Node LTS            https://nodejs.org/en/about/previous-releases
+
+name: Check
+
+on:
+  pull_request:
+  workflow_call:
+
+# One run per branch, a newer push to a pull request cancels the older run, a release call is never cancelled.
+# https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# No permissions for the workflow, grant them per job only.
+# https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#permissions
+permissions: {}
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # check out the repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        # Reads the version from packageManager in package.json.
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm run format:check
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Type check
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm test

@@ -1,0 +1,65 @@
+# Bug report as an issue form, the fields follow GitHub's template editor.
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms.md
+name: Bug report
+description: Create a report to help us improve
+# Exists in every new repository as a default label.
+# https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels.md#about-default-labels
+labels: ['bug']
+body:
+  # A hint shown while filling in, not submitted.
+  # https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema.md#example-of-markdown
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a new issue, please search the existing issues and upvote a matching one instead.
+  # Field labels as GitHub's template editor writes them.
+  # https://github.com/js-cookie/js-cookie/commit/9bf3b8ea9906d41249325fafe9f182601ad221ea.patch
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: To Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  # One field for every environment, most projects have no browser.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Where the bug happens, such as version, OS, runtime or device.
+      placeholder: |
+        - Version: [e.g. 22]
+        - OS: [e.g. macOS 15]
+    validations:
+      required: false
+  # Sources as a list of links, easier to follow than prose.
+  # https://code.claude.com/docs/en/best-practices.md#provide-rich-content
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: The documentation the fix depends on and the code it should follow, one Markdown link per line.
+      placeholder: |
+        - [API reference](https://docs.example.com/reference/...)
+        - [src/auth/session.ts](https://github.com/owner/repo/blob/main/src/auth/session.ts)
+    validations:
+      required: false
