@@ -8,6 +8,7 @@
 #   actions/setup-node  https://github.com/actions/setup-node/releases
 #   pnpm/action-setup   https://github.com/pnpm/action-setup/releases
 #   Node LTS            https://nodejs.org/en/about/previous-releases
+#   Ubuntu runner image https://github.com/actions/runner-images#available-images
 
 name: Check
 
@@ -28,7 +29,7 @@ permissions: {}
 jobs:
   check:
     name: Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read # check out the repository
     steps:
