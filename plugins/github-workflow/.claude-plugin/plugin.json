@@ -1,7 +1,7 @@
 {
   "name": "github-workflow",
   "description": "Claude Code skills for a GitHub workflow, from the issue on the project board to the reviewed pull request. Requires the gh CLI and GitHub Projects.",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "author": {
     "name": "René El Fatuaki"
   },
