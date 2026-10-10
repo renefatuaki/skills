@@ -1,6 +1,6 @@
 {
   "name": "clean-code",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Claude Code skills for clean code, code comments, project documentation and diagrams, with language guides for Swift, Kotlin, Java, TypeScript and Python.",
   "license": "MIT",
