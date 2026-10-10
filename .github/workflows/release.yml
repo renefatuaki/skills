@@ -10,6 +10,7 @@
 #   changesets/action   https://github.com/changesets/action/releases
 #   @changesets/cli     https://www.npmjs.com/package/@changesets/cli
 #   Node LTS            https://nodejs.org/en/about/previous-releases
+#   Ubuntu runner image https://github.com/actions/runner-images#available-images
 
 name: Release
 
@@ -35,7 +36,7 @@ jobs:
   release:
     name: Version
     needs: check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Required by changesets/action:
     # https://github.com/changesets/action#requirements
     permissions:
