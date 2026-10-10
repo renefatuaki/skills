@@ -1,0 +1,16 @@
+# Dependabot version and security updates.
+# https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference.md
+
+version: 2
+updates:
+  # Package manager to use.
+  - package-ecosystem: npm
+    # Location of package manifests.
+    directory: /
+    # How often to check for updates.
+    schedule:
+      interval: weekly
+    # Ignore certain dependencies or versions.
+    ignore:
+      # The diagrams skill pins mermaid to the oldest version among GitHub, VS Code and JetBrains, so an update follows those three by hand.
+      - dependency-name: mermaid
