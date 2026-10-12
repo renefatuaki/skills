@@ -46,7 +46,7 @@ The clean-code skill carries a formatter and linter configuration per language u
 The engineering skill works every development task through the playbook that matches it. It reads the task, opens that playbook and follows its steps, from a question about the code to a GitHub issue worked to a draft pull request.
 
 - [pstack](https://github.com/cursor/plugins/tree/main/pstack) is the source the engineering skill adapts to Claude Code.
-- The [pstack guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide) explains the workflow in depth.
+- The [guide](docs/guide/README.md) explains the workflow in depth, from the first prompt to a draft pull request.
 - [UPSTREAM.md](UPSTREAM.md) names every copied file and what changed in it.
 
 | Entry point | What it does |
