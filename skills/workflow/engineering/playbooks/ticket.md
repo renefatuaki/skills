@@ -5,10 +5,10 @@
 One GitHub issue, the ticket, per run. This playbook takes it over in its own worktree, clears what it leaves open, runs the playbook its label names, proves every acceptance criterion with a test, commits criterion by criterion, has interrogate review the diff, and opens the draft. It runs unattended, so it asks only where these steps say so, every question through the AskUserQuestion tool with the recommended answer first, marked "(Recommended)". It ends without waiting for the ready word.
 
 1. **Ensure a user and `gh`.** Every step needs a user who can answer. Without one, stop. Run `gh auth status` and do nothing else until it reports a logged-in account whose token scopes include `project`. If `gh` is missing, install it after confirmation, following GitHub's [installation guide](https://raw.githubusercontent.com/cli/cli/trunk/README.md#installation). If nobody is logged in, ask the user to run `! gh auth login`, wait for them, then run `gh auth status` again. If the scope is missing, ask the user to run `! gh auth refresh -s project`. If the user declines, stop and say what is missing.
-2. **Ensure the grilling skill.** Look for `grilling` under `.claude/skills/` of the repository or of the user. If it is missing, install it after confirmation, with the "Run a one-off tool" command from the `package-manager` skill.
+2. **Ensure the grilling skill.** Look for `grilling` in the skill list of the session, under its own name or with a plugin prefix such as `mattpocock-skills:grilling`. If it is missing, install it globally after confirmation, with the "Run a one-off tool" command from the `package-manager` skill. `-g` installs for the user, so every repository finds it.
 
    ```sh
-   pnpx skills add https://github.com/mattpocock/skills --skill grilling
+   pnpx skills add https://github.com/mattpocock/skills --skill grilling -g
    ```
 3. **Clear finished worktrees.** These are the worktrees of this repository at `../<repo>-<number>`, as `git worktree list --porcelain` lists them, where `<repo>` is the folder name of the main checkout. Run `git fetch --prune origin`, then read for each worktree the newest pull request of its branch, its upstream, its tip and its changes.
 
