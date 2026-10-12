@@ -1,0 +1,9 @@
+[
+  { "model": "gpt-6-astra", "hidden": false },
+  { "model": "gpt-6-sol", "hidden": false },
+  { "model": "gpt-6-luna", "hidden": false },
+  { "model": "gpt-7-luna", "hidden": true },
+  { "model": "gpt-6.1-sol", "hidden": false },
+  { "model": "gpt-5.6-astra", "hidden": false },
+  { "model": "gpt-5.6-sol", "hidden": false }
+]

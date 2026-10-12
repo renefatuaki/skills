@@ -9,10 +9,10 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
 ## Steps
 
 1. **Ensure a user and `gh`.** Every step needs a user who can answer. Without one, stop. Run `gh auth status` and do nothing else until it reports a logged-in account whose token scopes include `project`. If `gh` is missing, install it after confirmation, following GitHub's [installation guide](https://raw.githubusercontent.com/cli/cli/trunk/README.md#installation). If nobody is logged in, ask the user to run `! gh auth login`, wait for them, then run `gh auth status` again. If the scope is missing, ask the user to run `! gh auth refresh -s project`. If the user declines, stop and say what is missing.
-2. **Ensure the grilling skill.** Look for `grilling` under `.claude/skills/` of the repository or of the user. If it is missing, install it after confirmation, with the "Run a one-off tool" command from the `package-manager` skill.
+2. **Ensure the grilling skill.** Look for `grilling` in the skill list of the session, under its own name or with a plugin prefix such as `mattpocock-skills:grilling`. If it is missing, install it globally after confirmation, with the "Run a one-off tool" command from the `package-manager` skill. `-g` installs for the user, so every repository finds it.
 
    ```sh
-   pnpx skills add https://github.com/mattpocock/skills --skill grilling
+   pnpx skills add https://github.com/mattpocock/skills --skill grilling -g
    ```
 3. **Ensure templates.** Read [templates](../templates/SKILL.md) and follow it for the issue forms. Its reply folds into this skill's reply. If the user asked only for templates, this is the end. Steps 4 to 7 read the forms from the assets of the templates skill.
 4. **Pick the template.** Bug when something behaves differently than expected, feature when the user wants something new or changed, refactor for a change to structure that keeps the behaviour, chore for other work with no user-facing change, epic when the user asks for one or the request has several parts that ship on their own. Ensure the labels the chosen template sets exist, with `gh label list --search "<name>" --json name` per label, matched on the exact name, and create each missing one.

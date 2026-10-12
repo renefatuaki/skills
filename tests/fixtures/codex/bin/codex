@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+
+// Stands in for `codex app-server` and answers initialize, account/rateLimits/read with the usage FAKE_CODEX_USAGE names, and model/list from model-list.json, in two pages.
+
+const { readFileSync } = require('node:fs');
+const { join } = require('node:path');
+const { createInterface } = require('node:readline');
+
+if (process.env.FAKE_CODEX_EXIT) {
+  console.error("error: unrecognized subcommand 'app-server'");
+  process.exit(2);
+}
+
+const models = process.env.FAKE_CODEX_EMPTY
+  ? []
+  : JSON.parse(readFileSync(join(__dirname, '..', 'model-list.json'), 'utf8'));
+const half = Math.ceil(models.length / 2);
+
+const usage = {
+  reached: { ordinaryUsageAllowed: false, used: 100, credits: false },
+  low: { ordinaryUsageAllowed: true, used: 85, credits: false },
+  enough: { ordinaryUsageAllowed: true, used: 80, credits: false },
+  credits: { ordinaryUsageAllowed: false, used: 100, credits: true },
+}[process.env.FAKE_CODEX_USAGE] ?? { ordinaryUsageAllowed: true, used: 0, credits: false };
+
+createInterface({ input: process.stdin }).on('line', line => {
+  const request = JSON.parse(line);
+
+  if (request.method === 'initialize' && process.env.FAKE_CODEX_NOISE) {
+    process.stdout.write('WARN: not json\n');
+  } else if (request.method === 'initialize' && process.env.FAKE_CODEX_QUIT) {
+    reply({ id: request.id, result: {} });
+    process.exit(3);
+  } else if (request.method === 'initialize') {
+    reply({ id: request.id, result: {} });
+  } else if (request.method === 'account/rateLimits/read' && process.env.FAKE_CODEX_USAGE === 'apikey') {
+    reply({ id: request.id, error: { code: -32600, message: 'chatgpt authentication required' } });
+  } else if (request.method === 'account/rateLimits/read') {
+    reply({ id: request.id, result: rateLimits(usage) });
+  } else if (request.method === 'model/list' && process.env.FAKE_CODEX_ERROR) {
+    reply({ id: request.id, error: { code: -32600, message: 'restart Codex' } });
+  } else if (request.method === 'model/list' && request.params.cursor === null) {
+    reply({ method: 'remoteControl/status/changed', params: {} });
+    reply({ id: request.id, result: { data: models.slice(0, half), nextCursor: 'page-2' } });
+  } else if (request.method === 'model/list') {
+    reply({ id: request.id, result: { data: models.slice(half) } });
+  }
+});
+
+/** Builds an account/rateLimits/read result whose weekly window used the given percent and whose 5-hour window used none. */
+function rateLimits({ ordinaryUsageAllowed, used, credits }) {
+  return {
+    ordinaryUsageAllowed,
+    rateLimits: {
+      primary: { usedPercent: 0, windowDurationMins: 300, resetsAt: 1791849845 },
+      secondary: { usedPercent: used, windowDurationMins: 10080, resetsAt: 1792418150 },
+      credits: { hasCredits: credits, unlimited: false, balance: credits ? '10' : '0' },
+      spendControlReached: false,
+      rateLimitReachedType: ordinaryUsageAllowed ? null : 'rate_limit_reached',
+    },
+  };
+}
+
+/** Writes one JSON-RPC message as a line to stdout. */
+function reply(message) {
+  process.stdout.write(`${JSON.stringify(message)}\n`);
+}

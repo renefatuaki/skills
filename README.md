@@ -30,7 +30,7 @@ pnpm install
 | `pnpm run lint` | runs oxlint |
 | `pnpm run lint:fix` | runs oxlint and applies its fixes |
 | `pnpm run typecheck` | checks the `.mts` files with tsc |
-| `pnpm test` | runs the tests of the comment hook, the documentation hook, the diagram hook and the session hook |
+| `pnpm test` | runs the tests of the comment hook, the documentation hook, the diagram hook, the session hook and the Codex model script |
 | `pnpm run check-upstream` | lists what changed upstream since the base commit of every file in [UPSTREAM.md](UPSTREAM.md), with `gh` logged in |
 
 - The pre-commit hook judges the staged files with oxfmt and oxlint.
@@ -46,7 +46,7 @@ The clean-code skill carries a formatter and linter configuration per language u
 The engineering skill works every development task through the playbook that matches it. It reads the task, opens that playbook and follows its steps, from a question about the code to a GitHub issue worked to a draft pull request.
 
 - [pstack](https://github.com/cursor/plugins/tree/main/pstack) is the source the engineering skill adapts to Claude Code.
-- The [pstack guide](https://github.com/cursor/plugins/tree/main/pstack/docs/guide) explains the workflow in depth.
+- The [guide](docs/guide/README.md) explains the workflow in depth, from the first prompt to a draft pull request.
 - [UPSTREAM.md](UPSTREAM.md) names every copied file and what changed in it.
 
 | Entry point | What it does |
