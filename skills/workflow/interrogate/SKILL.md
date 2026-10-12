@@ -1,6 +1,7 @@
 ---
 name: interrogate
 description: "Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\". Multiple LLM reviewers challenge changes from independent angles."
+allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *)
 disable-model-invocation: true
 ---
 
@@ -29,11 +30,11 @@ Launch all reviewers in a single message with the `Agent` tool, one per entry on
 | Subagent | Default model |
 |----------|---------------|
 | Reviewer A | `opus/xhigh` |
-| Reviewer B | `codex/xhigh` |
+| Reviewer B | `codex:astra/xhigh` |
 
 Each Claude reviewer gets `subagent_type: "general-purpose"`, and `model` and `effort` from its configured entry, or from its table default when there is no configured line. Read-only: the prompt says not to edit, write, or commit anything.
 
-A `codex` reviewer runs as a Codex slot: `subagent_type: "codex:codex-rescue"`, a prompt that starts with `--wait` plus the entry's `--effort` and `--model` flags, a read-only first sentence, and the full filled template below. If the slot falls back to `sonnet`, say so in the Reviewers list and note that the panel ran single-family, so agreement carries less weight. Do not block the review on a fallback.
+A Codex reviewer runs as a Codex slot: `subagent_type: "codex:codex-rescue"`, a prompt that starts with `--wait` plus the entry's `--effort` and its resolved `--model` flags, a read-only first sentence, and the full filled template below. If the slot falls back to its Claude model, say so in the Reviewers list and note that the panel ran single-family, so agreement carries less weight. Do not block the review on a fallback.
 
 Read `references/reviewer-prompt.md` and fill in the same template for every reviewer with the stated intent, the diff or file contents, the rubric from `references/rubric.md`, and the code-quality lens from `references/code-quality-review.md`.
 
@@ -56,7 +57,7 @@ You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator
 > [The stated intent paragraph from Step 2]
 
 ### Reviewers
-- Reviewer [label]: [model and effort, such as `opus/xhigh` or `codex/xhigh`, or `sonnet (codex fallback: <reason>)`], [N findings] (one bullet per reviewer)
+- Reviewer [label]: [model and effort, such as `opus/xhigh` or `codex:astra/xhigh`, or `opus/xhigh (codex fallback: <reason>)`], [N findings] (one bullet per reviewer)
 
 ### Act On
 [Each: description, which models raised it, why it matters.]

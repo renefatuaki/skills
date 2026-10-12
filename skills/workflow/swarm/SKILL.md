@@ -1,6 +1,7 @@
 ---
 name: swarm
 description: "Fan out N parallel workers, drain them, and return one report. Use for /swarm, 'swarm this', or parallel coverage, races, gauntlets, and exploration."
+allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *)
 disable-model-invocation: true
 ---
 
@@ -22,7 +23,7 @@ Open a todolist with one entry per phase before launching anything.
 1. State the done predicate and the artifact or report the swarm must return.
 2. Choose the shape. Partition into slices, race N workers on identical briefs, or mix both. For a race or mixed shape, declare `first pass`, `rank all`, or `best-of` before spawning.
 3. Set N from the user or derive it from the shape. N is total workers. All N run on this machine, so a large N shares its CPU, memory, ports, and API rate limits. Batch the spawns when the machine or the limits cannot take N at once.
-4. Pick the worker model from the `swarm workers` line in `~/.claude/rules/models.md`. Resolve it per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`. If the rule or that line is missing, use `sonnet/high`. For a model race, name each arm's model up front. A `codex` arm, such as `codex/high`, is a Codex slot.
+4. Pick the worker model from the `swarm workers` line in `~/.claude/rules/models.md`. Resolve it per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`. If the rule or that line is missing, use `sonnet/high`. For a model race, name each arm's model up front. A Codex arm, such as `codex:astra/high`, is a Codex slot.
 5. Give each worker its own writable output when it writes, and its own ports, `/tmp` subdirectory, and test data when it runs the app, since workers share this machine. When workers verify or measure commits, each brief names the exact SHAs. A measurement brief also names the method (sample count, what one sample is, order). The worker records both in its result.
 
 ## Phase B: Fan out

@@ -80,7 +80,7 @@ One GitHub issue, the ticket, per run. This playbook takes it over in its own wo
 
    Work a subagent reported stays out of the branch. The `issue` skill creates a ticket for it and step 13 names it. When the ticket cannot be finished without it, link it with `gh issue edit <number> --add-blocked-by <new-number>` and go to step 13 as Blocked.
 10. **Get unstuck.** A test or a hook that stays red after two fixes on one premise goes to `principle-attack-the-premise` before the next fix. When it is still red, or a subagent returns its census instead of a diff, the main thread asks the user with what was tried and what the census showed, and waits.
-11. **Review with interrogate.** Run the `interrogate` skill on every ticket, over `git diff origin/<base>...HEAD`, with its `interrogate reviewers` role, `opus/xhigh` and `codex/xhigh` by default. The intent of its step 2 comes from the ticket's title, its criteria and the design comment of step 7 when there is one. Each finding of the verdict goes one way.
+11. **Review with interrogate.** Run the `interrogate` skill on every ticket, over `git diff origin/<base>...HEAD`, with its `interrogate reviewers` role, `opus/xhigh` and `codex:astra/xhigh` by default. The intent of its step 2 comes from the ticket's title, its criteria and the design comment of step 7 when there is one. Each finding of the verdict goes one way.
     - **Act on, with a concrete path to the fix.** A fresh code subagent fixes it as in step 8, and step 9 integrates it, one commit per fix.
     - **Act on, about the design or the scope.** The Notes for the reviewer carry it as "needs your call".
     - **Consider.** The Notes for the reviewer carry it.
