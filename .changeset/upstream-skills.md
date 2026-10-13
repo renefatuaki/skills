@@ -1,5 +1,0 @@
----
-"forge": major
----
-
-Adopt skills of pstack and Cursor Team Kit from cursor/plugins word for word, adapted to Claude Code through the mapping in UPSTREAM.md. The 24 principles of pstack live under `skills/principles/`, each named `principle-<slug>`. The workflow category holds how, why, architect, arena, interrogate, swarm, blast-radius, figure-it-out, tdd and show-me-your-work. The verification category holds control-ui, control-cli and verify-this from Cursor Team Kit, create-verification-skill, maintain-verification-skill and benchmark-checklist. The meta category holds reflect, correct, recall, automate-me, teach, bro and setup-models, which writes the model and the effort of each role to `~/.claude/rules/models.md`. The github category holds loop-on-ci from Cursor Team Kit, the ci-watcher agent watches the checks of a pull request, the docs category holds unslop and technical-writing, and the clean-code category holds typescript-best-practices. `pnpm run check-upstream` lists, for every copied file, the upstream commits since the base commit that touched it and prints their diff.
