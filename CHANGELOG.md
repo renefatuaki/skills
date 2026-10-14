@@ -1,5 +1,11 @@
 # forge
 
+## 1.1.0
+
+### Minor Changes
+
+- b5738b9: The `pull-request` skill posts one comment with before and after screenshots of every screen a branch changes. It captures the base and the head, a web application on desktop and on mobile. It keeps the images on the orphan branch `pr-assets` and rewrites the same comment when a revision changes the screens again.
+
 ## 1.0.0
 
 ### Major Changes
