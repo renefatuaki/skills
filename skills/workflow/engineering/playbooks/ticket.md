@@ -84,7 +84,7 @@ One GitHub issue, the ticket, per run. This playbook takes it over in its own wo
     - **Act on, with a concrete path to the fix.** A fresh code subagent fixes it as in step 8, and step 9 integrates it, one commit per fix.
     - **Act on, about the design or the scope.** The Notes for the reviewer carry it as "needs your call".
     - **Consider.** The Notes for the reviewer carry it.
-    - **Noted and Dismissed.** The Notes for the reviewer carry them with their reasons, in a `<details>` block.
+    - **Noted and Dismissed.** The Notes for the reviewer carry them with their reasons, in the `<details>` block Review history of the `pull-request` skill.
 
     Then a reviewer of the model family that did not write the fixes re-checks the fixed Act on findings once, with that family's entry of the `interrogate reviewers` role, per `references/model-roles.md`. What it still finds goes to the Notes for the reviewer. There is no second round. A panel that ran single-family says so in the Notes for the reviewer.
 12. **Check the blast radius.** When the diff changes a schema, a public API, the dependencies or a flag, run the `blast-radius` skill. Its result feeds the Blast radius section of the draft.
