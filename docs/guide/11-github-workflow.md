@@ -52,7 +52,7 @@ A ticket that already has a branch or an open PR resumes where it stopped. A tic
 
 ## Open the draft
 
-The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill opens one draft per branch against `dev` when the remote has it, otherwise against the default branch. Its description carries a test plan, the steps a reviewer runs in the running app before approving. The skill marks the draft ready for review on its own when all of these hold.
+The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill opens one draft per branch against `dev` when the remote has it, otherwise against the default branch. Its description carries a test plan, the steps a reviewer runs in the running app before approving. When the branch changes what the application shows, the skill posts a comment with every changed screen before and after, a web application on desktop and on mobile. It rewrites that comment after each push that changes the screens. The skill marks the draft ready for review on its own when all of these hold.
 
 - Nothing waits for you, such as a finding marked "needs your call".
 - No assumption is open.
