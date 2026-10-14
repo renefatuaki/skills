@@ -71,7 +71,7 @@ the draft is ready
 /pull-request-review 42
 ```
 
-The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself and hands you only those that need a physical device, a sense it lacks, an account it cannot get or another person, each with its reason. Then it posts the result as a comment or a request for changes. The approval stays your own click on GitHub.
+The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with its reason in parentheses. Then it posts the result as a comment or a request for changes. The approval stays your own click on GitHub.
 
 ## Plan a day of tickets
 
