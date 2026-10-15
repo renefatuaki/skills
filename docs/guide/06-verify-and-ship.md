@@ -97,7 +97,7 @@ Apps change and feature maps rot. Run this at least once a day, ideally from a s
 /engineering open the pr. evidence in the description.
 ```
 
-The [Opening a PR playbook](../../skills/workflow/engineering/playbooks/pull-request.md) cleans the diff with `clean-code` and `code-comments`, commits what is still open with the `commit` skill, and has the [`pull-request`](../../skills/github/pull-request/SKILL.md) skill open one draft per branch against its base. It never rebases and never stacks. The description carries a test plan, the steps a reviewer runs in the running app before approving. Five narrow PRs beat one fat one.
+The [Opening a PR playbook](../../skills/workflow/engineering/playbooks/pull-request.md) cleans the diff with `clean-code` and `code-comments`, commits what is still open with the `commit` skill, and has the [`pull-request`](../../skills/github/pull-request/SKILL.md) skill open one draft per branch against its base. It never rebases a branch onto its base. A branch based on another PR's branch becomes a layer of a [stacked PR](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs), and a push to a lower layer rebases the layers above with the `gh stack` extension. The description carries a test plan, the steps a reviewer runs in the running app before approving. Five narrow PRs beat one fat one.
 
 ## Get the checks green with `/loop-on-ci`
 
