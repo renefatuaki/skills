@@ -5,7 +5,7 @@ allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/read-board.mts *)
 disable-model-invocation: true
 ---
 
-The plan for one day of work on a GitHub Project. This skill reads the open tickets of the board, asks the user for today's three budgets, ranks the tickets, groups them into tracks that run side by side, and shows one table per track in the format of [assets/plan.md](assets/plan.md). It only reads. The board is the state, so every run plans from what the board says now. A ticket of the plan starts with `/engineering <issue-url>`, which works it through the Ticket playbook of the engineering skill.
+The plan for one day of work on a GitHub Project. This skill reads the open tickets of the board, asks the user for today's three budgets and the Sizes to run, ranks the tickets, groups them into tracks that run side by side, and shows one table per track in the format of [assets/plan.md](assets/plan.md). It only reads. The board is the state, so every run plans from what the board says now. A ticket of the plan starts with `/engineering <issue-url>`, which works it through the Ticket playbook of the engineering skill.
 
 ## Steps
 
@@ -17,10 +17,16 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    ```
 
    It prints every open issue of the project that is not Done and is assigned to the user or to nobody, from every repository the project holds. `blockedBy` holds open blockers only, and `pullRequests` the open pull requests that close the issue.
-3. **Pick the candidates.** Every issue without sub-issues is a ticket, and its Status decides whether it is a candidate.
+3. **Ask the budgets.** Read the time with `date` and tell the user the time and how many tickets wait in each Status. Then ask all four questions in one call of the AskUserQuestion tool. The time shapes the options you offer, so a late start gets shorter ones. A question the user's request already answers is not asked. The answers alone are the budgets.
+   - **Total.** How long sessions may run today, as a duration.
+   - **Questions.** How long the user answers the questions of running sessions, as a duration. One option is "None (unattended)", which makes the run unattended.
+   - **Review.** How long the user reviews pull requests, as a duration.
+   - **Sizes.** Which Sizes run today. All Sizes is the first option, XS and S another. Any answer but all Sizes is a size filter.
+4. **Pick the candidates.** Every issue without sub-issues is a ticket, and its Status decides whether it is a candidate.
    - A ticket In review, In progress or Ready is a candidate.
-   - A Backlog ticket is a candidate only when no ticket on the whole board is Ready. A ticket without a Status counts as Backlog.
+   - A Backlog ticket is a candidate when no ticket on the whole board is Ready, or when a size filter holds and its Size passes it. A ticket without a Status counts as Backlog.
    - A Blocked ticket is never a candidate.
+   - A size filter keeps only the candidates whose Size it names, and every ticket In review or In progress. A ticket without a Size passes no size filter.
 
    A candidate leaves the plan for the Not today list when one of its open blockers is no candidate. The blockers of a ticket are the issues in `blockedBy`, whatever its body says.
 
@@ -28,10 +34,6 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    - An epic with a candidate sub-issue is planned through its candidates. It has **begun** when one of its sub-issues is closed, which `subIssues.completed` counts, or is In progress or In review.
    - An epic with open sub-issues and no candidate among them waits, and the plan leaves it out.
    - An epic whose sub-issues are all closed, where `subIssues.completed` equals `subIssues.total`, is **finished**. The plan names it under Gaps as ready to be closed.
-4. **Ask the budgets.** Read the time with `date` and tell the user the time and how many candidates wait. Then ask all three budgets in one call of the AskUserQuestion tool, each as a duration. The time shapes the options you offer, so a late start gets shorter ones. The answers alone are the budgets.
-   - **Total.** How long sessions may run today.
-   - **Questions.** How long the user answers the questions of running sessions.
-   - **Review.** How long the user reviews pull requests.
 5. **Estimate every candidate.** Its Size gives three values.
 
    | Size | Run | Questions | Review |
@@ -50,6 +52,10 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    Two kinds of ticket get their values another way.
    - A ticket without a Size gets all three values from its body.
    - A ticket In review costs review and nothing else. That is the review of its open pull request, when it has one, and everything its body leaves for the user to do.
+
+   An unattended run asks the user nothing, so its tickets cost no questions. A candidate with an open decision or with work only the user can do goes to Not today with its cause, and so does every candidate it blocks. A ticket In review stays.
+   - **Open decision.** A label such as `question`. A section such as Open questions or To decide that still holds an entry without an answer. An unchecked task item that asks to decide, choose or confirm. A criterion that can be read two ways, two criteria that contradict each other, or several approaches that lead to a result the user would see differently.
+   - **Work only the user can do.** A step the run cannot finish without that needs a credential, a secret or an account the agent lacks, a payment, a physical device, a store listing, access to production such as a deploy or its data, or another person. A check the body leaves to the review does not count.
 6. **Rank.** The ranking orders units. A candidate that belongs to no epic is a unit of its own. An epic with its candidate sub-issues is one unit, so they stay together. The rules apply in order, and a rule decides only between units that every rule before it ranks the same.
    1. In review, because a review releases finished work.
    2. Priority Critical.
@@ -62,7 +68,8 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
 
    The candidate sub-issues of an epic follow rules 5 to 8 among themselves. The epic ranks with its own Priority and with the layer and the Size of the first of them.
 7. **Build the tracks.** A track is a row of tickets that run one after another. Tracks run side by side.
-   - Two tickets collide when they belong to the same repository, unless both carry `app: <name>` labels and name no common application.
+   - A ticket lands in each repository its `repo: <name>` labels name, because that is where its code changes. A label names the repository its description names, as `gh label list --repo <repository> --json name,description` prints it, such as `repo: backend` with "Affects grocery-lens-elysia". A description that names none leaves `<name>` as the repository. Without such a label the ticket lands in its own repository.
+   - Two tickets collide when they land in a common repository, unless both carry `app: <name>` labels and name no common application.
    - Tickets that collide share a track, in rank order. A ticket that collides with tickets of several tracks joins those tracks into one. A ticket and its blocker share a track too. The ticket starts once the pull request of its blocker is merged, and its Reason says so.
    - An epic is a track of its own that holds its sub-issues and nothing else, and it runs alone. It starts when every ticket ranked before it has ended, and no ticket ranked after it starts before its last candidate sub-issue has ended.
    - Tickets In review form no track. They are the Reviews table, and nothing waits for them.
@@ -72,6 +79,6 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    - Review bounds the sum over every placed ticket and every review.
    - A ticket that exceeds a budget goes to Not today with the name of that budget, and the walk goes on with the next unit.
    - An epic takes its candidate sub-issues in order. When all of them are placed, the walk goes on with the next unit. When the first of them exceeds a budget, the epic does not start today, all of them go to Not today with the name of that budget, and the walk goes on as well. When a later one exceeds a budget, the epic has started and stops there. Its candidate sub-issues left go to Not today as continuing on another day, and so does every unit ranked after the epic.
-9. **Show the plan** as the reply, in the format of [assets/plan.md](assets/plan.md) and in English. The Reason of a ticket names the rule that put it where it stands. Gaps name every candidate without a Size or a Priority, every candidate without an `app: <name>` label whose repository holds another ticket that carries one, and every finished epic.
+9. **Show the plan** as the reply, in the format of [assets/plan.md](assets/plan.md) and in English. The Reason of a ticket names the rule that put it where it stands. Gaps name every candidate without a Size or a Priority, every candidate without an `app: <name>` label that lands in a repository where another ticket carries one, and every finished epic.
 
 Done when every candidate stands in a table or under Not today with its reason, every Blocked ticket stands under Not today, the planned sums stand against the three budgets, and every gap is named.

@@ -79,7 +79,7 @@ The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) sk
 /today-issues
 ```
 
-The [`today-issues`](../../skills/github/today-issues/SKILL.md) skill reads the open tickets of the board and asks for today's three budgets: how long sessions may run, how long you answer their questions, and how long you review PRs. It ranks the tickets and groups them into tracks that run side by side, one table per track. A ticket that does not fit a budget lands under Not today with the reason. The skill only reads. Start each ticket of the plan with its URL:
+The [`today-issues`](../../skills/github/today-issues/SKILL.md) skill reads the open tickets of the board and asks for today's three budgets: how long sessions may run, how long you answer their questions, and how long you review PRs. It also asks which Sizes run today. Naming some, such as XS and S, pulls tickets of those Sizes from Backlog too. A questions budget of none plans an unattended run, which leaves out every ticket with an open decision or with work only you can do. It ranks the tickets and groups them into tracks that run side by side, one table per track. Tickets that change code in the same repository, named by their `repo: <name>` label, share a track. A ticket that does not fit a budget lands under Not today with the reason. The skill only reads. Start each ticket of the plan with its URL:
 
 ```text
 /engineering https://github.com/<owner>/<repo>/issues/42
