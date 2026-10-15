@@ -63,10 +63,33 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    **Before and after.** When the diff changes what the application shows, post one comment with every changed screen before and after, in the format of [assets/before-after.md](assets/before-after.md). When you are unsure, capture.
    - **Capture** the base and the head, each in its own worktree with the application running. Drop every pair whose images are identical.
      - A web application gets `desktop` at the viewport the prerequisites name, otherwise 1280x800, and `mobile` at 360x800. Use the `control-ui` skill, or `playwright screenshot --channel chrome --viewport-size <width>,<height> <url> <file>` through the one-off runner of the `package-manager` skill. Chrome's own `--headless --screenshot` renders a page at least 500 pixels wide and never shows the mobile view.
-     - An iOS app runs on the simulator of the prerequisites. `xcrun simctl status_bar <device> override --time 9:41` keeps the clock equal, `xcrun simctl io <device> screenshot <file>` takes each image.
+     - An iOS app runs on the simulator of the prerequisites, `<device>` its UDID from `xcrun simctl list devices`. `xcrun simctl bootstatus <device> -b` boots it and waits until it is ready, then `xcrun simctl status_bar <device> override --time 9:41` keeps the clock equal. Build, install and launch the app from each worktree before its images, the base first, so every image shows the app of its own worktree. Then set up the State of the prerequisites, open each screen and take its image.
+
+       ```sh
+       xcodebuild build \
+         -scheme <scheme> \
+         -destination "platform=iOS Simulator,id=<device>" \
+         -derivedDataPath <worktree>/DerivedData
+
+       xcrun simctl uninstall <device> <bundle-id>
+       xcrun simctl install <device> <worktree>/DerivedData/Build/Products/<configuration>-iphonesimulator/<app>.app
+       xcrun simctl launch <device> <bundle-id>
+
+       xcrun simctl io <device> screenshot <file>
+       ```
+
      - Any other platform uses the tool of its test steps.
    - **Upload** the images to `pr-<number>/<head7>/` on the orphan branch `pr-assets`, created on the first upload. Commit and push with `--no-verify`, because the repository's hooks also run there. Never force the push. Then delete the local `pr-assets` branch, so the user's repository keeps no copy of it. Link each image as `https://github.com/<owner>/<repo>/blob/<full-sha>/<path>?raw=true`, with the full SHA of the `pr-assets` commit.
    - **Post.** The pull request has one such comment, found by its first line `<!-- forge:before-after -->`. Replace its body on every revision, otherwise post it. When no pair is left or the capture fails, write the marker and one line with the reason instead. Step 8 names the reason.
+   - **Check**, before step 7. When the first command below prints a file, the second must print 1. When the second prints 0, capture and post now.
+
+     ```sh
+     git diff --name-only origin/<base>...HEAD \
+       | grep -iE '(View|ViewController|Screen|Cell|Sheet|Modifier)\.swift$|\.(storyboard|xib|css|scss|sass|less|vue|svelte)$|\.xcassets/|(^|/)(ui|design|theme|components|pages|views|screens|layouts|styles)/'
+
+     gh pr view <number> --json comments \
+       --jq '[.comments[] | select(.body | startswith("<!-- forge:before-after -->"))] | length'
+     ```
 7. **Decide ready.** A draft this run opened or revised turns ready for review without asking when every condition below holds. A pull request that is already ready for review skips this step.
    - **Nothing waits for the user.** The user did not ask for a draft. Notes for the reviewer names no obstacle and no decision the user has to make, such as a blocked Ticket run or a finding marked "needs your call".
    - **No assumption is open.** Step 8 will list no value the repository did not settle, and no uncommitted file was left out of the pull request.
@@ -124,4 +147,4 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
    When the user called it ready and step 7 did not already run the test steps against the current head, test what an agent can. When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, which runs those steps and ticks the passed ones. When every step needs a person, end here and say that the review is theirs to start.
 
-Done when the draft exists on GitHub, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, or step 8 names the reason, and the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
+Done when the draft exists on GitHub, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the check of step 6 passes, and the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
