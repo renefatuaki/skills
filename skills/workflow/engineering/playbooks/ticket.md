@@ -38,10 +38,13 @@ One GitHub issue, the ticket, per run. This playbook takes it over in its own wo
    - **Someone else is assigned.** `assignees` holds logins, and the logged-in user, `gh api user --jq .login`, is not among them. Name the person and offer to assign the logged-in user instead. Only the user's yes makes it their ticket.
 5. **Take the ticket over.** The base is `dev` when `git ls-remote --heads origin dev` lists it, otherwise the default branch from `gh repo view --json defaultBranchRef`. Run `git fetch origin <base>`. The ticket's worktree is `../<repo>-<number>`, next to the main checkout, and every later step runs in it.
    - **Resume** when `closedByPullRequestsReferences` holds an open pull request, or `git branch --all --list '*/<number>-*'` finds a branch. Use the ticket's worktree when it exists, otherwise add it for that branch with `git worktree add ../<repo>-<number> <branch>`. Read the pull request with `gh pr view <branch> --json body,comments`, and treat every criterion whose test is green as done. Steps 7 to 14 then work the rest. Step 7 keeps a design the issue's comments already hold, and Opening a PR revises the draft in place of opening one.
-   - **Start** otherwise. The branch is `<type>/<number>-<slug>` from `origin/<base>`, in a new worktree. The type comes from the label, `bug` gives `fix`, `feature` gives `feat`, `refactor` gives `refactor`, anything else gives `chore`. The slug is the title in lowercase ASCII, words joined by hyphens, cut to the words that name the ticket.
+   - **Start** otherwise. The branch is `<type>/<number>-<slug>` from `origin/<base>`, in a new worktree. The type comes from the label, `bug` gives `fix`, `feature` gives `feat`, `refactor` gives `refactor`, anything else gives `chore`. The slug is the title in lowercase ASCII, words joined by hyphens, cut to the words that name the ticket. Create the branch on GitHub as a branch of the issue, so the issue's Development section shows it and the pull request opened from it. A closing keyword such as `Closes #<number>` links only a pull request against the default branch, and a branch created with git alone is never linked. `<checkout>` is the repository of the main checkout, as `gh repo view --json nameWithOwner --jq .nameWithOwner` prints it.
 
      ```sh
-     git worktree add -b <branch> ../<repo>-<number> origin/<base>
+     gh issue develop <number> --repo <owner>/<repo> --branch-repo <checkout> --base <base> --name <branch>
+
+     git fetch origin <branch>
+     git worktree add --track -b <branch> ../<repo>-<number> origin/<branch>
      ```
 
    A new worktree lacks what git ignores. Install the dependencies in it with the "Install all" command of the `package-manager` skill, and copy the `.env*` files of the main checkout to the same paths in it.
