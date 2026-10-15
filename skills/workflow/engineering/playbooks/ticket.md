@@ -35,14 +35,14 @@ A run is in **auto** mode when the prompt says so, such as `/engineering <issue-
    Seven kinds of ticket are not started. Check for them in this order. If one applies, do not create a worktree and do not touch the board. Tell the user which case applies, add what the case asks for, and end.
    - **The issue is closed.** `state` is `CLOSED`. Say that the work is done.
    - **The issue is an epic.** `subIssuesSummary.total` is above zero. An epic is never implemented itself, its sub-issues are the tickets. Read them with `gh issue view <number> --json subIssues` and list the open ones.
-   - **A blocker is still open without a pull request to stack on.** An entry of `blockedBy` has `state` `OPEN`. Read the open pull request of each open blocker through the branch its issue links, in the repository of this checkout.
+   - **A blocker is still open without a pull request to stack on.** An entry of `blockedBy` has `state` `OPEN`. Read the newest pull request of each open blocker through the branch its issue links, in the repository of this checkout.
 
      ```sh
      gh issue develop --list <blocker> --repo <owner>/<repo>
-     gh pr list --head <branch> --state open --json number,headRefName,baseRefName,isCrossRepository
+     gh pr list --head <branch> --state all --limit 1 --json number,state,headRefName,baseRefName,isCrossRepository
      ```
 
-     When every open blocker has one, none from a fork, and each of them except the lowest is based on the branch of another, the ticket is **stacked** and starts. It stacks on the top one, the pull request no other of them is based on. Otherwise name the blockers without a pull request. The ticket can start once each has one.
+     A blocker whose pull request is `MERGED` is done, because its issue closes only once the change reaches the default branch. When no blocker is left, the ticket starts on the trunk. When every one left has an `OPEN` pull request, none from a fork, and each of them except the lowest is based on the branch of another, the ticket is **stacked** and starts. It stacks on the top one, the pull request no other of them is based on. Otherwise name the blockers without a pull request. The ticket can start once each has one.
    - **The ticket is Blocked.** An entry of `projectItems` has `status.name` `Blocked`. A person set that status, and the comment on the issue says what is missing. Point to that comment.
    - **Someone else is assigned.** `assignees` holds logins, and the logged-in user, `gh api user --jq .login`, is not among them. Name the person and offer to assign the logged-in user instead. Only the user's yes makes it their ticket. An auto run makes no offer.
    - **The ticket changes several repositories.** It carries more than one `repo: <name>` label. Name the repositories and offer to split it with the `issue` skill into an epic with one sub-issue per repository, each blocked by the one whose change it needs. An auto run makes no offer.

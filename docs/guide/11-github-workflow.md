@@ -39,7 +39,7 @@ A board with the Status, Priority and Size fields comes from the [`project`](../
 
 The [Ticket playbook](../../skills/workflow/engineering/playbooks/ticket.md) runs on its own and asks only where its steps say so.
 
-1. It stops on a ticket that is closed, an epic, blocked by an open issue without an open PR, set to Blocked, or assigned to someone else, and says which case applies.
+1. It stops on a ticket that is closed, an epic, blocked by an open issue whose PR is neither open nor merged, set to Blocked, or assigned to someone else, and says which case applies.
 2. It takes the ticket over in its own worktree `../<repo>-<number>`, on a branch `<type>/<number>-<slug>` off `dev`, or off the default branch when the remote has no `dev`. A ticket whose blockers all have open PRs branches off the top one instead, so its PR becomes the next layer of a stack. The branch is created as a branch of the issue, so the issue links it and the PR opened from it. It sets the Status to In progress and assigns you.
 3. It asks you through the grilling skill where a criterion reads two ways, two criteria contradict each other, or several approaches lead to a result you would see differently. It may also ask whether to set up a test runner or a verification skill.
 4. It opens the playbook the label names. `bug` gives Bug fix, `refactor` gives Refactoring, and every other label gives Feature.
