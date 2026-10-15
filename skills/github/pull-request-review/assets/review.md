@@ -6,8 +6,8 @@
 | # | Step | Result | Tested by |
 |---|---|---|---|
 | 1 | <action> | Passed | Agent |
-| 2 | <action> | Failed | Reviewer |
-| 3 | <action> | Blocked | Reviewer |
+| 2 | <action> | Failed | Reviewer (needs a person: <reason>) |
+| 3 | <action> | Blocked | Reviewer (needs a person: <reason>) |
 
 ### Findings
 

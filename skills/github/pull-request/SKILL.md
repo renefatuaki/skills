@@ -21,10 +21,11 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - **Blast radius** holds the one or two sentences the template comment asks for. They condense the result of the [blast-radius](../../workflow/blast-radius/SKILL.md) skill when it ran, otherwise they come from the diff.
    - **Automated coverage** names the tests that exercise the change, added, changed or already there, and the CI checks that run them.
    - **Prerequisites** take the block of each platform whose paths the diff touches, from [assets/prerequisites/](assets/prerequisites/). `ios.md` for an app built with Xcode, `web.md` for an application in the browser, `api.md` for a service called over the network, `cli.md` for a command line tool or a library. A change that fits none gets a plain list of what the reviewer needs. Every value comes from the repository, such as the scheme from the Xcode project or the start command from `package.json`.
-   - **Steps** come from the diff and from the acceptance criteria and the verification of the issue, minus what the automated coverage proves. A reviewer follows each step without reading the code, and each starts where the step before it ended. A step against an API carries its request under the checkbox as an `http` code block with method, URL, headers and body, and its expected result names the status and the response. When no step is left, such as for a refactoring, documentation or a change the tests prove completely, Steps holds the sentence with the reason and Prerequisites are left out.
+   - **Steps** come from the diff and from the acceptance criteria and the verification of the issue, minus what the automated coverage proves. A reviewer follows each step without reading the code, and each starts where the step before it ended. A step against an API carries its request under the checkbox as an `http` code block with method, URL, headers and body, and its expected result names the status and the response. A step is written for an agent to run. Only a step that needs what an agent cannot get ends its checkbox line with `(needs a person: <reason>)`, such as `(needs a person: a physical iPhone for the camera)`. That is a physical device or its sensors, an account or a payment, or the action or the judgment of another person, such as how a sound or a vibration feels. A VoiceOver step names the label, the value, the hint or the traits an element must have, which an agent reads from the accessibility tree and checks with `performAccessibilityAudit()`, so it needs no person. When no step is left, such as for a refactoring, documentation or a change the tests prove completely, Steps holds the sentence with the reason and Prerequisites are left out.
    - **Notes for the reviewer** are left out when empty.
+   - **Collapsed sections.** Tradeoffs, Automated coverage and Prerequisites put their content under the heading into `<details>` … `</details>`, with a one-line `<summary>` of the gist and a blank line after it. Code in the summary is `<code>`, not backticks. Notes for the reviewer collapse only the review history, into `<details><summary>Review history</summary>` … `</details>`.
    - **A pull request that already exists** is revised from what it says. Read its title and body first, then bring every section up to date with the branch and keep what still holds, whoever wrote it.
-   - Cut pass, once the sections are written. Reread the draft and delete every sentence whose removal changes neither what the reviewer does nor how they judge a step.
+   - Cut pass, once the sections are written. Reread the draft and delete every sentence, collapsed or not, whose removal changes neither what the reviewer does nor how they judge a step.
    - Metadata. The assignee is the author. Label and milestone are the issue's. The reviewer is the one the user named and waits for step 8.
 6. **Open the draft**, without asking. Push the branch, then create the pull request, the body from a quoted heredoc. A flag without a value is left out.
 
@@ -60,14 +61,48 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    ```
 
    **Before and after.** When the diff changes what the application shows, post one comment with every changed screen before and after, in the format of [assets/before-after.md](assets/before-after.md). When you are unsure, capture.
-   - **Capture** the base and the head, each in its own worktree with the application running. A web application gets `desktop` at the viewport the prerequisites name, otherwise 1280x800, and `mobile` at 360x800. Use the `control-ui` skill, or `playwright screenshot --channel chrome --viewport-size <width>,<height> <url> <file>` through the one-off runner of the `package-manager` skill. Chrome's own `--headless --screenshot` renders a page at least 500 pixels wide and never shows the mobile view. Drop every pair whose images are identical.
+   - **Capture** the base and the head, each in its own worktree with the application running. Drop every pair whose images are identical.
+     - A web application gets `desktop` at the viewport the prerequisites name, otherwise 1280x800, and `mobile` at 360x800. Use the `control-ui` skill, or `playwright screenshot --channel chrome --viewport-size <width>,<height> <url> <file>` through the one-off runner of the `package-manager` skill. Chrome's own `--headless --screenshot` renders a page at least 500 pixels wide and never shows the mobile view.
+     - An iOS app runs on the simulator of the prerequisites, `<device>` its UDID from `xcrun simctl list devices`. `xcrun simctl bootstatus <device> -b` boots it and waits until it is ready, then `xcrun simctl status_bar <device> override --time 9:41` keeps the clock equal. Build, install and launch the app from each worktree before its images, the base first, so every image shows the app of its own worktree. Then set up the State of the prerequisites, open each screen and take its image.
+
+       ```sh
+       xcodebuild build \
+         -scheme <scheme> \
+         -destination "platform=iOS Simulator,id=<device>" \
+         -derivedDataPath <worktree>/DerivedData
+
+       xcrun simctl uninstall <device> <bundle-id>
+       xcrun simctl install <device> <worktree>/DerivedData/Build/Products/<configuration>-iphonesimulator/<app>.app
+       xcrun simctl launch <device> <bundle-id>
+
+       xcrun simctl io <device> screenshot <file>
+       ```
+
+     - Any other platform uses the tool of its test steps.
    - **Upload** the images to `pr-<number>/<head7>/` on the orphan branch `pr-assets`, created on the first upload. Commit and push with `--no-verify`, because the repository's hooks also run there. Never force the push. Then delete the local `pr-assets` branch, so the user's repository keeps no copy of it. Link each image as `https://github.com/<owner>/<repo>/blob/<full-sha>/<path>?raw=true`, with the full SHA of the `pr-assets` commit.
    - **Post.** The pull request has one such comment, found by its first line `<!-- forge:before-after -->`. Replace its body on every revision, otherwise post it. When no pair is left or the capture fails, write the marker and one line with the reason instead. Step 8 names the reason.
+   - **Check**, before step 7. When the first command below prints a file, the second must print 1. When the second prints 0, capture and post now.
+
+     ```sh
+     git diff --name-only origin/<base>...HEAD \
+       | grep -iE '(View|ViewController|Screen|Cell|Sheet|Modifier)\.swift$|\.(storyboard|xib|css|scss|sass|less|vue|svelte)$|\.xcassets/|(^|/)(ui|design|theme|components|pages|views|screens|layouts|styles)/'
+
+     gh pr view <number> --json comments \
+       --jq '[.comments[] | select(.body | startswith("<!-- forge:before-after -->"))] | length'
+     ```
 7. **Decide ready.** A draft this run opened or revised turns ready for review without asking when every condition below holds. A pull request that is already ready for review skips this step.
-   - **Nothing waits for the user.** The user did not ask for a draft. Notes for the reviewer names no obstacle and no decision the user has to make, such as a blocked Ticket run or a finding marked "needs your call".
+   - **Nothing waits for the user.** The user did not ask for a draft. "Pull requests only" means do not merge. It does not ask for a draft. Notes for the reviewer names no obstacle and no decision the user has to make, such as a blocked Ticket run or a finding marked "needs your call".
    - **No assumption is open.** Step 8 will list no value the repository did not settle, and no uncommitted file was left out of the pull request.
    - **Every check passes.** Spawn the `forge:ci-watcher` agent for this pull request and wait for its report, which says whether every check passed and quotes the failure when one did not. A pull request without checks meets this condition. When a check failed, read [loop-on-ci](../loop-on-ci/SKILL.md) and follow it on this pull request until every check passes. Commit each fix with the `commit` skill. Where loop-on-ci says main, it means the base of step 3, merged without a rebase. When two fixes for the same failure did not turn it green, stop, and the pull request stays a draft.
-   - **Every test step you can run passes.** When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, without its step 6, which hands steps to a person, and without the confirmation its step 8 asks for after a failed step, because on your own pull request the result is only a comment. It runs those steps, ticks the passed ones and posts its result. A step that failed, or that it could not run, keeps the draft. Steps that need a person do not count here, they stay for the reviewer. A test plan without a step you can run meets this condition.
+   - **Every test step you can run passes.** When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, without its step 6, which hands steps to a person, and without the confirmation its step 8 asks for after a failed step, because on your own pull request the result is only a comment. It runs those steps, ticks the passed ones and posts its result. A step that failed, or that it could not run, keeps the draft. Only a step that step 5 marks `(needs a person: <reason>)` stays for the reviewer. An unattended session runs every other step too. A test plan without a step you can run meets this condition.
+
+   After the run, every unticked step that did not fail ends its checkbox line with `(needs a person: <reason>)`, also when the pull request stays a draft. `needs a person` without a reason does not count. Add the missing ones with `gh pr edit`, until the command below prints only the failed steps.
+
+   ```sh
+   gh pr view <number> --json body --jq .body \
+     | grep -E '^\s*[-*] \[ \] [0-9]+\.' \
+     | grep -vE '\(needs a person: [^)]+\)'
+   ```
 
    Check the conditions in this order. The first that fails ends this step, and the pull request stays a draft. When all hold, mark it ready with step 9, without waiting for the user.
 8. **Hand over.** Reply with the URL and the title, whether it is ready for review or still a draft, and for a draft the condition of step 7 that kept it. Then the assumptions, one line each.
@@ -118,6 +153,6 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
      --single-select-option-id <option-id>
    ```
 
-   When the user called it ready and step 7 did not already run the test steps against the current head, test what an agent can. When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, which runs those steps and ticks the passed ones. When every step needs a person, end here and say that the review is theirs to start.
+   When the user called it ready and step 7 did not already run the test steps against the current head, test what an agent can. When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, which runs those steps and ticks the passed ones, then give every unticked step its reason as step 7 says. When every step needs a person, end here and say that the review is theirs to start.
 
-Done when the draft exists on GitHub, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, or step 8 names the reason, and the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
+Done when the draft exists on GitHub, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the check of step 6 passes, every unticked step of a tested plan that did not fail ends with `(needs a person: <reason>)`, the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.

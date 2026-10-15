@@ -5,7 +5,7 @@
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
-/** An item of a project that holds the issue, as `gh issue view --json projectItems` prints it. */
+/** An item of a project that holds the issue, as the `projectItems` of the issue in the GraphQL API return it, since `gh issue view --json projectItems` prints neither item id nor project id. */
 type ProjectItem = {
   id: string;
   project: { id: string; title: string };
@@ -23,6 +23,22 @@ type Change = { project: string; from: string | null; to: string };
 type Miss = { project: string; options: string[] };
 
 const USAGE = 'usage: github-issue-status.mts <issue-url> <status>';
+
+const PROJECT_ITEMS_QUERY = `query($owner: String!, $repo: String!, $number: Int!) {
+  repository(owner: $owner, name: $repo) {
+    issue(number: $number) {
+      projectItems(first: 100) {
+        nodes {
+          id
+          project { id title }
+          fieldValueByName(name: "Status") {
+            ... on ProjectV2ItemFieldSingleSelectValue { name optionId }
+          }
+        }
+      }
+    }
+  }
+}`;
 
 const STATUS_FIELD_QUERY = `query($projectId: ID!) {
   node(id: $projectId) {
@@ -45,10 +61,8 @@ if (positionals.length !== 2) {
 }
 
 // 2. Read the items of the issue, one per project that holds it.
-// https://cli.github.com/manual/gh_issue_view
-const issueView = gh(['issue', 'view', url, '--json', 'projectItems']);
-
-const items: ProjectItem[] = JSON.parse(issueView).projectItems;
+// https://docs.github.com/en/graphql/reference/objects.md#issue
+const items = readProjectItems(url);
 
 if (items.length === 0) {
   fail(`${url} belongs to no project`);
@@ -80,6 +94,50 @@ for (const item of items) {
 }
 
 console.log(JSON.stringify({ status, changed, missing }));
+
+/**
+ * Reads the items of an issue, one per project that holds it, with the ids that `gh issue view` leaves out.
+ * @see {@link https://docs.github.com/en/graphql/reference/objects.md#projectv2item | ProjectV2Item}
+ */
+function readProjectItems(issueUrl: string): ProjectItem[] {
+  const { owner, repo, number } = parseIssueUrl(issueUrl);
+  const body = JSON.stringify({
+    query: PROJECT_ITEMS_QUERY,
+    variables: { owner, repo, number },
+  });
+
+  const response = JSON.parse(gh(['api', 'graphql', '--input', '-'], body));
+
+  return response.data.repository.issue.projectItems.nodes.map(
+    (node: {
+      id: string;
+      project: { id: string; title: string };
+      fieldValueByName: { optionId: string; name: string } | null;
+    }): ProjectItem => ({
+      id: node.id,
+      project: node.project,
+      status: node.fieldValueByName,
+    }),
+  );
+}
+
+/** Splits `https://github.com/<owner>/<repo>/issues/<number>` into its parts. */
+function parseIssueUrl(issueUrl: string): {
+  owner: string;
+  repo: string;
+  number: number;
+} {
+  const match =
+    /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/issues\/(\d+)\/?$/.exec(
+      issueUrl,
+    );
+
+  if (!match) {
+    fail(`${issueUrl} is not a GitHub issue URL`);
+  }
+
+  return { owner: match[1], repo: match[2], number: Number(match[3]) };
+}
 
 /**
  * Reads the Status field of a project with its options.

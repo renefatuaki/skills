@@ -37,10 +37,10 @@ A board with the Status, Priority and Size fields comes from the [`project`](../
 /engineering #42
 ```
 
-The [Ticket playbook](../../skills/workflow/engineering/playbooks/ticket.md) runs unattended and asks only where its steps say so.
+The [Ticket playbook](../../skills/workflow/engineering/playbooks/ticket.md) runs on its own and asks only where its steps say so.
 
 1. It stops on a ticket that is closed, an epic, blocked by an open issue, set to Blocked, or assigned to someone else, and says which case applies.
-2. It takes the ticket over in its own worktree `../<repo>-<number>`, on a branch `<type>/<number>-<slug>` off `dev`, or off the default branch when the remote has no `dev`. It sets the Status to In progress and assigns you.
+2. It takes the ticket over in its own worktree `../<repo>-<number>`, on a branch `<type>/<number>-<slug>` off `dev`, or off the default branch when the remote has no `dev`. The branch is created as a branch of the issue, so the issue links it and the PR opened from it. It sets the Status to In progress and assigns you.
 3. It asks you through the grilling skill where a criterion reads two ways, two criteria contradict each other, or several approaches lead to a result you would see differently. It may also ask whether to set up a test runner or a verification skill.
 4. It opens the playbook the label names. `bug` gives Bug fix, `refactor` gives Refactoring, and every other label gives Feature.
 5. It builds each criterion in a fresh subagent, test first, with the test named after the criterion. A refactoring pins today's behaviour with a test before it changes the structure.
@@ -71,7 +71,7 @@ the draft is ready
 /pull-request-review 42
 ```
 
-The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It hands you the steps it cannot drive itself, and posts the result as a comment or a request for changes. The approval stays your own click on GitHub.
+The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with its reason in parentheses. Then it posts the result as a comment or a request for changes. The approval stays your own click on GitHub.
 
 ## Plan a day of tickets
 
@@ -79,10 +79,16 @@ The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) sk
 /today-issues
 ```
 
-The [`today-issues`](../../skills/github/today-issues/SKILL.md) skill reads the open tickets of the board and asks for today's three budgets: how long sessions may run, how long you answer their questions, and how long you review PRs. It ranks the tickets and groups them into tracks that run side by side, one table per track. A ticket that does not fit a budget lands under Not today with the reason. The skill only reads. Start each ticket of the plan with its URL:
+The [`today-issues`](../../skills/github/today-issues/SKILL.md) skill reads the open tickets of the board and asks for today's three budgets: how long sessions may run, how long you answer their questions, and how long you review PRs. It also asks which Sizes run today. Naming some, such as XS and S, pulls tickets of those Sizes from Backlog too. A questions budget of none plans an auto run, which leaves out every ticket with an open decision or with work only you can do. It ranks the tickets and groups them into tracks that run side by side, one table per track. Tickets that change code in the same repository, named by their `repo: <name>` label, share a track. A ticket that does not fit a budget lands under Not today with the reason. The skill only reads. Start each ticket of the plan with its URL:
 
 ```text
 /engineering https://github.com/<owner>/<repo>/issues/42
+```
+
+In an auto run, add `auto`. The session then asks nothing. A ticket that needs your decision ends as Blocked, with the question in a comment on the issue.
+
+```text
+/engineering https://github.com/<owner>/<repo>/issues/42 auto
 ```
 
 Back to the [guide index](./README.md).

@@ -75,6 +75,8 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 **Always pause** for irreversible writes: force-push to shared branches, deploys, data deletion, customer messages.
 
+**Production data.** No reads or writes of production data without the user's word. Use local or staging. When an open question needs production, the PR carries the query or command for the user.
+
 **Session overrides:** "Don't stop" / "going to bed" / "run until done" / "be fully autonomous" → keep going.
 
 **No is an acceptable answer.** Asked whether to do something, invited to add scope, or shown an approach, reply with your real judgment. Decline, push back, or say "this doesn't earn its place" when true. A recommendation is a judgment, not a validation. Agreement is not the default, candor over sycophancy.
