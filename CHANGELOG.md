@@ -1,5 +1,26 @@
 # forge
 
+## 1.2.0
+
+### Minor Changes
+
+- df00112: The `pull-request` skill collapses Tradeoffs, Automated coverage and Prerequisites into `<details>` blocks with a one-line summary, and moves the review history of the Notes for the reviewer into a collapsed block.
+- 10629ea: The `today-issues` skill asks which Sizes run today and pulls tickets of the named Sizes from Backlog too, and a questions budget of none plans an auto run without tickets that hold an open decision or work only the user can do. It splits tracks by the repository a ticket's `repo: <name>` label names.
+
+### Patch Changes
+
+- 2fd8014: The `pull-request` skill builds and installs the iOS app of each worktree before its before and after images, and checks that the before and after comment exists when the diff touches a UI file.
+- 0196180: The `pull-request` skill captures before and after images of an iOS app on the simulator.
+- 9f5d7a0: The `github-issue-status.mts` script of the engineering skill reads the project items of an issue through GraphQL, because `gh issue view --json projectItems` returns neither item id nor project id and made the script crash.
+- be8fd0d: The `pull-request` and `pull-request-review` skills mark every test step left to a person with `(needs a person: <reason>)`, and the `pull-request` skill checks that no unticked step lacks its reason. A VoiceOver step names the label, the value, the hint or the traits an agent checks from the accessibility tree.
+- f190027: The `pull-request-review` skill runs every test step itself and hands a step to the reviewer only for a named reason, such as a physical device or another person, written in parentheses. It tests VoiceOver itself from the accessibility tree, the reading order and `performAccessibilityAudit()`.
+- c6296d6: The core of the `engineering` skill reads and writes no production data without the user's word and uses local or staging instead.
+- 263d8b7: The `pull-request` skill reads a request for pull requests only as do not merge, so it no longer keeps such a pull request a draft.
+- 1100e7d: The `issue` skill gives an issue a `repo: <name>` label for the repository its code changes land in and splits work across several repositories into one sub-issue each. The Ticket playbook of the `engineering` skill starts a ticket only from the checkout of that repository, and `today-issues` leaves a ticket of several repositories out until it is split.
+- 7d228d8: The Ticket playbook of the `engineering` skill runs in auto mode when the prompt says `auto`. It asks nothing, takes its recommended answer where it would ask, and blocks a ticket that needs the user's decision.
+- b2bcc84: The Ticket playbook of the `engineering` skill creates the ticket's branch with `gh issue develop`, so the issue links the branch and the pull request opened from it.
+- 1e1383b: The Ticket playbook of the `engineering` skill runs interrogate on every diff, small ones included, and its reply names every skipped step with its reason.
+
 ## 1.1.0
 
 ### Minor Changes
