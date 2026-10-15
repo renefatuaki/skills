@@ -42,7 +42,7 @@
 
 ### Not today
 
-- [#<number> <title>](<url>). <the budget it exceeds, the open decision or the work only the user can do in an auto run, the open blocker it waits for, its Status Blocked, or the epic that continues on another day>
+- [#<number> <title>](<url>). <the budget it exceeds, the open decision or the work only the user can do in an auto run, the repositories it changes when it needs a split, the open blocker it waits for, its Status Blocked, or the epic that continues on another day>
 
 ### Gaps
 

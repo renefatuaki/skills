@@ -56,6 +56,13 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
        --color 56b4e9 \
        --description "Touches <path>"
      ```
+   - Repo labels. When the project holds issues of several repositories, the issue carries one `repo: <name>` label for the repository its code changes land in, which can differ from the repository it sits in, so the `today-issues` skill and the Ticket playbook of the engineering skill run it there. The label's description names that repository. Work that changes several repositories becomes an epic with one sub-issue per repository, each blocked by the one whose change it needs. A label the repository lacks is created after confirmation.
+
+     ```sh
+     gh label create "repo: <name>" \
+       --color e69f00 \
+       --description "Affects <repository>"
+     ```
    - Project. Every issue belongs to a project, from the request or the interview, chosen among `gh project list --owner <owner> --format json`. A single project is the choice without a question. An owner without a project, or a chosen project without Priority or Size in its field list, gets them first from [project](../project/SKILL.md), read and followed, which creates or extends the project after confirmation and returns the project number. The single-select fields of the project that describe the work, read with `gh project field-list <number> --owner <owner> --format json`, are yours to decide from the request and the interview, size by the number of acceptance criteria and the areas they touch, priority by how many users the problem hits and how often. Status is workflow state and stays with the project.
    - The epic form is the parent, created first. Then steps 6 to 8 run once per part, from its own template, with the epic as the parent and the epic's interview as the source of answers, without a second interview.
 7. **Present.** Ask for each metadata field still open first. A field stays empty only when the user says so. The project is never left empty. Then the route depends on who invoked this skill.
@@ -82,6 +89,7 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
      ```sh
      gh issue edit <number> \
        --add-label "app: <name>" \
+       --add-label "repo: <name>" \
        --parent <parent> \
        --add-blocked-by <blocker> \
        --add-blocking <blocked> \
@@ -94,6 +102,7 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
        --title "<title>" \
        --label <label> \
        --label "app: <name>" \
+       --label "repo: <name>" \
        --assignee <login> \
        --milestone "<title>" \
        --parent <number> \

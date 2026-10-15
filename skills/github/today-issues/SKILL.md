@@ -28,7 +28,7 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    - A Blocked ticket is never a candidate.
    - A size filter keeps only the candidates whose Size it names, and every ticket In review or In progress. A ticket without a Size passes no size filter.
 
-   A candidate leaves the plan for the Not today list when one of its open blockers is no candidate. The blockers of a ticket are the issues in `blockedBy`, whatever its body says.
+   A candidate with more than one `repo: <name>` label goes to Not today, to be split into one issue per repository with the `issue` skill. A candidate leaves the plan for the Not today list when one of its open blockers is no candidate. The blockers of a ticket are the issues in `blockedBy`, whatever its body says.
 
    An issue with sub-issues is an **epic**, whatever its label, and its sub-issues are the issues whose `parent.url` is its URL. An epic is never planned itself. Its sub-issues are, each by its own Status like any other ticket, and they decide what happens to the epic.
    - An epic with a candidate sub-issue is planned through its candidates. It has **begun** when one of its sub-issues is closed, which `subIssues.completed` counts, or is In progress or In review.
@@ -68,7 +68,7 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
 
    The candidate sub-issues of an epic follow rules 5 to 8 among themselves. The epic ranks with its own Priority and with the layer and the Size of the first of them.
 7. **Build the tracks.** A track is a row of tickets that run one after another. Tracks run side by side.
-   - A ticket lands in each repository its `repo: <name>` labels name, because that is where its code changes. A label names the repository its description names, as `gh label list --repo <repository> --json name,description` prints it, such as `repo: backend` with "Affects grocery-lens-elysia". A description that names none leaves `<name>` as the repository. Without such a label the ticket lands in its own repository.
+   - A ticket lands in the repository its `repo: <name>` label names, because that is where its code changes. A label names the repository its description names, as `gh label list --repo <repository> --json name,description` prints it, such as `repo: backend` with "Affects grocery-lens-elysia". A description that names none leaves `<name>` as the repository. Without such a label the ticket lands in its own repository.
    - Two tickets collide when they land in a common repository, unless both carry `app: <name>` labels and name no common application.
    - Tickets that collide share a track, in rank order. A ticket that collides with tickets of several tracks joins those tracks into one. A ticket and its blocker share a track too. The ticket starts once the pull request of its blocker is merged, and its Reason says so.
    - An epic is a track of its own that holds its sub-issues and nothing else, and it runs alone. It starts when every ticket ranked before it has ended, and no ticket ranked after it starts before its last candidate sub-issue has ended.
