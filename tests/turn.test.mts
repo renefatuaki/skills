@@ -54,6 +54,23 @@ const README_WITHOUT_OLD = README.replace(
   '',
 );
 
+/** A diagram of a package whose table links a source file of the package. */
+const FLOW = [
+  '# Flow',
+  '',
+  'How the package flows.',
+  '',
+  '```mermaid',
+  'flowchart TD',
+  '  main["Main"]',
+  '```',
+  '',
+  '| Element | Source |',
+  '| --- | --- |',
+  '| `main` | [`main.ts`](../src/main.ts) |',
+  '',
+].join('\n');
+
 const INTRO =
   'The forge Stop hook checked every file this turn changed. Fix each line below, then end the turn.';
 
@@ -82,6 +99,7 @@ runTurnTwo(story);
 runBaseline();
 runMidTurnCheckouts();
 runCheckoutFilters();
+runMonorepo();
 runDeadline();
 
 console.log(
@@ -466,6 +484,45 @@ function runCheckoutFilters(): void {
     'the file a rebase conflict resolution wrote is named, the file the base brought in is not',
     stop('c2', rebase),
     [INTRO, '', COMMENTS, `a.ts:3 ${DASH}`].join('\n'),
+  );
+}
+
+/** A session in a package of a monorepo keeps the package as the root of the rules for the files below it, and a file outside it takes its git top level. */
+function runMonorepo(): void {
+  const repo = makeRepo('mono', {
+    'README.md': '# Mono\n\nThe repository.\n',
+    'packages/app/README.md': '# App\n\nThe app.\n\n- [Guide](docs/guide.md)\n',
+    'packages/app/docs/guide.md': '# Guide\n\nA guide.\n',
+    'packages/app/docs/flow.md': FLOW,
+    'packages/app/src/main.ts': GOOD_TS,
+    'packages/lib/src/lib.ts': GOOD_TS,
+  });
+
+  const app = join(repo, 'packages', 'app');
+
+  hook(prompt('m1', app));
+  hook(edit('m1', app, join(app, 'docs/guide.md')));
+  write(join(app, 'docs/guide.md'), '# Guide\n\nA guide — here.\n');
+  write(join(app, 'src/main.ts'), `${GOOD_TS}export const more = 2;\n`);
+  write(join(repo, 'README.md'), '# Mono\n\nThe repository — here.\n');
+  write(join(repo, 'packages/lib/src/lib.ts'), BAD_TS);
+
+  expect(
+    'below the working directory the rules take it as their root, outside it the top level of the repository',
+    stop('m1', app),
+    [
+      INTRO,
+      '',
+      COMMENTS,
+      `${repo}/packages/lib/src/lib.ts:3 ${DASH}`,
+      '',
+      DOCS,
+      `${repo}/README.md:3 ${DASH}`,
+      `docs/guide.md:3 ${DASH}`,
+      '',
+      LINKED,
+      'docs/flow.md:5 linked src/main.ts',
+    ].join('\n'),
   );
 }
 

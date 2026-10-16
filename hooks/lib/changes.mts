@@ -19,7 +19,7 @@ import { dirname, join } from 'node:path';
 
 import { type SessionId, segmentsBelow } from './hook.mts';
 
-/** The files one turn changed below one root, absolute, sorted and unique, deleted files included. The root is a git top level, or the working directory for files outside any repository. */
+/** The files one turn changed that share one root for the rules, absolute, sorted and unique, deleted files included. The root is the working directory for a file in its checkout, so a package of a monorepo is the root of its own files, and the git top level for a file of any other checkout. */
 export type Changes = {
   root: string;
   files: string[];
@@ -163,18 +163,18 @@ export function turnChanges(session: SessionId, cwd: string): Changes[] {
     stopRoot,
   ]);
 
-  // 4. List the changed files of each checkout, without the worktrees of subagents.
-  return [...roots]
+  // 4. List the changed files of each checkout, without the worktrees of subagents, and group them by the root of their rules.
+  const files = [...roots]
     .filter(root => !AGENT_WORKTREE.test(root))
     .flatMap(root => {
       const edits = placed
         .filter(entry => entry.root === root)
         .map(({ edit }) => edit);
 
-      const files = changedIn(root, baselineFor(root, turn), edits);
-
-      return files.length > 0 ? [{ root, files }] : [];
+      return changedIn(root, baselineFor(root, turn), edits);
     });
+
+  return groupByRuleRoot(cwd, files);
 }
 
 /** Lists what a subagent with isolation changed in its own worktree, nothing for a subagent that works in a checkout the main session owns. */
@@ -185,15 +185,15 @@ export function agentChanges(
 ): Changes[] {
   const turn = turnOf(readJournal(session));
 
-  return agentWorktreesOf(cwd, agent, turn).flatMap(root => {
+  const files = agentWorktreesOf(cwd, agent, turn).flatMap(root => {
     const edits = (turn?.edits ?? []).filter(
       edit => toplevelOf(edit.path) === root,
     );
 
-    const files = changedIn(root, baselineFor(root, turn), edits);
-
-    return files.length > 0 ? [{ root, files }] : [];
+    return changedIn(root, baselineFor(root, turn), edits);
   });
+
+  return groupByRuleRoot(cwd, files);
 }
 
 /** Appends one entry. An append is a single write, so concurrent hooks of one session never interleave a line. */
@@ -324,6 +324,34 @@ function turnOf(entries: Entry[]): Turn | null {
     baselines: inTurn.filter(entry => entry.kind === 'baseline'),
     edits: inTurn.filter(entry => entry.kind === 'edit'),
   };
+}
+
+/** Groups the files by the root their rules resolve against, in the order the roots first appear. */
+function groupByRuleRoot(cwd: string, files: string[]): Changes[] {
+  const cwdCheckout = toplevelOf(cwd);
+  const groups = new Map<string, string[]>();
+
+  for (const file of files) {
+    const root = ruleRootOf(cwd, cwdCheckout, file);
+
+    groups.set(root, [...(groups.get(root) ?? []), file]);
+  }
+
+  return [...groups].map(([root, group]) => ({ root, files: group.sort() }));
+}
+
+/** Returns the working directory for a file below it in the checkout of the working directory, as the per-edit hooks did. Any other file takes the top level of its checkout, and the working directory when it lies in none. */
+function ruleRootOf(
+  cwd: string,
+  cwdCheckout: string | null,
+  file: string,
+): string {
+  const checkout = toplevelOf(file);
+  const isInCwdCheckout = checkout === null || checkout === cwdCheckout;
+
+  return segmentsBelow(cwd, file) !== null && isInCwdCheckout
+    ? cwd
+    : (checkout ?? cwd);
 }
 
 /** Returns the nearest folder at or above the path that holds a .git folder or file, which covers a main checkout, a linked worktree and a submodule. */
