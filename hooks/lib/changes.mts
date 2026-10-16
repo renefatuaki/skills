@@ -2,17 +2,21 @@
 // https://git-scm.com/docs/git-status#_porcelain_format_version_1
 
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
-  appendFileSync,
+  closeSync,
+  constants,
   existsSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
   readlinkSync,
-  statSync,
+  renameSync,
+  rmSync,
   unlinkSync,
+  writeSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -85,18 +89,23 @@ const PATHS_PER_CALL = 200;
 /** A journal that no hook wrote to for this long belongs to a session that is over. */
 const JOURNAL_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Starts a new turn of the session and notes the state of the checkout it starts in. Journals of long-gone sessions are deleted here. */
+/** The permission bits that let the group and other users into a folder. */
+const SHARED_MODE_BITS = 0o077;
+
+/** The flag that refuses to open a link, where the platform has it. */
+const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
+
+/** Starts a new turn of the session and notes the state of the checkout it starts in. The journal then holds this turn only. Journals of long-gone sessions are deleted here. */
 export function noteTurnStart(session: SessionId, cwd: string): void {
   const at = Date.now();
-
-  pruneJournals();
-  append(session, { at, agent: null, kind: 'prompt', cwd });
-
   const root = toplevelOf(cwd);
+  const entries: Entry[] = [{ at, agent: null, kind: 'prompt', cwd }];
 
   if (root !== null) {
-    append(session, baselineOf(root, null, at));
+    entries.push(baselineOf(root, null, at));
   }
+
+  startJournal(session, entries);
 }
 
 /** Notes the content of a file an Edit or a Write is about to touch, and the state of its checkout when the turn has none for it yet. Runs before the tool, so the content is the old one. */
@@ -196,45 +205,130 @@ export function agentChanges(
   return groupByRuleRoot(cwd, files);
 }
 
-/** Appends one entry. An append is a single write, so concurrent hooks of one session never interleave a line. */
+/** Appends one entry to the journal the turn started. An append is a single write, so concurrent hooks of one session never interleave a line. A journal that is missing, or a link in its place, is not written. */
 function append(session: SessionId, entry: Entry): void {
-  const path = journalOf(session);
+  const folder = journalFolder();
 
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  appendFileSync(path, `${JSON.stringify(entry)}\n`, { mode: 0o600 });
+  if (folder === null) {
+    return;
+  }
+
+  try {
+    const journal = openSync(
+      join(folder, `${session}.jsonl`),
+      constants.O_WRONLY | constants.O_APPEND | NO_FOLLOW,
+    );
+
+    try {
+      writeSync(journal, `${JSON.stringify(entry)}\n`);
+    } finally {
+      closeSync(journal);
+    }
+  } catch {
+    // Without a journal there is no turn to add to, and a stop then stays silent.
+  }
 }
 
-/** The journal of the session in the temporary folder of the user, which the operating system clears. */
-function journalOf(session: SessionId): string {
-  return join(journalFolder(), `${session}.jsonl`);
+/**
+ * Replaces the journal of the session by the entries that open the turn. They are written to a file of their own in the folder and renamed over the journal, so a reader sees the whole turn start or none of it, a torn line of an earlier hook is gone, and a link in the place of the journal is replaced instead of followed.
+ * @see {@link https://man7.org/linux/man-pages/man2/rename.2.html | rename(2)}
+ */
+function startJournal(session: SessionId, entries: Entry[]): void {
+  const folder = createJournalFolder();
+
+  if (folder === null) {
+    return;
+  }
+
+  pruneJournals(folder);
+
+  const pending = join(folder, `${session}.${randomUUID()}.tmp`);
+
+  try {
+    const file = openSync(
+      pending,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW,
+      0o600,
+    );
+
+    try {
+      writeSync(
+        file,
+        entries.map(entry => `${JSON.stringify(entry)}\n`).join(''),
+      );
+    } finally {
+      closeSync(file);
+    }
+
+    renameSync(pending, join(folder, `${session}.jsonl`));
+  } catch {
+    // The turn goes without a journal, and a stop then stays silent.
+    rmSync(pending, { force: true });
+  }
 }
 
-/** The folder of all journals of the user. */
-function journalFolder(): string {
+/** The folder of all journals of the user in the temporary folder, which the operating system clears. */
+function journalFolderPath(): string {
   return join(tmpdir(), `forge-${process.getuid?.() ?? 'user'}`);
 }
 
-/** Deletes every journal that no hook wrote to for a week. A journal that cannot be deleted stays. */
-function pruneJournals(): void {
+/** Creates the journal folder for the user alone when it is missing, then returns it as journalFolder does. */
+function createJournalFolder(): string | null {
   try {
-    for (const name of readdirSync(journalFolder())) {
-      const path = join(journalFolder(), name);
+    mkdirSync(journalFolderPath(), { recursive: true, mode: 0o700 });
+  } catch {
+    // A folder that cannot be made is no folder to use, journalFolder tells.
+  }
 
-      if (Date.now() - statSync(path).mtimeMs > JOURNAL_LIFETIME_MS) {
+  return journalFolder();
+}
+
+/** Returns the journal folder when it is a real folder of this user that no other user can enter, otherwise null. A journal in any other folder could be planted or read by someone else. */
+function journalFolder(): string | null {
+  const folder = journalFolderPath();
+  const uid = process.getuid?.();
+
+  try {
+    const stat = lstatSync(folder);
+    const isPrivate =
+      uid === undefined ||
+      (stat.uid === uid && (stat.mode & SHARED_MODE_BITS) === 0);
+
+    return stat.isDirectory() && isPrivate ? folder : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Deletes every journal that no hook wrote to for a week. A journal that cannot be deleted stays. */
+function pruneJournals(folder: string): void {
+  try {
+    for (const name of readdirSync(folder)) {
+      const path = join(folder, name);
+
+      if (Date.now() - lstatSync(path).mtimeMs > JOURNAL_LIFETIME_MS) {
         unlinkSync(path);
       }
     }
   } catch {
-    // A missing folder holds no journal, and a journal that vanished is deleted already.
+    // A journal that vanished is deleted already.
   }
 }
 
-/** Reads every well-formed entry, none for a missing journal. A torn last line from a crashed hook is skipped. */
+/** Reads every well-formed entry, none for a missing journal and for a link in its place. A torn line from a crashed hook is skipped. */
 function readJournal(session: SessionId): Entry[] {
+  const folder = journalFolder();
   let text: string;
 
+  if (folder === null) {
+    return [];
+  }
+
   try {
-    text = readFileSync(journalOf(session), 'utf8');
+    text = readFileSync(join(folder, `${session}.jsonl`), {
+      encoding: 'utf8',
+      flag: constants.O_RDONLY | NO_FOLLOW,
+    });
   } catch {
     return [];
   }

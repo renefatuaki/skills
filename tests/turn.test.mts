@@ -4,10 +4,15 @@
 
 import { spawnSync } from 'node:child_process';
 import {
+  appendFileSync,
+  chmodSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
+  readFileSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -100,6 +105,7 @@ runBaseline();
 runMidTurnCheckouts();
 runCheckoutFilters();
 runMonorepo();
+runJournal();
 runDeadline();
 
 console.log(
@@ -526,6 +532,74 @@ function runMonorepo(): void {
   );
 }
 
+/** The journal lives in a folder only its user can write, holds one turn and is never followed through a link. */
+function runJournal(): void {
+  const repo = makeRepo('journal', { 'a.ts': GOOD_TS });
+
+  // A hook killed in the middle of a line leaves a torn line, which the next prompt must not join. The file written before that prompt belongs to the turn before.
+  hook(prompt('j1', repo));
+  write(join(repo, 'before.ts'), BAD_TS);
+  appendFileSync(journalOf(journals, 'j1'), '{"at":1,"agent":null,"ki');
+  hook(prompt('j1', repo));
+  write(join(repo, 'torn.ts'), BAD_TS);
+
+  expect(
+    'a torn last line of the journal does not swallow the next prompt',
+    stop('j1', repo),
+    [INTRO, '', COMMENTS, `torn.ts:3 ${DASH}`].join('\n'),
+  );
+
+  // A folder that others can write holds no journal, a private one that exists already does.
+  const shared = folderWithMode('journals-shared', 0o777);
+  const private_ = folderWithMode('journals-private', 0o700);
+
+  for (const [session, tmp] of [
+    ['j2', shared],
+    ['j3', private_],
+  ]) {
+    hook(prompt(session, repo), { TMPDIR: tmp });
+    write(join(repo, `${session}.ts`), BAD_TS);
+  }
+
+  expect(
+    'a journal folder that others can write is not used',
+    stop('j2', repo),
+    '',
+    { TMPDIR: shared },
+  );
+
+  check(
+    'the shared journal folder holds no file',
+    readdirSync(journalFolder(shared)),
+    [],
+  );
+
+  expect(
+    'a private journal folder that exists already is used',
+    stop('j3', repo),
+    [INTRO, '', COMMENTS, `j3.ts:3 ${DASH}`].join('\n'),
+    { TMPDIR: private_ },
+  );
+
+  // A link in the place of the journal is replaced by a prompt and refused by an Edit.
+  const links = folderWithMode('journals-links', 0o700);
+  const victim = join(sandbox, 'victim.txt');
+
+  writeFileSync(victim, 'original\n');
+  symlinkSync(victim, journalOf(links, 'j4'));
+  hook(prompt('j4', repo), { TMPDIR: links });
+  hook(edit('j4', repo, join(repo, 'j4.ts')), { TMPDIR: links });
+  rmSync(journalOf(links, 'j4'));
+  symlinkSync(victim, journalOf(links, 'j4'));
+  hook(edit('j4', repo, join(repo, 'j4-again.ts')), { TMPDIR: links });
+
+  check(
+    'a planted link to a file never receives a journal line',
+    readFileSync(victim, 'utf8'),
+    'original\n',
+  );
+}
+
 /** The input of UserPromptSubmit. */
 function prompt(session: string, cwd: string): Record<string, unknown> {
   return {
@@ -642,6 +716,26 @@ function makeRepo(
   git(repo, 'commit', '-q', '-m', 'init');
 
   return repo;
+}
+
+/** Creates the journal folder of the hook inside a new temporary folder with the mode, and returns the temporary folder. */
+function folderWithMode(name: string, mode: number): string {
+  const tmp = join(sandbox, name);
+
+  mkdirSync(journalFolder(tmp), { recursive: true });
+  chmodSync(journalFolder(tmp), mode);
+
+  return tmp;
+}
+
+/** The folder the hook keeps its journals in when TMPDIR is the folder. */
+function journalFolder(tmp: string): string {
+  return join(tmp, `forge-${process.getuid?.()}`);
+}
+
+/** The journal of the session when TMPDIR is the folder. */
+function journalOf(tmp: string, session: string): string {
+  return join(journalFolder(tmp), `${session}.jsonl`);
 }
 
 /** Writes a file and the folders above it. */
