@@ -65,27 +65,19 @@ type Entry = PromptEntry | BaselineEntry | EditEntry;
 
 /** The current turn as the journal tells it, derived on every read from the lines after the last prompt. */
 type Turn = {
+  promptAt: number;
   baselines: BaselineEntry[];
   edits: EditEntry[];
-};
-
-/** What the turn knows about one path that may have changed, enough to decide it without touching disk or git. */
-type Evidence = {
-  path: string;
-  before: ContentId | null;
-  now: ContentId;
-  committed: ContentId;
-  authored: boolean;
 };
 
 /** The content id of a path that holds no file. */
 const MISSING: ContentId = 'missing';
 
+/** The content id of a file git could not read, which equals no content. */
+const UNREADABLE: ContentId = 'unreadable';
+
 /** Matches the worktree Claude Code creates for a subagent with isolation and captures the agent id. Only that subagent writes there. */
 const AGENT_WORKTREE = /[\\/]\.claude[\\/]worktrees[\\/]agent-([^\\/]+)$/;
-
-/** Matches the reflog subject of a commit made in the checkout, as opposed to a checkout, reset, merge, pull or rebase, which bring in work that was already there. */
-const OWN_COMMIT = /^commit\b/;
 
 /** The number of paths one git call gets, which keeps the command line below the limit of the system. */
 const PATHS_PER_CALL = 200;
@@ -95,13 +87,15 @@ const JOURNAL_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Starts a new turn of the session and notes the state of the checkout it starts in. Journals of long-gone sessions are deleted here. */
 export function noteTurnStart(session: SessionId, cwd: string): void {
+  const at = Date.now();
+
   pruneJournals();
-  append(session, { at: Date.now(), agent: null, kind: 'prompt', cwd });
+  append(session, { at, agent: null, kind: 'prompt', cwd });
 
   const root = toplevelOf(cwd);
 
   if (root !== null) {
-    append(session, baselineOf(root, null));
+    append(session, baselineOf(root, null, at));
   }
 }
 
@@ -117,13 +111,24 @@ export function noteEdit(
     return;
   }
 
+  // 1. A checkout that did not exist when the turn started begins in the state it was created in. Every other checkout begins in the state it is in now. A subagent worktree needs neither, its state is the one it was created in.
   const root = toplevelOf(path);
 
   if (
     root !== null &&
+    !AGENT_WORKTREE.test(root) &&
     !turn.baselines.some(baseline => baseline.root === root)
   ) {
-    append(session, baselineOf(root, agent));
+    append(
+      session,
+      creationBaseline(root, agent, turn.promptAt) ??
+        baselineOf(root, agent, Date.now()),
+    );
+  }
+
+  // 2. The first Edit of a path holds the content that counts, a later one adds nothing.
+  if (turn.edits.some(edit => edit.path === path)) {
+    return;
   }
 
   append(session, {
@@ -131,7 +136,7 @@ export function noteEdit(
     agent,
     kind: 'edit',
     path,
-    before: contentIdOf(path) ?? MISSING,
+    before: contentIds(root ?? dirname(path), [path]).get(path) ?? MISSING,
   });
 }
 
@@ -162,13 +167,11 @@ export function turnChanges(session: SessionId, cwd: string): Changes[] {
   return [...roots]
     .filter(root => !AGENT_WORKTREE.test(root))
     .flatMap(root => {
-      const baseline = turn.baselines.find(entry => entry.root === root);
-      const edits = placed.filter(entry => entry.root === root);
-      const files = changedIn(
-        root,
-        baseline ?? null,
-        edits.map(({ edit }) => edit),
-      );
+      const edits = placed
+        .filter(entry => entry.root === root)
+        .map(({ edit }) => edit);
+
+      const files = changedIn(root, baselineFor(root, turn), edits);
 
       return files.length > 0 ? [{ root, files }] : [];
     });
@@ -180,23 +183,17 @@ export function agentChanges(
   cwd: string,
   agent: string,
 ): Changes[] {
-  // 1. Find the worktree of the subagent, an empty list when it has none.
-  const root = agentWorktreeOf(cwd, agent);
-
-  if (root === null) {
-    return [];
-  }
-
-  // 2. Everything in the worktree is the work of this subagent. Its baseline stands in the turn when the subagent started in it.
   const turn = turnOf(readJournal(session));
-  const baseline = turn?.baselines.find(entry => entry.root === root);
-  const edits = (turn?.edits ?? []).filter(
-    edit => toplevelOf(edit.path) === root,
-  );
 
-  const files = changedIn(root, baseline ?? null, edits);
+  return agentWorktreesOf(cwd, agent, turn).flatMap(root => {
+    const edits = (turn?.edits ?? []).filter(
+      edit => toplevelOf(edit.path) === root,
+    );
 
-  return files.length > 0 ? [{ root, files }] : [];
+    const files = changedIn(root, baselineFor(root, turn), edits);
+
+    return files.length > 0 ? [{ root, files }] : [];
+  });
 }
 
 /** Appends one entry. An append is a single write, so concurrent hooks of one session never interleave a line. */
@@ -323,6 +320,7 @@ function turnOf(entries: Entry[]): Turn | null {
   const inTurn = entries.slice(start + 1);
 
   return {
+    promptAt: entries[start].at,
     baselines: inTurn.filter(entry => entry.kind === 'baseline'),
     edits: inTurn.filter(entry => entry.kind === 'edit'),
   };
@@ -346,10 +344,14 @@ function toplevelOf(path: string): string | null {
 }
 
 /**
- * Returns the worktree of the subagent among the worktrees of the repository that holds cwd, or null when the subagent has none.
+ * Lists the worktrees of the subagent: the one the worktrees of the repository that holds cwd name and the ones its Edits in the turn lie in. Empty when it has none.
  * @see {@link https://git-scm.com/docs/git-worktree#_list_output_format | git worktree, porcelain format}
  */
-function agentWorktreeOf(cwd: string, agent: string): string | null {
+function agentWorktreesOf(
+  cwd: string,
+  agent: string,
+  turn: Turn | null,
+): string[] {
   const listing = git(toplevelOf(cwd) ?? cwd, [
     'worktree',
     'list',
@@ -357,36 +359,97 @@ function agentWorktreeOf(cwd: string, agent: string): string | null {
     '-z',
   ]);
 
-  const worktrees = (listing ?? '')
+  const listed = (listing ?? '')
     .split('\0')
     .filter(field => field.startsWith('worktree '))
     .map(field => field.slice('worktree '.length));
 
-  return (
-    worktrees.find(path => AGENT_WORKTREE.exec(path)?.[1] === agent) ?? null
+  const edited = (turn?.edits ?? [])
+    .filter(edit => edit.agent === agent)
+    .map(edit => toplevelOf(edit.path) ?? '');
+
+  return [...new Set([...listed, ...edited])].filter(
+    path => AGENT_WORKTREE.exec(path)?.[1] === agent,
   );
 }
 
-/** Takes the state of the checkout: the commit HEAD names, null before the first commit, and the content of every file git status names. */
-function baselineOf(root: string, agent: string | null): BaselineEntry {
+/** Returns the state a checkout starts the turn in. A worktree of a subagent always starts in the state it was created in, and so does any worktree made since the prompt. Every other checkout starts in the state the journal noted, null when it noted none. */
+function baselineFor(root: string, turn: Turn | null): BaselineEntry | null {
+  const noted = turn?.baselines.find(baseline => baseline.root === root);
+
+  if (AGENT_WORKTREE.test(root)) {
+    return creationBaseline(root, null, 0) ?? noted ?? null;
+  }
+
+  if (noted !== undefined || turn === null) {
+    return noted ?? null;
+  }
+
+  return creationBaseline(root, null, turn.promptAt);
+}
+
+/**
+ * Returns the state a worktree was created in, provided that happened at or after the time. The oldest reflog entry of HEAD names the commit the worktree started on, and an older worktree or one without a reflog gives null.
+ * @see {@link https://git-scm.com/docs/git-reflog | git reflog}
+ */
+function creationBaseline(
+  root: string,
+  agent: string | null,
+  notBefore: number,
+): BaselineEntry | null {
+  const output = git(root, [
+    'reflog',
+    'show',
+    '--date=unix',
+    '--format=%gd%x09%H',
+    'HEAD',
+  ]);
+
+  const oldest = (output ?? '').trim().split('\n').at(-1)?.split('\t');
+  const seconds = Number(oldest?.[0]?.match(/\{(\d+)\}/)?.[1]);
+  const head = oldest?.[1];
+
+  if (
+    head === undefined ||
+    Number.isNaN(seconds) ||
+    seconds < Math.floor(notBefore / 1000)
+  ) {
+    return null;
+  }
+
+  return {
+    at: seconds * 1000,
+    agent,
+    kind: 'baseline',
+    root,
+    head,
+    dirty: {},
+  };
+}
+
+/** Takes the state of the checkout at the time: the commit HEAD names, null before the first commit, and the content of every file git status names. */
+function baselineOf(
+  root: string,
+  agent: string | null,
+  at: number,
+): BaselineEntry {
+  const paths = statusPaths(root);
+  const ids = contentIds(
+    root,
+    paths.map(path => join(root, path)),
+  );
+
   const dirty: Record<string, ContentId> = {};
 
-  for (const path of statusPaths(root)) {
-    const id = contentIdOf(join(root, path));
+  for (const path of paths) {
+    const id = ids.get(join(root, path));
 
-    if (id !== null) {
+    if (id !== undefined) {
       dirty[path] = id;
     }
   }
 
-  return {
-    at: Date.now(),
-    agent,
-    kind: 'baseline',
-    root,
-    head: headOf(root),
-    dirty,
-  };
+  return { at, agent, kind: 'baseline', root, head: headOf(root), dirty };
 }
 
 /** Lists the files of the checkout that differ from the content they held when the turn started, deleted files included. */
@@ -395,82 +458,43 @@ function changedIn(
   baseline: BaselineEntry | null,
   edits: EditEntry[],
 ): string[] {
-  // 1. Gather every path that may have changed. A path with no content now is a directory, which holds no rule to check.
-  const now = new Map(
-    candidatesOf(root, baseline, edits).flatMap(path => {
-      const id = contentIdOf(path);
+  // 1. Gather every path that may have changed and read what it holds now. A path with no content now is a directory, which holds no rule to check.
+  const status = statusPaths(root).map(path => join(root, path));
+  const candidates = new Set([
+    ...committedPaths(root, baseline).map(path => join(root, path)),
+    ...status,
+    ...Object.keys(baseline?.dirty ?? {}).map(path => join(root, path)),
+    ...edits.map(edit => edit.path),
+  ]);
 
-      return id === null ? [] : [[path, id] as const];
-    }),
-  );
-
-  // 2. Look up what each path held when the turn started and what the commit of HEAD holds, in two calls for all paths.
+  const now = contentIds(root, [...candidates]);
   const paths = [...now.keys()];
+
+  // 2. Look up what each path held when the turn started: the dirty content of the baseline, else the blob of its commit, else for a path git names nowhere, a gitignored file, the content before its first Edit.
+  const dirty = new Map(Object.entries(baseline?.dirty ?? {}));
   const started = baseline?.head ? treeIds(root, baseline.head, paths) : null;
-  const committed = treeIds(root, 'HEAD', paths);
-  const dirty = baseline?.dirty ?? {};
   const firstEdits = new Map(
     edits.toReversed().map(edit => [edit.path, edit.before]),
   );
 
-  const written = new Set([
-    ...Object.keys(dirty).map(path => join(root, path)),
-    ...firstEdits.keys(),
-    ...committedPaths(root, baseline),
-  ]);
+  const named = new Set(status);
 
-  // 3. Decide each path from what was gathered, without touching disk or git again.
-  const evidence = paths.map((path): Evidence => {
-    const known = dirty[relativeTo(root, path)] ?? firstEdits.get(path);
+  function contentAtStart(path: string): ContentId | null {
+    if (baseline === null) {
+      return firstEdits.get(path) ?? null;
+    }
 
-    return {
-      path,
-      before:
-        baseline === null
-          ? (known ?? null)
-          : (known ?? started?.get(path) ?? MISSING),
-      now: now.get(path) ?? MISSING,
-      committed: committed.get(path) ?? MISSING,
-      authored: written.has(path),
-    };
-  });
+    const content = dirty.get(relativeTo(root, path)) ?? started?.get(path);
 
-  return changedPaths(evidence).sort();
-}
+    if (content !== undefined) {
+      return content;
+    }
 
-/**
- * The changed set as a pure function of the evidence. A path changed when its content now differs from the content the turn started with, or when the start is unknown.
- * A path that equals the commit of HEAD and that no one wrote in the turn was brought in by git, a checkout or a pull for example, and is left out.
- */
-function changedPaths(evidence: Evidence[]): string[] {
-  return evidence
-    .filter(({ before, now, committed, authored }) => {
-      const differs = before === null || before !== now;
-      const brought = now === committed && !authored;
+    return (named.has(path) ? undefined : firstEdits.get(path)) ?? MISSING;
+  }
 
-      return differs && !brought;
-    })
-    .map(({ path }) => path);
-}
-
-/** Lists every path that may have changed, absolute, deleted ones included. */
-function candidatesOf(
-  root: string,
-  baseline: BaselineEntry | null,
-  edits: EditEntry[],
-): string[] {
-  const names = [
-    ...(baseline === null ? [] : trackedSince(root, baseline.head)),
-    ...statusPaths(root),
-    ...Object.keys(baseline?.dirty ?? {}),
-  ];
-
-  return [
-    ...new Set([
-      ...names.map(name => join(root, name)),
-      ...edits.map(e => e.path),
-    ]),
-  ];
+  // 3. Keep each path whose content now differs from the content it started with, and each path whose start is unknown.
+  return paths.filter(path => contentAtStart(path) !== now.get(path)).sort();
 }
 
 /**
@@ -494,68 +518,30 @@ function statusPaths(root: string): string[] {
 }
 
 /**
- * Lists the tracked files whose working tree content differs from the commit, or every tracked file when there was no commit yet. A commit, an amend or a reset made since then is part of the difference.
- * @see {@link https://git-scm.com/docs/git-diff#_raw_output_format | git diff, name-only output}
+ * Lists the files of the commits made since the baseline, by committer date, so a commit, an amend, a rebase or a cherry-pick of the turn counts and the commits a checkout or a pull brought in do not. A merge names the files its resolution changed.
+ * @see {@link https://git-scm.com/docs/git-log | git log}
  */
-function trackedSince(root: string, head: string | null): string[] {
-  const output =
-    head === null
-      ? git(root, ['ls-files', '-z'])
-      : git(root, ['diff', '--name-only', '-z', '--no-renames', head]);
-
-  return (output ?? '').split('\0').filter(path => path !== '');
-}
-
-/** Lists the files of the commits the checkout made since the baseline, which tells a file the model committed from a file a checkout or a pull brought in. Nothing when HEAD did not move. */
 function committedPaths(
   root: string,
   baseline: BaselineEntry | null,
 ): string[] {
-  if (baseline === null || baseline.head === headOf(root)) {
+  if (baseline === null) {
     return [];
   }
 
-  // 1. Read the reflog of HEAD, which prints HEAD@{<seconds>}, the commit and the subject per entry.
-  // https://git-scm.com/docs/git-log#Documentation/git-log.txt--g
-  const since = Math.floor(baseline.at / 1000);
-  const reflog = git(root, [
+  const output = git(root, [
     'log',
-    '-g',
-    '--format=%gd%x09%H%x09%gs',
-    '--date=unix',
-    'HEAD',
+    '--no-renames',
+    '--name-only',
+    '-z',
+    '--format=',
+    '--cc',
+    `--since=${Math.floor(baseline.at / 1000)}`,
+    baseline.head === null ? 'HEAD' : `${baseline.head}..HEAD`,
+    '--',
   ]);
 
-  // 2. Keep the commits the checkout made since the baseline. A checkout, reset, merge, pull, cherry-pick and rebase entry is no commit of its own.
-  const commits = (reflog ?? '').split('\n').flatMap(line => {
-    const [selector, commit, subject] = line.split('\t');
-    const seconds = Number(selector.match(/\{(\d+)\}/)?.[1]);
-
-    return seconds >= since && OWN_COMMIT.test(subject ?? '') ? [commit] : [];
-  });
-
-  // 3. List the files of those commits in one call. With --cc a merge names only the files its resolution changed.
-  // https://git-scm.com/docs/git-diff-tree
-  const output = git(
-    root,
-    [
-      'diff-tree',
-      '--stdin',
-      '--root',
-      '-r',
-      '--no-renames',
-      '--cc',
-      '--name-only',
-      '-z',
-      '--no-commit-id',
-    ],
-    commits.map(commit => `${commit}\n`).join(''),
-  );
-
-  return (output ?? '')
-    .split('\0')
-    .filter(path => path !== '')
-    .map(path => join(root, path));
+  return (output ?? '').split('\0').filter(path => path !== '');
 }
 
 /**
@@ -600,23 +586,65 @@ function relativeTo(root: string, path: string): string {
   return (segmentsBelow(root, path) ?? []).join('/');
 }
 
-/** Returns the git blob id of the content of the file, the target for a symbolic link, MISSING for a path without a file and null for a directory. */
-function contentIdOf(path: string): ContentId | null {
-  try {
-    const stat = lstatSync(path);
+/**
+ * Reads the content id of each path as git would store it, filters of the checkout applied, so the id of a file equals the id of the same content in a commit. A path without a file maps to MISSING and a directory is left out.
+ * @see {@link https://git-scm.com/docs/git-hash-object | git hash-object}
+ */
+function contentIds(root: string, paths: string[]): Map<string, ContentId> {
+  const ids = new Map<string, ContentId>();
+  const files: string[] = [];
 
-    if (stat.isSymbolicLink()) {
-      return blobId(Buffer.from(readlinkSync(path)));
+  for (const path of paths) {
+    try {
+      const stat = lstatSync(path);
+
+      if (stat.isSymbolicLink()) {
+        ids.set(path, blobId(Buffer.from(readlinkSync(path))));
+      } else if (stat.isFile()) {
+        files.push(path);
+      }
+    } catch {
+      ids.set(path, MISSING);
     }
-
-    return stat.isFile() ? blobId(readFileSync(path)) : null;
-  } catch {
-    return MISSING;
   }
+
+  for (const [index, id] of hashFiles(root, files).entries()) {
+    ids.set(files[index], id);
+  }
+
+  return ids;
+}
+
+/** Hashes the files with one git call, or one call per file when a name holds a line break or the call fails, so one unreadable file costs only its own id. */
+function hashFiles(root: string, files: string[]): ContentId[] {
+  if (files.length === 0) {
+    return [];
+  }
+
+  const batch = git(
+    root,
+    ['hash-object', '--stdin-paths'],
+    files.map(file => `${file}\n`).join(''),
+  )
+    ?.trim()
+    .split('\n');
+
+  if (batch?.length === files.length && !files.some(isMultiline)) {
+    return batch;
+  }
+
+  return files.map(
+    file => git(root, ['hash-object', '--', file])?.trim() ?? UNREADABLE,
+  );
+}
+
+/** Tells whether the name holds a line break, which a list of names read line by line cannot carry. */
+function isMultiline(name: string): boolean {
+  return name.includes('\n');
 }
 
 /**
- * Hashes the bytes the way git hashes a blob, so the id of a file equals the id of the same content in a commit.
+ * Hashes the bytes the way git hashes a blob, which is the id of a symbolic link, the target of the link being its content.
  * @see {@link https://git-scm.com/book/en/v2/Git-Internals-Git-Objects.md#_object_storage | Pro Git, object storage}
  */
 function blobId(bytes: Buffer): ContentId {

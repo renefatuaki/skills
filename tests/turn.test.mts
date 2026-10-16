@@ -79,6 +79,9 @@ const story = setUp();
 
 runTurnOne(story);
 runTurnTwo(story);
+runBaseline();
+runMidTurnCheckouts();
+runCheckoutFilters();
 runDeadline();
 
 console.log(
@@ -315,6 +318,157 @@ function runDeadline(): void {
   );
 }
 
+/** A Bash write followed by an Edit that changes nothing, as a denied or failed Edit does, still counts. An untouched file next to them does not. */
+function runBaseline(): void {
+  const repo = makeRepo('baseline', {
+    'a.ts': GOOD_TS,
+    'calm.ts': GOOD_TS,
+  });
+
+  hook(prompt('b1', repo));
+  write(join(repo, 'a.ts'), BAD_TS);
+  hook(edit('b1', repo, join(repo, 'a.ts')));
+  write(join(repo, 'new.ts'), BAD_TS);
+  hook(edit('b1', repo, join(repo, 'new.ts')));
+  hook(edit('b1', repo, join(repo, 'calm.ts')));
+
+  expect(
+    'a shell write to a tracked and to a new file stays visible after an Edit that changed nothing',
+    stop('b1', repo),
+    [INTRO, '', COMMENTS, `a.ts:3 ${DASH}`, `new.ts:3 ${DASH}`].join('\n'),
+  );
+}
+
+/** Checkouts the turn enters after its prompt start from the state they were created in, and so does the worktree of a subagent. */
+function runMidTurnCheckouts(): void {
+  // A ticket worktree made mid-turn. The shell writes in it before the first Edit does, and the file it inherited stays out.
+  const repo = makeRepo('mid-turn', {
+    'a.ts': GOOD_TS,
+    'inherited.ts': BAD_TS,
+  });
+
+  const ticket = join(sandbox, 'mid-turn-42');
+
+  hook(prompt('t1', repo));
+  git(repo, 'worktree', 'add', '-q', '-b', 'ticket-42', ticket);
+  write(join(ticket, 'scaffold.ts'), BAD_TS);
+  hook(edit('t1', repo, join(ticket, 'later.ts')));
+  write(join(ticket, 'later.ts'), GOOD_TS);
+
+  expect(
+    'a file the shell wrote in a worktree made mid-turn is named, the inherited one is not',
+    stop('t1', repo),
+    [INTRO, '', COMMENTS, `${ticket}/scaffold.ts:3 ${DASH}`].join('\n'),
+  );
+
+  // A subagent worktree made mid-turn. The heredoc of the subagent comes before its first Edit.
+  const agent = join(repo, '.claude', 'worktrees', 'agent-q');
+
+  git(repo, 'worktree', 'add', '-q', '--detach', agent);
+  write(join(agent, 'heredoc.ts'), BAD_TS);
+  hook(edit('t1', repo, join(agent, 'later.ts'), 'q'));
+  write(join(agent, 'later.ts'), GOOD_TS);
+
+  expect(
+    'a subagent stop names the file the subagent wrote before its first Edit and not the inherited one',
+    subagentStop('t1', repo, 'q'),
+    [
+      INTRO,
+      '',
+      COMMENTS,
+      `.claude/worktrees/agent-q/heredoc.ts:3 ${DASH}`,
+    ].join('\n'),
+  );
+
+  // A subagent that keeps working across a new prompt of the user.
+  const spanning = join(repo, '.claude', 'worktrees', 'agent-bg');
+
+  git(repo, 'worktree', 'add', '-q', '--detach', spanning);
+  hook(prompt('t2', repo));
+  hook(edit('t2', repo, join(spanning, 'first.ts'), 'bg'));
+  write(join(spanning, 'first.ts'), BAD_TS);
+  hook(prompt('t2', repo));
+  hook(edit('t2', repo, join(spanning, 'second.ts'), 'bg'));
+  write(join(spanning, 'second.ts'), GOOD_TS);
+
+  expect(
+    'a subagent stop names what the subagent wrote before a later prompt of the user',
+    subagentStop('t2', repo, 'bg'),
+    [INTRO, '', COMMENTS, `.claude/worktrees/agent-bg/first.ts:3 ${DASH}`].join(
+      '\n',
+    ),
+  );
+
+  // A subagent stop whose working directory lies in another repository finds the worktree through the journal.
+  const elsewhere = makeRepo('mid-turn-elsewhere', { 'b.ts': GOOD_TS });
+  const remote = join(repo, '.claude', 'worktrees', 'agent-zed');
+
+  hook(prompt('t3', repo));
+  git(repo, 'worktree', 'add', '-q', '--detach', remote);
+  hook(edit('t3', repo, join(remote, 'z.ts'), 'zed'));
+  write(join(remote, 'z.ts'), BAD_TS);
+
+  expect(
+    'a subagent stop from another repository finds the worktree the subagent edited in',
+    subagentStop('t3', elsewhere, 'zed'),
+    [INTRO, '', COMMENTS, `${remote}/z.ts:3 ${DASH}`].join('\n'),
+  );
+
+  expect(
+    'a subagent stop from another repository stays silent for an agent that edited nowhere',
+    subagentStop('t3', elsewhere, 'nobody'),
+    '',
+  );
+}
+
+/** Commits are told from the files a checkout brought in by their committer date, and the content of a file is compared the way git stores it. */
+function runCheckoutFilters(): void {
+  // A checkout under core.autocrlf rewrites a file with other line endings than the blob. The file stays absent, the Edit stays present.
+  const crlf = makeRepo('crlf', { 'a.ts': GOOD_TS }, true);
+
+  git(crlf, 'checkout', '-q', '-b', 'other');
+  write(join(crlf, 'branch-only.ts'), BAD_TS);
+  git(crlf, 'add', '.');
+  git(crlf, 'commit', '-q', '-m', 'branch only');
+  git(crlf, 'checkout', '-q', 'main');
+  waitForNextSecond();
+  hook(prompt('c1', crlf));
+  git(crlf, 'checkout', '-q', 'other');
+  hook(edit('c1', crlf, join(crlf, 'edited.ts')));
+  write(join(crlf, 'edited.ts'), BAD_TS);
+
+  expect(
+    'a file a checkout wrote with other line endings is not named, an edited file is',
+    stop('c1', crlf),
+    [INTRO, '', COMMENTS, `edited.ts:3 ${DASH}`].join('\n'),
+  );
+
+  // A rebase that stops on a conflict ends in a commit the reflog does not call a commit. The file the conflict resolution wrote is named, the file the base branch brought in is not.
+  const rebase = makeRepo('rebase', { 'a.ts': GOOD_TS });
+
+  git(rebase, 'checkout', '-q', '-b', 'feature');
+  write(join(rebase, 'a.ts'), `${GOOD_TS}export const feature = 2;\n`);
+  git(rebase, 'commit', '-q', '-am', 'feature');
+  git(rebase, 'checkout', '-q', 'main');
+  write(join(rebase, 'a.ts'), `${GOOD_TS}export const main = 3;\n`);
+  write(join(rebase, 'main-only.ts'), BAD_TS);
+  git(rebase, 'add', '.');
+  git(rebase, 'commit', '-q', '-m', 'main change');
+  git(rebase, 'checkout', '-q', 'feature');
+  waitForNextSecond();
+  hook(prompt('c2', rebase));
+  gitMayFail(rebase, 'rebase', 'main');
+  write(join(rebase, 'a.ts'), BAD_TS);
+  git(rebase, 'add', 'a.ts');
+  git(rebase, '-c', 'core.editor=true', 'rebase', '--continue');
+
+  expect(
+    'the file a rebase conflict resolution wrote is named, the file the base brought in is not',
+    stop('c2', rebase),
+    [INTRO, '', COMMENTS, `a.ts:3 ${DASH}`].join('\n'),
+  );
+}
+
 /** The input of UserPromptSubmit. */
 function prompt(session: string, cwd: string): Record<string, unknown> {
   return {
@@ -389,14 +543,48 @@ function environment(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
 
 /** Runs git in a checkout of the story and fails the test when git fails. */
 function git(cwd: string, ...args: string[]): void {
-  const result = spawnSync('git', ['-C', cwd, ...args], {
-    encoding: 'utf8',
-    env: environment(),
-  });
+  const result = runGit(cwd, args);
 
   if (result.status !== 0) {
     throw new Error(`git ${args.join(' ')} failed: ${result.stderr}`);
   }
+}
+
+/** Runs git in a checkout of the story and leaves a failure to the caller, as a rebase that stops on a conflict. */
+function gitMayFail(cwd: string, ...args: string[]): void {
+  runGit(cwd, args);
+}
+
+function runGit(cwd: string, args: string[]) {
+  return spawnSync('git', ['-C', cwd, ...args], {
+    encoding: 'utf8',
+    env: environment(),
+  });
+}
+
+/** Creates a repository on main with one commit that holds the files. */
+function makeRepo(
+  name: string,
+  files: Record<string, string>,
+  autocrlf = false,
+): string {
+  const repo = join(sandbox, name);
+
+  mkdirSync(repo, { recursive: true });
+  git(repo, 'init', '-q', '-b', 'main');
+
+  if (autocrlf) {
+    git(repo, 'config', 'core.autocrlf', 'true');
+  }
+
+  for (const [path, content] of Object.entries(files)) {
+    write(join(repo, path), content);
+  }
+
+  git(repo, 'add', '.');
+  git(repo, 'commit', '-q', '-m', 'init');
+
+  return repo;
 }
 
 /** Writes a file and the folders above it. */
@@ -442,15 +630,19 @@ function waitForNextSecond(): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, wait);
 }
 
-/** Runs one stop against the hook, prints PASS or FAIL with the difference, and counts a failure. */
+/** Runs one stop against the hook and checks the reason it blocks with. */
 function expect(
   name: string,
   input: Record<string, unknown>,
   expected: string,
   env: Record<string, string> = {},
 ): void {
-  const actual = hook(input, env);
-  const ok = actual === expected;
+  check(name, hook(input, env), expected);
+}
+
+/** Prints PASS or FAIL with the difference and counts a failure. */
+function check<T>(name: string, actual: T, expected: T): void {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected);
 
   if (!ok) {
     failures++;
@@ -459,6 +651,11 @@ function expect(
   console.log(`${ok ? 'PASS' : 'FAIL'} ${name}`);
 
   if (!ok) {
-    console.log(`  expected:\n${expected}\n  actual:\n${actual}`);
+    console.log(`  expected:\n${show(expected)}\n  actual:\n${show(actual)}`);
   }
+}
+
+/** Shows a string as it is and anything else as JSON. */
+function show(value: unknown): string {
+  return typeof value === 'string' ? value : JSON.stringify(value, null, 2);
 }
