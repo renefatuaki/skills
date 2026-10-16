@@ -27,7 +27,7 @@ Describe the work, and ask for an issue:
 the csv export drops its last row since yesterday's deploy. write an issue for it.
 ```
 
-The [`issue`](../../skills/github/issue/SKILL.md) skill picks the template, bug, feature, refactor, chore or epic. Where the request leaves a field open, it interviews you with the grilling skill. It hands you the issue as a prefilled GitHub form, so you review it before it exists. Work with several parts that ship on their own becomes an epic with one sub-issue per part.
+The [`issue`](../../skills/github/issue/SKILL.md) skill picks the template, bug, feature, refactor, chore or epic. Where the request leaves a field open, it interviews you with the grilling skill. It creates the issue and asks you with its link whether anything should change. Work with several parts that ship on their own becomes an epic with one sub-issue per part.
 
 A board with the Status, Priority and Size fields comes from the [`project`](../../skills/github/project/SKILL.md) skill. Run `/project` to create one for the repository.
 
