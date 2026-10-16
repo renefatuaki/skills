@@ -128,13 +128,6 @@ export function realPathOf(path: string): string {
   }
 }
 
-/** Returns the absolute path of the file the tool is about to write, the symbolic links of its folder resolved. A link as the file itself stays one, because the tool then writes through it. */
-function realFileOf(cwd: string, file: string): string {
-  const absolute = resolve(cwd, file);
-
-  return join(realPathOf(dirname(absolute)), basename(absolute));
-}
-
 /** Tells whether the path runs through a dot folder or a dependency folder. */
 export function isHidden(segments: string[]): boolean {
   return segments.some(
@@ -180,16 +173,6 @@ export function resolveFromProject(
   } catch {
     return null;
   }
-}
-
-/** Returns the id when it is a string that is safe as a file name, otherwise null. */
-function asSafeId(value: unknown): string | null {
-  return typeof value === 'string' && /^[\w-]+$/.test(value) ? value : null;
-}
-
-/** Brands the value as a session id when it is safe as a file name, otherwise null. */
-function asSessionId(value: unknown): SessionId | null {
-  return asSafeId(value) as SessionId | null;
 }
 
 /** Runs a rule set over one checkout. An error it throws costs only its own findings and comes back as the one finding that names the rule set and the reason. */
@@ -244,4 +227,21 @@ export function segmentsBelow(root: string, absolute: string): string[] | null {
   const path = relative(root, absolute);
 
   return path.startsWith('..') || isAbsolute(path) ? null : path.split(sep);
+}
+
+/** Brands the value as a session id when it is safe as a file name, otherwise null. */
+function asSessionId(value: unknown): SessionId | null {
+  return asSafeId(value) as SessionId | null;
+}
+
+/** Returns the id when it is a string that is safe as a file name, otherwise null. */
+function asSafeId(value: unknown): string | null {
+  return typeof value === 'string' && /^[\w-]+$/.test(value) ? value : null;
+}
+
+/** Returns the absolute path of the file the tool is about to write, the symbolic links of its folder resolved. A link as the file itself stays one, because the tool then writes through it. */
+function realFileOf(cwd: string, file: string): string {
+  const absolute = resolve(cwd, file);
+
+  return join(realPathOf(dirname(absolute)), basename(absolute));
 }

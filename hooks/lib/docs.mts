@@ -163,23 +163,23 @@ async function createLinter(root: string): Promise<Linter> {
   try {
     const lint = await loadLinter(root);
 
-    return lint === null ? () => [] : text => lintGuarded(lint, text);
+    return lint === null ? () => [] : text => lintSafely(lint, text);
   } catch (error) {
-    return () => [couldNotRun(error)];
+    return () => [linterFailureOf(error)];
   }
 }
 
 /** Runs the linter and turns an error it throws into the one finding that tells why markdownlint could not run. */
-function lintGuarded(lint: Linter, text: string): DocumentFinding[] {
+function lintSafely(lint: Linter, text: string): DocumentFinding[] {
   try {
     return lint(text);
   } catch (error) {
-    return [couldNotRun(error)];
+    return [linterFailureOf(error)];
   }
 }
 
 /** Names the reason markdownlint could not run, on the first line of the file. */
-function couldNotRun(error: unknown): DocumentFinding {
+function linterFailureOf(error: unknown): DocumentFinding {
   const reason = error instanceof Error ? error.message : String(error);
 
   return {

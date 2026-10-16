@@ -335,7 +335,7 @@ function startJournal(session: SessionId, entries: Entry[]): void {
   }
 }
 
-/** The folder of all journals of the user in the temporary folder, which the operating system clears. */
+/** Returns the folder of all journals of the user in the temporary folder, which the operating system clears. */
 function journalFolderPath(): string {
   return join(tmpdir(), `forge-${process.getuid?.() ?? 'user'}`);
 }
@@ -502,7 +502,7 @@ function groupByRuleRoot(cwd: string, files: string[]): Changes[] {
   return [...groups].map(([root, group]) => ({ root, files: group.sort() }));
 }
 
-/** Returns the working directory for a file below it in the checkout of the working directory, as the per-edit hooks did. Any other file takes the top level of its checkout, and the working directory when it lies in none. */
+/** Returns the working directory for a file below it in the checkout of the working directory. Any other file takes the top level of its checkout, and the working directory when it lies in none. */
 function ruleRootOf(
   cwd: string,
   cwdCheckout: string | null,
@@ -683,7 +683,11 @@ function changedIn(
       return content;
     }
 
-    return (named.has(path) ? undefined : firstEdits.get(path)) ?? MISSING;
+    if (named.has(path)) {
+      return MISSING;
+    }
+
+    return firstEdits.get(path) ?? MISSING;
   }
 
   // 3. Keep each path whose content now differs from the content it started with, and each path whose start is unknown.

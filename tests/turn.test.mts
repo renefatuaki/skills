@@ -327,40 +327,7 @@ function runTurnTwo({ repo }: Story): void {
   );
 }
 
-/** Runs a small repository against the deadline, once with the budget used up, once with the default one and once with an empty setting, which means the default. */
-function runDeadline(): void {
-  const repo = join(sandbox, 'deadline');
-
-  mkdirSync(repo);
-  git(repo, 'init', '-q', '-b', 'main');
-  git(repo, 'commit', '-q', '--allow-empty', '-m', 'init');
-  hook(prompt('s3', repo));
-  write(join(repo, 'a.ts'), BAD_TS);
-
-  expect(
-    'a stop with no time left names the checkout it could not list',
-    stop('s3', repo),
-    [INTRO, '', `Not checked in time: 1 checkout, starting with ${repo}.`].join(
-      '\n',
-    ),
-    { FORGE_CHECK_BUDGET_MS: '0' },
-  );
-
-  expect(
-    'the same stop with the default budget checks the file',
-    stop('s3', repo),
-    [INTRO, '', COMMENTS, `a.ts:3 ${DASH}`].join('\n'),
-  );
-
-  expect(
-    'an empty budget setting keeps the default budget',
-    stop('s3', repo),
-    [INTRO, '', COMMENTS, `a.ts:3 ${DASH}`].join('\n'),
-    { FORGE_CHECK_BUDGET_MS: '' },
-  );
-}
-
-/** A Bash write followed by an Edit that changes nothing, as a denied or failed Edit does, still counts. An untouched file next to them does not. */
+/** Checks that a Bash write followed by an Edit that changes nothing, as a denied or failed Edit does, still counts. An untouched file next to them does not. */
 function runBaseline(): void {
   const repo = makeRepo('baseline', {
     'a.ts': GOOD_TS,
@@ -381,7 +348,7 @@ function runBaseline(): void {
   );
 }
 
-/** Checkouts the turn enters after its prompt start from the state they were created in, and so does the worktree of a subagent. */
+/** Checks that checkouts the turn enters after its prompt start from the state they were created in, and so does the worktree of a subagent. */
 function runMidTurnCheckouts(): void {
   // A ticket worktree made mid-turn. The shell writes in it before the first Edit does, and the file it inherited stays out.
   const repo = makeRepo('mid-turn', {
@@ -463,7 +430,7 @@ function runMidTurnCheckouts(): void {
   );
 }
 
-/** Commits are told from the files a checkout brought in by their committer date, and the content of a file is compared the way git stores it. */
+/** Checks that commits are told from the files a checkout brought in by their committer date, and that the content of a file is compared the way git stores it. */
 function runCheckoutFilters(): void {
   // A checkout under core.autocrlf rewrites a file with other line endings than the blob. The file stays absent, the Edit stays present.
   const crlf = makeRepo('crlf', { 'a.ts': GOOD_TS }, true);
@@ -511,7 +478,7 @@ function runCheckoutFilters(): void {
   );
 }
 
-/** A session in a package of a monorepo keeps the package as the root of the rules for the files below it, and a file outside it takes its git top level. */
+/** Checks that a session in a package of a monorepo keeps the package as the root of the rules for the files below it, and that a file outside it takes its git top level. */
 function runMonorepo(): void {
   const repo = makeRepo('mono', {
     'README.md': '# Mono\n\nThe repository.\n',
@@ -550,7 +517,7 @@ function runMonorepo(): void {
   );
 }
 
-/** One checkout reached through a symbolic link and through its real path is one checkout. */
+/** Checks that one checkout reached through a symbolic link and through its real path is one checkout. */
 function runAlias(): void {
   const repo = makeRepo('real', { 'src/a.ts': GOOD_TS });
   const alias = join(sandbox, 'alias');
@@ -574,7 +541,7 @@ function runAlias(): void {
   );
 }
 
-/** The journal lives in a folder only its user can write, holds one turn and is never followed through a link. */
+/** Checks that the journal lives in a folder only its user can write, holds one turn and is never followed through a link. */
 function runJournal(): void {
   const repo = makeRepo('journal', { 'a.ts': GOOD_TS });
 
@@ -593,11 +560,11 @@ function runJournal(): void {
 
   // A folder that others can write holds no journal, a private one that exists already does.
   const shared = folderWithMode('journals-shared', 0o777);
-  const private_ = folderWithMode('journals-private', 0o700);
+  const ownerOnly = folderWithMode('journals-private', 0o700);
 
   for (const [session, tmp] of [
     ['j2', shared],
-    ['j3', private_],
+    ['j3', ownerOnly],
   ]) {
     hook(prompt(session, repo), { TMPDIR: tmp });
     write(join(repo, `${session}.ts`), BAD_TS);
@@ -620,7 +587,7 @@ function runJournal(): void {
     'a private journal folder that exists already is used',
     stop('j3', repo),
     [INTRO, '', COMMENTS, `j3.ts:3 ${DASH}`].join('\n'),
-    { TMPDIR: private_ },
+    { TMPDIR: ownerOnly },
   );
 
   // A link in the place of the journal is replaced by a prompt and refused by an Edit.
@@ -642,7 +609,7 @@ function runJournal(): void {
   );
 }
 
-/** A rule set that throws costs only its own findings. */
+/** Checks that a rule set that throws costs only its own findings. */
 async function runRuleSetFailure(): Promise<void> {
   const changes = { root: sandbox, files: [] };
   const finding: Finding = {
@@ -682,7 +649,40 @@ async function runRuleSetFailure(): Promise<void> {
   );
 }
 
-/** The input of UserPromptSubmit. */
+/** Runs a small repository against the deadline, once with the budget used up, once with the default one and once with an empty setting, which means the default. */
+function runDeadline(): void {
+  const repo = join(sandbox, 'deadline');
+
+  mkdirSync(repo);
+  git(repo, 'init', '-q', '-b', 'main');
+  git(repo, 'commit', '-q', '--allow-empty', '-m', 'init');
+  hook(prompt('s3', repo));
+  write(join(repo, 'a.ts'), BAD_TS);
+
+  expect(
+    'a stop with no time left names the checkout it could not list',
+    stop('s3', repo),
+    [INTRO, '', `Not checked in time: 1 checkout, starting with ${repo}.`].join(
+      '\n',
+    ),
+    { FORGE_CHECK_BUDGET_MS: '0' },
+  );
+
+  expect(
+    'the same stop with the default budget checks the file',
+    stop('s3', repo),
+    [INTRO, '', COMMENTS, `a.ts:3 ${DASH}`].join('\n'),
+  );
+
+  expect(
+    'an empty budget setting keeps the default budget',
+    stop('s3', repo),
+    [INTRO, '', COMMENTS, `a.ts:3 ${DASH}`].join('\n'),
+    { FORGE_CHECK_BUDGET_MS: '' },
+  );
+}
+
+/** Returns the input of UserPromptSubmit. */
 function prompt(session: string, cwd: string): Record<string, unknown> {
   return {
     hook_event_name: 'UserPromptSubmit',
@@ -692,7 +692,7 @@ function prompt(session: string, cwd: string): Record<string, unknown> {
   };
 }
 
-/** The input of PreToolUse for a Write, which fires before the file changes. A hook that fires inside a subagent also carries its agent id. */
+/** Returns the input of PreToolUse for a Write, which fires before the file changes. A hook that fires inside a subagent also carries its agent id. */
 function edit(
   session: string,
   cwd: string,
@@ -709,7 +709,7 @@ function edit(
   };
 }
 
-/** The input of Stop. */
+/** Returns the input of Stop. */
 function stop(
   session: string,
   cwd: string,
@@ -723,7 +723,7 @@ function stop(
   };
 }
 
-/** The input of SubagentStop. */
+/** Returns the input of SubagentStop. */
 function subagentStop(
   session: string,
   cwd: string,
@@ -739,7 +739,7 @@ function subagentStop(
   };
 }
 
-/** The environment of git and of the hook in the story, without the configuration of the machine and with an author for the commits. */
+/** Returns the environment of git and of the hook in the story, without the configuration of the machine and with an author for the commits. */
 function environment(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
   return {
     ...process.env,
@@ -810,12 +810,12 @@ function folderWithMode(name: string, mode: number): string {
   return tmp;
 }
 
-/** The folder the hook keeps its journals in when TMPDIR is the folder. */
+/** Returns the folder the hook keeps its journals in when TMPDIR is the folder. */
 function journalFolder(tmp: string): string {
   return join(tmp, `forge-${process.getuid?.()}`);
 }
 
-/** The journal of the session when TMPDIR is the folder. */
+/** Returns the journal of the session when TMPDIR is the folder. */
 function journalOf(tmp: string, session: string): string {
   return join(journalFolder(tmp), `${session}.jsonl`);
 }

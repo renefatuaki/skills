@@ -122,7 +122,7 @@ async function checkLinked(changes: Changes): Promise<Finding[]> {
           file: document,
           line: diagram.line,
           rule: 'linked',
-          message: linked.map(file => shownBelow(root, file)).join(', '),
+          message: linked.map(file => displayPathOf(root, file)).join(', '),
         });
       }
     }
@@ -148,7 +148,7 @@ function isMarkdown(path: string): boolean {
 }
 
 /** Shows the file below the root with slashes. */
-function shownBelow(root: string, file: string): string {
+function displayPathOf(root: string, file: string): string {
   return relative(root, file).split(sep).join('/');
 }
 
@@ -225,7 +225,7 @@ async function createSyntaxCheck(root: string): Promise<SyntaxCheck> {
     const findings: SyntaxFinding[] = [];
 
     for (const diagram of diagrams) {
-      const error = await parseError(mermaid, diagram.body.join('\n'));
+      const error = await syntaxErrorOf(mermaid, diagram.body.join('\n'));
 
       if (error !== null) {
         findings.push({
@@ -241,7 +241,7 @@ async function createSyntaxCheck(root: string): Promise<SyntaxCheck> {
 }
 
 /** Parses one diagram and returns the error message, or null for a valid one. */
-async function parseError(
+async function syntaxErrorOf(
   mermaid: Mermaid,
   text: string,
 ): Promise<string | null> {

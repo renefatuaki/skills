@@ -50,7 +50,7 @@ const INTRO =
 const DEFAULT_BUDGET_MS = 25_000;
 
 /** The time in epoch milliseconds after which no git call and no file starts. */
-const deadline = Date.now() + budgetMs();
+const deadline = Date.now() + readBudgetMs();
 
 await main();
 
@@ -155,7 +155,7 @@ async function blockOnFindings(
 }
 
 /** Reads the time a stop may spend on its checks from the environment, which a test sets to run into the deadline. An empty setting keeps the default. */
-function budgetMs(): number {
+function readBudgetMs(): number {
   const setting = process.env.FORGE_CHECK_BUDGET_MS?.trim();
   const budget = Number(setting);
 
@@ -185,10 +185,10 @@ function reasonOf(
 
   const late = [
     unchecked.length > 0
-      ? `${count(unchecked.length, 'file')}, starting with ${shown(cwd, unchecked[0])}`
+      ? `${quantityOf(unchecked.length, 'file')}, starting with ${displayPathOf(cwd, unchecked[0])}`
       : null,
     skipped.length > 0
-      ? `${count(skipped.length, 'checkout')}, starting with ${skipped[0]}`
+      ? `${quantityOf(skipped.length, 'checkout')}, starting with ${skipped[0]}`
       : null,
   ].filter(part => part !== null);
 
@@ -200,16 +200,16 @@ function reasonOf(
 }
 
 /** Writes the number with its noun, in the plural unless it is one. */
-function count(number: number, noun: string): string {
+function quantityOf(number: number, noun: string): string {
   return `${number} ${noun}${number === 1 ? '' : 's'}`;
 }
 
 /** Writes one finding as path:line rule message, the format the skills name. */
 function lineOf(cwd: string, finding: Finding): string {
-  return `${shown(cwd, finding.file)}:${finding.line} ${finding.rule} ${finding.message}`;
+  return `${displayPathOf(cwd, finding.file)}:${finding.line} ${finding.rule} ${finding.message}`;
 }
 
 /** Shows a path below the working directory relative with slashes, and any other path absolute, so a sibling worktree stays unambiguous. */
-function shown(cwd: string, file: string): string {
+function displayPathOf(cwd: string, file: string): string {
   return segmentsBelow(cwd, file)?.join('/') ?? file;
 }
