@@ -11,24 +11,47 @@
         ]
       }
     ],
-    "PostToolUse": [
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-turn.mts\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-comments.mts\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-turn.mts\"",
             "timeout": 10
-          },
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-docs.mts\"",
-            "timeout": 10
-          },
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-turn.mts\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-diagrams.mts\"",
-            "timeout": 10
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/check-turn.mts\"",
+            "timeout": 30
           }
         ]
       }

@@ -115,7 +115,7 @@ A thick border is added, a dashed border is changed, a dotted grey border is rem
 
 ## Update
 
-A diagram in the repository is true for the current code. Bring it up to date when the user asks, when the hook reports `path:line linked` after an edit, and when the `pull-request` skill asks for the files of a branch.
+A diagram in the repository is true for the current code. Bring it up to date when the user asks, when the hook reports `path:line linked` at the end of a turn, and when the `pull-request` skill asks for the files of a branch.
 
 1. **Find the diagrams.** The hook names the ones in a `README.md` above the changed file and under `docs/`. For a diagram anywhere else, and without the hook, search the Markdown files for links to each changed file with `grep -rn --include='*.md' -F '<file name>' .` and keep the hits that stand in a table under a `mermaid` block.
 2. **Read the code again**, as step 4 of [Steps](#steps) does.
@@ -136,4 +136,4 @@ pnpm add -D --save-exact mermaid@11.15.0
 
 ## Hook feedback
 
-A PostToolUse hook parses every `mermaid` block of an edited Markdown file with the Mermaid of the project. When it reports `path:line syntax` with the message of the parser, fix each reported line in your next edit. A project without Mermaid gets no syntax check. After an edit to any file, the hook reports `path:line linked` for each diagram whose table links that file. Run [Update](#update) on each of them. In a project that has Mermaid, silence means every diagram parses. The rules above still apply.
+When a turn ends, a Stop hook parses every `mermaid` block of a Markdown file the turn changed with the Mermaid of the project. When it reports `path:line syntax` with the message of the parser, fix each reported line, then end the turn. A project without Mermaid gets no syntax check. For any file the turn changed, however it changed, the hook reports `path:line linked` and the changed files for each diagram whose table links one of them. A diagram whose own file the turn changed is not named. Run [Update](#update) on each of them. In a project that has Mermaid, silence means every diagram parses. The rules above still apply.

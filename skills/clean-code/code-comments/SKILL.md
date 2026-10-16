@@ -38,4 +38,4 @@ Done when every comment in the touched symbol is one content line, punctuated, f
 
 ## Hook feedback
 
-A PostToolUse hook scans every edited file for em-dashes, semicolons, comment blocks longer than two content lines, and `TODO`/`FIXME` without a link. When it reports `path:line rule`, fix each reported line in your next edit. Silence means the mechanical rules pass, the rules above still apply.
+When a turn ends, a Stop hook scans every file the turn changed, however it changed, for em-dashes, semicolons, comment blocks longer than two content lines, and `TODO`/`FIXME` without a link. When it reports `path:line rule`, fix each reported line, then end the turn. Silence means the mechanical rules pass, the rules above still apply.

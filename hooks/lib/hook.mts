@@ -1,4 +1,4 @@
-// The plumbing the hooks share, which reads the hook input from stdin and hands findings or context back to Claude.
+// The plumbing the hooks share, which reads the hook input from stdin and hands context or a blocked stop back to Claude.
 // https://code.claude.com/docs/en/hooks.md
 
 import { readFileSync } from 'node:fs';
@@ -33,25 +33,6 @@ type TurnInput = {
   tool_input?: {
     file_path?: unknown;
   };
-};
-
-/** What the PostToolUse hook receives on stdin, the fields the hooks read. */
-type HookInput = {
-  cwd?: string;
-  tool_input?: {
-    file_path?: unknown;
-  };
-};
-
-/** The path an Edit or Write touched, resolved against the working directory of the session. */
-export type EditedPath = {
-  root: string;
-  absolute: string;
-};
-
-/** The file an Edit or Write touched inside the project, with the segments of its path below the root. */
-export type EditedFile = EditedPath & {
-  segments: string[];
 };
 
 /** One rule violation in a changed file. The file is absolute, the rule is named as its skill names it. */
@@ -120,46 +101,11 @@ export function parseTurnEvent(input: unknown): TurnEvent | null {
   }
 }
 
-/** Reads the hook input from stdin and returns the edited path, or null when the input is no JSON or names no file. */
-export function readEditedPath(): EditedPath | null {
-  const input = readHookInput() as HookInput;
-  const filePath = input.tool_input?.file_path;
-
-  if (typeof filePath !== 'string') {
-    return null;
-  }
-
-  const root = input.cwd ?? process.cwd();
-
-  return { root, absolute: resolve(root, filePath) };
-}
-
-/** Returns the edited file, or null when the input names none or names one outside the project. */
-export function readEditedFile(): EditedFile | null {
-  const edited = readEditedPath();
-
-  if (edited === null) {
-    return null;
-  }
-
-  const segments = segmentsBelow(edited.root, edited.absolute);
-
-  return segments === null ? null : { ...edited, segments };
-}
-
 /** Tells whether the path runs through a dot folder or a dependency folder. */
 export function isHidden(segments: string[]): boolean {
   return segments.some(
     segment => segment.startsWith('.') || segment === 'node_modules',
   );
-}
-
-/**
- * Hands the lines to Claude as additional context, which informs and never blocks the edit.
- * @see {@link https://code.claude.com/docs/en/hooks.md#posttooluse-decision-control | Claude Code, PostToolUse decision control}
- */
-export function report(lines: string[]): void {
-  addContext('PostToolUse', lines);
 }
 
 /**
@@ -171,13 +117,10 @@ export function blockStop(reason: string): void {
 }
 
 /**
- * Hands the lines to Claude as additional context of the event.
+ * Hands the lines to Claude as additional context of the session start.
  * @see {@link https://code.claude.com/docs/en/hooks.md#sessionstart-decision-control | Claude Code, SessionStart decision control}
  */
-export function addContext(
-  event: 'PostToolUse' | 'SessionStart',
-  lines: string[],
-): void {
+export function addContext(event: 'SessionStart', lines: string[]): void {
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {

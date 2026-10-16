@@ -1,22 +1,22 @@
 # Hooks
 
-What happens when a session starts and after Claude edits a file?
+What happens when a session starts and while a turn runs?
 
 ```mermaid
 flowchart TD
-  accTitle: What happens when a session starts and after Claude edits a file?
+  accTitle: What happens when a session starts and while a turn runs?
   hooksJson["Start every hook of the event"]
   hooksJson -->|"when a session starts"| sessionContext["Hand Claude the transcript of the session and the root of the plugin"]
-  hooksJson -->|"after an Edit or a Write"| checkComments["Check the comments of a source file"]
-  hooksJson -->|"after an Edit or a Write"| checkDocs["Check the prose and the links of a documentation file"]
-  hooksJson -->|"after an Edit or a Write"| checkDiagrams["Parse the diagrams of a Markdown file and name the diagrams that link the edited file"]
-  checkDocs -->|"when the project has it"| markdownlint["Lint the Markdown syntax"]
-  checkDiagrams -->|"when the project has it"| mermaid["Parse one diagram"]
-  checkDocs --> markdown["Find the code fences and resolve the links"]
-  checkDiagrams --> markdown
-  checkComments --> hook["Read the hook input and hand the findings or the context to Claude"]
-  checkDocs --> hook
-  checkDiagrams --> hook
+  hooksJson -->|"when a prompt starts, before an Edit or a Write, and when a turn or a subagent stops"| checkTurn["Note the turn and its edits, and check what it changed when it stops"]
+  checkTurn -->|"when a turn or a subagent stops"| changes["Find the files the turn changed in every checkout it worked in"]
+  checkTurn -->|"when a turn or a subagent stops"| comments["Check the comments of a source file"]
+  checkTurn -->|"when a turn or a subagent stops"| docs["Check the prose and the links of a documentation file"]
+  checkTurn -->|"when a turn or a subagent stops"| diagrams["Parse the diagrams of a Markdown file and name the diagrams that link a changed file"]
+  docs -->|"when the project has it"| markdownlint["Lint the Markdown syntax"]
+  diagrams -->|"when the project has it"| mermaid["Parse one diagram"]
+  docs --> markdown["Find the code fences and resolve the links"]
+  diagrams --> markdown
+  checkTurn --> hook["Read the hook input and hand the context or the blocked stop to Claude"]
   sessionContext --> hook
 ```
 
@@ -24,13 +24,19 @@ flowchart TD
 | --- | --- |
 | `hooksJson` | [`hooks.json`](hooks.json) |
 | `sessionContext` | [`session-context.mts`](session-context.mts) |
-| `checkComments` | [`check-comments.mts`](check-comments.mts) |
-| `checkDocs` | [`check-docs.mts`](check-docs.mts) |
-| `checkDiagrams` | [`check-diagrams.mts`](check-diagrams.mts) |
+| `checkTurn` | [`check-turn.mts`](check-turn.mts) |
+| `changes` | [`lib/changes.mts`](lib/changes.mts) |
+| `comments` | [`lib/comments.mts`](lib/comments.mts) |
+| `docs` | [`lib/docs.mts`](lib/docs.mts) |
+| `diagrams` | [`lib/diagrams.mts`](lib/diagrams.mts) |
 | `markdown` | [`lib/markdown.mts`](lib/markdown.mts) |
 | `hook` | [`lib/hook.mts`](lib/hook.mts) |
 
-Every hook informs and never blocks a session or an edit. A hook that has nothing to report prints nothing.
+The session hook informs. The turn hook blocks the end of a turn once when a file the turn changed breaks a rule, and stays silent on the stop after it. A hook that has nothing to report prints nothing.
 
+- The turn hook keeps a journal per session in the temporary folder of the user, never in a working tree. It holds the start of each turn, the state of each checkout the turn works in and the content of each file before an Edit or a Write touches it.
+- A stop compares the content of every candidate file with its content at the start of the turn. An Edit, a shell command, a commit and an amend count alike. A file that a checkout or a pull brought in does not.
+- A subagent with its own worktree is checked when it stops. The stop of the main session leaves that worktree out.
+- A stop starts no new file after 25 seconds and names the files it left. `FORGE_CHECK_BUDGET_MS` sets the budget in milliseconds, the turn test uses it.
 - [markdownlint](https://raw.githubusercontent.com/DavidAnson/markdownlint/main/README.md) and [Mermaid](https://raw.githubusercontent.com/mermaid-js/mermaid/develop/docs/config/usage.md) come from the project that is edited, never from this plugin.
 - [Claude Code hooks](https://code.claude.com/docs/en/hooks.md) describes the input a hook reads and the output it writes.

@@ -54,7 +54,7 @@ Write [GitHub Flavored Markdown](https://docs.github.com/en/get-started/writing-
 
 ## markdownlint
 
-markdownlint checks the Markdown syntax of every documentation file. The hook needs the library and a configuration in the project, reads both and reports the findings after every edit. If the project has no markdownlint, install it after confirmation with the "Add dev dependency" command of the `package-manager` skill. If the project root has no `.markdownlint.jsonc` and no `.markdownlint.json`, copy [.markdownlint.jsonc](assets/.markdownlint.jsonc) into it.
+markdownlint checks the Markdown syntax of every documentation file. The hook needs the library and a configuration in the project root, reads both and reports the findings when a turn ends. If the project has no markdownlint, install it after confirmation with the "Add dev dependency" command of the `package-manager` skill. If the project root has no `.markdownlint.jsonc` and no `.markdownlint.json`, copy [.markdownlint.jsonc](assets/.markdownlint.jsonc) into it.
 
 ```sh
 pnpm add -D markdownlint
@@ -65,4 +65,4 @@ pnpm add -D markdownlint
 
 ## Hook feedback
 
-A PostToolUse hook scans every edited documentation file for em-dashes, semicolons, relative links without a target, a missing opening sentence, and a file under `docs/` that the README does not link. In a project that has markdownlint and its configuration, the hook also reports what markdownlint finds. When it reports `path:line rule`, fix each reported line in your next edit. Silence means the mechanical rules pass, the rules above still apply.
+When a turn ends, a Stop hook scans every documentation file the turn changed for em-dashes, semicolons, relative links without a target, a missing opening sentence, and a file under `docs/` that the README does not link. In a project that has markdownlint and its configuration, the hook also reports what markdownlint finds. When it reports `path:line rule`, fix each reported line, then end the turn. Silence means the mechanical rules pass, the rules above still apply.
