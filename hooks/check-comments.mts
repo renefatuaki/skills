@@ -7,9 +7,7 @@ import { readFileSync } from 'node:fs';
 import { extname, relative } from 'node:path';
 
 import { readEditedPath, report } from './lib/hook.mts';
-
-/** The comment syntax of a language, slashes and blocks or hashes and docstrings. */
-type Syntax = 'c' | 'python';
+import { LANGUAGES, type Syntax } from './lib/languages.mts';
 
 /** One content line of a comment, its delimiters removed, with its line number in the file. */
 type CommentLine = {
@@ -56,23 +54,6 @@ type Finding = {
   message: string;
 };
 
-/** Maps a file extension to its comment syntax, a file with any other extension is not checked. */
-const SYNTAX: Record<string, Syntax> = {
-  '.swift': 'c',
-  '.kt': 'c',
-  '.kts': 'c',
-  '.java': 'c',
-  '.ts': 'c',
-  '.tsx': 'c',
-  '.js': 'c',
-  '.jsx': 'c',
-  '.mjs': 'c',
-  '.cjs': 'c',
-  '.mts': 'c',
-  '.cts': 'c',
-  '.py': 'python',
-};
-
 /** A comment holds a summary line and a link line at most. */
 const MAX_CONTENT_LINES = 2;
 
@@ -99,9 +80,9 @@ function main(): void {
     return;
   }
 
-  const syntax = SYNTAX[extname(edited.absolute).toLowerCase()];
+  const language = LANGUAGES[extname(edited.absolute).toLowerCase()];
 
-  if (!syntax) {
+  if (!language) {
     return;
   }
 
@@ -114,7 +95,7 @@ function main(): void {
   }
 
   // 2. Collect the findings of every rule.
-  const findings = check(source, syntax);
+  const findings = check(source, language.syntax);
 
   if (findings.length === 0) {
     return;

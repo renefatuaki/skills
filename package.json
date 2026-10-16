@@ -9,7 +9,7 @@
     "url": "https://github.com/renefatuaki/skills"
   },
   "scripts": {
-    "test": "node tests/code-comments.test.mts && node tests/project-docs.test.mts && node tests/diagrams.test.mts && node tests/session-context.test.mts && node tests/codex-model.test.mts",
+    "test": "node tests/code-comments.test.mts && node tests/project-docs.test.mts && node tests/diagrams.test.mts && node tests/session-context.test.mts && node tests/codex-model.test.mts && node tests/load-comment-rules.test.mts",
     "version": "changeset version && node scripts/sync-plugin-version.mts",
     "prepare": "husky",
     "format": "oxfmt",

@@ -5,9 +5,12 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
-/** What the PostToolUse hook receives on stdin, the fields the hooks read. */
-type HookInput = {
+/** What a tool hook receives on stdin, the fields the hooks read. A subagent adds its agent_id. */
+export type HookInput = {
   cwd?: string;
+  session_id?: unknown;
+  transcript_path?: unknown;
+  agent_id?: unknown;
   tool_input?: {
     file_path?: unknown;
   };
@@ -75,6 +78,22 @@ export function isHidden(segments: string[]): boolean {
  */
 export function report(lines: string[]): void {
   addContext('PostToolUse', lines);
+}
+
+/**
+ * Denies the tool call and hands Claude the reason, which it reads before it repeats the call.
+ * @see {@link https://code.claude.com/docs/en/hooks.md#pretooluse-decision-control | Claude Code, PreToolUse decision control}
+ */
+export function deny(reason: string): void {
+  process.stdout.write(
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: reason,
+      },
+    }),
+  );
 }
 
 /**
