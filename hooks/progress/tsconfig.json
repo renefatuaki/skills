@@ -1,0 +1,27 @@
+// Lets the editor resolve `claude-code` in the hooks module against the declarations Claude Code writes into .claude-plugin/types when it loads the plugin. The module runs with no DOM and no Node.
+{
+  // Specify a file or files whose settings this configuration inherits.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    // Sets the module system for the program.
+    "module": "esnext",
+    // Specify how TypeScript looks up a file from a given module specifier.
+    "moduleResolution": "bundler",
+    // Specify a set of bundled library declaration files that describe the target runtime environment.
+    "lib": [
+      "es2023"
+    ],
+    // Specify type package names to be included without being referenced in a source file.
+    "types": [],
+    // Skip type checking all .d.ts files.
+    "skipLibCheck": true
+  },
+  // Specifies an array of filenames or patterns to include in the program.
+  "include": [
+    "*.mts",
+    "../../tests/progress.kit.test.ts",
+    "../../.claude-plugin/types"
+  ],
+  // Specifies an array of filenames or patterns that should be skipped when resolving include.
+  "exclude": []
+}

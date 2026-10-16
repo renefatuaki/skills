@@ -45,5 +45,8 @@
         ]
       }
     ]
-  }
+  },
+  "modules": [
+    "./progress/index.mts"
+  ]
 }

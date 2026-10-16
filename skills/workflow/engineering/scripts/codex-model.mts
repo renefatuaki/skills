@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 
-// Prints the newest full name the Codex app-server lists for a model name, such as gpt-6-astra for astra, once the account has enough usage left, asked over JSON-RPC on stdio.
+// Prints the newest full name the Codex app-server lists for a model name once the account has enough usage left, or with --usage the usage left as one JSON line, asked over JSON-RPC on stdio.
 // https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md
 
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';
 
@@ -32,6 +35,13 @@ type Usage = {
   };
 };
 
+/** The line --usage prints, the whole percents left of each window and whether either has less left than the minimum. */
+type UsageReport = {
+  primary: number | null;
+  secondary: number | null;
+  belowMinimum: boolean;
+};
+
 /** A line the app-server writes, a response that carries the id of its request or a notification that carries none. */
 type Message = {
   id?: number;
@@ -48,7 +58,7 @@ type Candidate = {
 
 const NAMES = ['luna', 'sol', 'astra'];
 
-const USAGE = `usage: codex-model.mts [--min-remaining <percent>] <${NAMES.join('|')}>`;
+const USAGE = `usage: codex-model.mts [--min-remaining <percent>] (--usage | <${NAMES.join('|')}>)`;
 
 const TIMEOUT_MS = 30_000;
 
@@ -56,24 +66,32 @@ const INITIALIZE_ID = 0;
 
 const USAGE_ID = 1;
 
-const DEFAULT_MIN_REMAINING = '20';
+/** Stands in for a missing `codex minimum` line, as model-roles.md says. */
+const DEFAULT_MIN_REMAINING = 20;
 
-// 1. Read the name and the usage a run needs left, in percent of a window, from the command line.
+/** Matches the line /setup-models writes into ~/.claude/rules/models.md, such as `codex minimum: 20%`. */
+const MINIMUM_LINE = /^codex minimum:\s*(\d+)\s*%\s*$/m;
+
+// 1. Read the mode, the name and the usage a run needs left from the command line, the minimum from the rule file when the line names none.
 // https://nodejs.org/api/util.md#utilparseargsconfig
 const { values, positionals } = readArgs();
 
 const [name] = positionals;
 
-const minRemaining = Number(values['min-remaining']);
+const isUsage = values.usage === true;
 
 if (
-  positionals.length !== 1 ||
-  !NAMES.includes(name) ||
-  !/^\d+$/.test(values['min-remaining']) ||
-  minRemaining > 100
+  (isUsage ? positionals.length !== 0 : positionals.length !== 1) ||
+  (!isUsage && !NAMES.includes(name)) ||
+  !isPercent(values['min-remaining'])
 ) {
   fail(USAGE);
 }
+
+const minRemaining =
+  values['min-remaining'] === undefined
+    ? ruleMinimum()
+    : Number(values['min-remaining']);
 
 // 2. Start the app-server. It logs a failed refresh of the catalog to stderr and then answers from the catalog bundled with the CLI.
 const server = spawn('codex', ['app-server'], {
@@ -89,9 +107,7 @@ server.on('error', () => {
 server.on('close', (code, signal) => {
   const reason = code === null ? `signal ${signal}` : `code ${code}`;
 
-  fail(
-    `The Codex app-server exited with ${reason} before it listed the models.`,
-  );
+  fail(`The Codex app-server exited with ${reason} before it answered.`);
 });
 
 server.stdin.on('error', () => {
@@ -102,7 +118,7 @@ setTimeout(() => {
   fail(`The Codex app-server did not answer within ${TIMEOUT_MS / 1000} s.`);
 }, TIMEOUT_MS).unref();
 
-// 3. Initialize the connection, check the usage left, then page through `model/list` without the models hidden from the picker.
+// 3. Initialize the connection and read the usage. --usage prints it and ends, a name checks it and pages through `model/list`.
 const models: Model[] = [];
 let nextId = USAGE_ID + 1;
 
@@ -110,12 +126,7 @@ createInterface({ input: server.stdout }).on('line', line => {
   const message = parse(line);
 
   if (message.id === USAGE_ID) {
-    // An account without usage limits, such as one signed in with an API key, answers with an error and runs.
-    if (message.result !== undefined) {
-      checkUsage(message.result);
-    }
-
-    requestModels(null);
+    answerUsage(message.result);
 
     return;
   }
@@ -161,7 +172,8 @@ function readArgs() {
     return parseArgs({
       allowPositionals: true,
       options: {
-        'min-remaining': { type: 'string', default: DEFAULT_MIN_REMAINING },
+        'min-remaining': { type: 'string' },
+        usage: { type: 'boolean' },
       },
     });
   } catch {
@@ -176,6 +188,73 @@ function parse(line: string): Message {
   } catch {
     fail(`The Codex app-server wrote a line that is no JSON: ${line}`);
   }
+}
+
+/** Accepts a missing option or a whole number of at most 100. */
+function isPercent(value: string | undefined): boolean {
+  return value === undefined || (/^\d+$/.test(value) && Number(value) <= 100);
+}
+
+/** Reads the percent of the `codex minimum` line of the user's rules, 20 without the file, the line or a percent of at most 100. */
+function ruleMinimum(): number {
+  let rules = '';
+
+  try {
+    rules = readFileSync(
+      join(homedir(), '.claude', 'rules', 'models.md'),
+      'utf8',
+    );
+  } catch {
+    return DEFAULT_MIN_REMAINING;
+  }
+
+  const match = MINIMUM_LINE.exec(rules);
+
+  if (match === null) {
+    return DEFAULT_MIN_REMAINING;
+  }
+
+  const percent = Number(match[1]);
+
+  return percent <= 100 ? percent : DEFAULT_MIN_REMAINING;
+}
+
+/** Prints the usage for --usage, else fails a run the usage cannot carry and asks for the models. */
+function answerUsage(usage: Usage | undefined): void {
+  // An account without usage limits, such as one signed in with an API key, answers with an error.
+  if (isUsage) {
+    if (usage === undefined) {
+      fail('Codex reports no usage limits for this account.');
+    }
+
+    console.log(JSON.stringify(report(usage)));
+    process.exit(0);
+  }
+
+  if (usage !== undefined) {
+    checkUsage(usage);
+  }
+
+  requestModels(null);
+}
+
+/** Reports the whole percents left, rounded down, and whether either window is below the minimum, whatever credits or a reached limit say. */
+function report(usage: Usage): UsageReport {
+  const { primary, secondary } = usage.rateLimits;
+
+  return {
+    primary: remaining(primary),
+    secondary: remaining(secondary),
+    belowMinimum: [primary, secondary].some(
+      window => window !== null && 100 - window.usedPercent < minRemaining,
+    ),
+  };
+}
+
+function remaining(window: UsageWindow | null): number | null {
+  return window === null
+    ? null
+    : Math.max(0, Math.floor(100 - window.usedPercent));
 }
 
 /**
@@ -227,11 +306,11 @@ function checkUsage(usage: Usage): void {
     fail(`Codex reached its usage limit.${resetsAt(tightest)}`);
   }
 
-  const remaining = 100 - (tightest?.usedPercent ?? 0);
+  const left = 100 - (tightest?.usedPercent ?? 0);
 
-  if (remaining < minRemaining) {
+  if (left < minRemaining) {
     fail(
-      `Codex has ${remaining} % left of its ${windowName(tightest)} usage window, below the minimum of ${minRemaining} %.${resetsAt(tightest)}`,
+      `Codex has ${left} % left of its ${windowName(tightest)} usage window, below the minimum of ${minRemaining} %.${resetsAt(tightest)}`,
     );
   }
 }

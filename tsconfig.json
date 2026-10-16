@@ -27,6 +27,7 @@
   ],
   // Specifies an array of filenames or patterns that should be skipped when resolving include.
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "hooks/progress/index.mts"
   ]
 }
