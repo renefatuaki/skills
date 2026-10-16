@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 
-// Builds the prefill URL of a GitHub issue form from the issue as JSON on stdin, and refuses one GitHub would reject as too long.
+// Builds the prefill URL of a GitHub issue, from a form or blank, from the issue as JSON on stdin, and refuses one GitHub would reject as too long.
 
-/** The issue as the skill hands it over, field values keyed by the id of the form field. */
+/** The issue as the skill hands it over, either a form with field values keyed by the id of the form field, or a blank issue with its body and labels. */
 type Issue = {
   repo: string;
-  template: string;
   title: string;
-  fields?: Record<string, string>;
   assignees?: string[];
   milestone?: string;
   projects?: string[];
-};
+} & (
+  | { template: string; fields?: Record<string, string> }
+  | { body: string; labels?: string[] }
+);
 
 /** GitHub answers a longer URL with a server error, measured on 2026-09-26. */
 const URL_BYTE_LIMIT = 7000;
@@ -50,7 +51,7 @@ async function readStdin(): Promise<string> {
   return input;
 }
 
-/** Parses the issue and rejects one without repo, template or title. */
+/** Parses the issue and rejects one without repo or title, or without exactly one of template and body. */
 function parseIssue(json: string): Issue {
   let issue: Issue;
 
@@ -62,10 +63,14 @@ function parseIssue(json: string): Issue {
     );
   }
 
-  for (const key of ['repo', 'template', 'title'] as const) {
+  for (const key of ['repo', 'title'] as const) {
     if (!issue[key]) {
       throw new InvalidIssueError(`${key} is missing`);
     }
+  }
+
+  if ('template' in issue === 'body' in issue) {
+    throw new InvalidIssueError('give either template or body');
   }
 
   return issue;
@@ -75,20 +80,20 @@ function parseIssue(json: string): Issue {
  * Builds the URL with every field value as a parameter named by the field id.
  * @see {@link https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-an-issue.md#creating-an-issue-from-a-url-query | Creating an issue from a URL query}
  */
-function buildPrefillUrl({
-  repo,
-  template,
-  title,
-  fields = {},
-  assignees = [],
-  milestone,
-  projects = [],
-}: Issue): string {
-  const parameters = [
-    ['template', template],
-    ['title', title],
-    ...Object.entries(fields),
-  ];
+function buildPrefillUrl(issue: Issue): string {
+  const { repo, title, assignees = [], milestone, projects = [] } = issue;
+  const parameters = [['title', title]];
+
+  if ('template' in issue) {
+    parameters.unshift(['template', issue.template]);
+    parameters.push(...Object.entries(issue.fields ?? {}));
+  } else {
+    parameters.push(['body', issue.body]);
+
+    if (issue.labels?.length) {
+      parameters.push(['labels', issue.labels.join(',')]);
+    }
+  }
 
   if (assignees.length > 0) {
     parameters.push(['assignees', assignees.join(',')]);
