@@ -21,13 +21,25 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import { type SessionId, segmentsBelow } from './hook.mts';
+import { realPathOf, type SessionId, segmentsBelow } from './hook.mts';
+
+/** What the stop found, the changed files per root of the rules and the checkouts the deadline kept from listing theirs. */
+export type Discovery = {
+  changes: Changes[];
+  skipped: string[];
+};
 
 /** The files one turn changed that share one root for the rules, absolute, sorted and unique, deleted files included. The root is the working directory for a file in its checkout, so a package of a monorepo is the root of its own files, and the git top level for a file of any other checkout. */
 export type Changes = {
   root: string;
   files: string[];
   /** The time in epoch milliseconds after which no new file is started, absent for no limit. */
+  deadline?: number;
+};
+
+/** A checkout to run git in, with the time in epoch milliseconds after which no git call starts, absent for no limit. */
+type Repo = {
+  root: string;
   deadline?: number;
 };
 
@@ -62,7 +74,7 @@ type EditEntry = {
 };
 
 /**
- * One line of the append-only journal of a session. The journal is the single source of a turn, the agent is the id of the subagent that wrote the line or null for the main session.
+ * One line of the journal of a session. A prompt starts the journal with its own line and a baseline, and the Edits of the turn append to it. It is the single source of a turn, and the agent is the id of the subagent that wrote the line or null for the main session.
  * @see {@link https://code.claude.com/docs/en/hooks.md | Claude Code, hooks reference}
  */
 type Entry = PromptEntry | BaselineEntry | EditEntry;
@@ -73,6 +85,9 @@ type Turn = {
   baselines: BaselineEntry[];
   edits: EditEntry[];
 };
+
+/** Thrown when the deadline passes before a git call starts or while it runs. */
+class DeadlineError extends Error {}
 
 /** The content id of a path that holds no file. */
 const MISSING: ContentId = 'missing';
@@ -102,7 +117,7 @@ export function noteTurnStart(session: SessionId, cwd: string): void {
   const entries: Entry[] = [{ at, agent: null, kind: 'prompt', cwd }];
 
   if (root !== null) {
-    entries.push(baselineOf(root, null, at));
+    entries.push(baselineOf({ root }, null, at));
   }
 
   startJournal(session, entries);
@@ -130,8 +145,8 @@ export function noteEdit(
   ) {
     append(
       session,
-      creationBaseline(root, agent, turn.promptAt) ??
-        baselineOf(root, agent, Date.now()),
+      creationBaseline({ root }, agent, turn.promptAt) ??
+        baselineOf({ root }, agent, Date.now()),
     );
   }
 
@@ -145,17 +160,22 @@ export function noteEdit(
     agent,
     kind: 'edit',
     path,
-    before: contentIds(root ?? dirname(path), [path]).get(path) ?? MISSING,
+    before:
+      contentIds({ root: root ?? dirname(path) }, [path]).get(path) ?? MISSING,
   });
 }
 
-/** Lists what the current turn of the main session changed per checkout, nothing before its first prompt. Agent worktrees are left to their subagents. */
-export function turnChanges(session: SessionId, cwd: string): Changes[] {
-  // 1. Derive the turn from the journal, an empty list when no prompt started one.
+/** Lists what the current turn of the main session changed per checkout, nothing before its first prompt. Agent worktrees are left to their subagents. A checkout the deadline cuts short is skipped. */
+export function turnChanges(
+  session: SessionId,
+  cwd: string,
+  deadline: number,
+): Discovery {
+  // 1. Derive the turn from the journal, nothing to list when no prompt started one.
   const turn = turnOf(readJournal(session));
 
   if (turn === null) {
-    return [];
+    return { changes: [], skipped: [] };
   }
 
   // 2. Place each edit in its checkout. An edit outside every repository joins the checkout of the stop, where only the comment rules reach it.
@@ -165,44 +185,92 @@ export function turnChanges(session: SessionId, cwd: string): Changes[] {
     root: toplevelOf(edit.path) ?? stopRoot,
   }));
 
-  // 3. The checkouts are those the turn left evidence in and the one the stop stands in, each once.
+  // 3. The checkouts are those the turn left evidence in and the one the stop stands in, each once, without the worktrees of subagents.
   const roots = new Set([
     ...turn.baselines.map(baseline => baseline.root),
     ...placed.map(({ root }) => root),
     stopRoot,
   ]);
 
-  // 4. List the changed files of each checkout, without the worktrees of subagents, and group them by the root of their rules.
-  const files = [...roots]
-    .filter(root => !AGENT_WORKTREE.test(root))
-    .flatMap(root => {
+  // 4. List the changed files of each checkout and group them by the root of their rules.
+  const listed = listEach(
+    [...roots].filter(root => !AGENT_WORKTREE.test(root)),
+    deadline,
+    repo => {
       const edits = placed
-        .filter(entry => entry.root === root)
+        .filter(entry => entry.root === repo.root)
         .map(({ edit }) => edit);
 
-      return changedIn(root, baselineFor(root, turn), edits);
-    });
+      return changedIn(repo, baselineFor(repo, turn), edits);
+    },
+  );
 
-  return groupByRuleRoot(cwd, files);
+  return {
+    changes: groupByRuleRoot(cwd, listed.files),
+    skipped: listed.skipped,
+  };
 }
 
-/** Lists what a subagent with isolation changed in its own worktree, nothing for a subagent that works in a checkout the main session owns. */
+/** Lists what a subagent with isolation changed in its own worktree, nothing for a subagent that works in a checkout the main session owns. A worktree the deadline cuts short is skipped. */
 export function agentChanges(
   session: SessionId,
   cwd: string,
   agent: string,
-): Changes[] {
+  deadline: number,
+): Discovery {
   const turn = turnOf(readJournal(session));
 
-  const files = agentWorktreesOf(cwd, agent, turn).flatMap(root => {
-    const edits = (turn?.edits ?? []).filter(
-      edit => toplevelOf(edit.path) === root,
+  try {
+    const roots = agentWorktreesOf(
+      { root: toplevelOf(cwd) ?? cwd, deadline },
+      agent,
+      turn,
     );
 
-    return changedIn(root, baselineFor(root, turn), edits);
-  });
+    const listed = listEach(roots, deadline, repo => {
+      const edits = (turn?.edits ?? []).filter(
+        edit => toplevelOf(edit.path) === repo.root,
+      );
 
-  return groupByRuleRoot(cwd, files);
+      return changedIn(repo, baselineFor(repo, turn), edits);
+    });
+
+    return {
+      changes: groupByRuleRoot(cwd, listed.files),
+      skipped: listed.skipped,
+    };
+  } catch (error) {
+    if (!(error instanceof DeadlineError)) {
+      throw error;
+    }
+
+    // The worktrees of the subagent could not be looked up in time, so the checkout of the stop is the one left unchecked.
+    return { changes: [], skipped: [cwd] };
+  }
+}
+
+/** Lists the changed files of each checkout. A checkout the deadline cuts short is skipped as a whole, so no half list is ever reported. */
+function listEach(
+  roots: string[],
+  deadline: number,
+  list: (repo: Repo) => string[],
+): { files: string[]; skipped: string[] } {
+  const files: string[] = [];
+  const skipped: string[] = [];
+
+  for (const root of roots) {
+    try {
+      files.push(...list({ root, deadline }));
+    } catch (error) {
+      if (!(error instanceof DeadlineError)) {
+        throw error;
+      }
+
+      skipped.push(root);
+    }
+  }
+
+  return { files, skipped };
 }
 
 /** Appends one entry to the journal the turn started. An append is a single write, so concurrent hooks of one session never interleave a line. A journal that is missing, or a link in its place, is not written. */
@@ -466,25 +534,20 @@ function toplevelOf(path: string): string | null {
 }
 
 /**
- * Lists the worktrees of the subagent: the one the worktrees of the repository that holds cwd name and the ones its Edits in the turn lie in. Empty when it has none.
+ * Lists the worktrees of the subagent: the one the worktrees of the repository of the stop name and the ones its Edits in the turn lie in. Empty when it has none.
  * @see {@link https://git-scm.com/docs/git-worktree#_list_output_format | git worktree, porcelain format}
  */
 function agentWorktreesOf(
-  cwd: string,
+  repo: Repo,
   agent: string,
   turn: Turn | null,
 ): string[] {
-  const listing = git(toplevelOf(cwd) ?? cwd, [
-    'worktree',
-    'list',
-    '--porcelain',
-    '-z',
-  ]);
+  const listing = git(repo, ['worktree', 'list', '--porcelain', '-z']);
 
   const listed = (listing ?? '')
     .split('\0')
     .filter(field => field.startsWith('worktree '))
-    .map(field => field.slice('worktree '.length));
+    .map(field => realPathOf(field.slice('worktree '.length)));
 
   const edited = (turn?.edits ?? [])
     .filter(edit => edit.agent === agent)
@@ -496,18 +559,18 @@ function agentWorktreesOf(
 }
 
 /** Returns the state a checkout starts the turn in. A worktree of a subagent always starts in the state it was created in, and so does any worktree made since the prompt. Every other checkout starts in the state the journal noted, null when it noted none. */
-function baselineFor(root: string, turn: Turn | null): BaselineEntry | null {
-  const noted = turn?.baselines.find(baseline => baseline.root === root);
+function baselineFor(repo: Repo, turn: Turn | null): BaselineEntry | null {
+  const noted = turn?.baselines.find(baseline => baseline.root === repo.root);
 
-  if (AGENT_WORKTREE.test(root)) {
-    return creationBaseline(root, null, 0) ?? noted ?? null;
+  if (AGENT_WORKTREE.test(repo.root)) {
+    return creationBaseline(repo, null, 0) ?? noted ?? null;
   }
 
   if (noted !== undefined || turn === null) {
     return noted ?? null;
   }
 
-  return creationBaseline(root, null, turn.promptAt);
+  return creationBaseline(repo, null, turn.promptAt);
 }
 
 /**
@@ -515,11 +578,11 @@ function baselineFor(root: string, turn: Turn | null): BaselineEntry | null {
  * @see {@link https://git-scm.com/docs/git-reflog | git reflog}
  */
 function creationBaseline(
-  root: string,
+  repo: Repo,
   agent: string | null,
   notBefore: number,
 ): BaselineEntry | null {
-  const output = git(root, [
+  const output = git(repo, [
     'reflog',
     'show',
     '--date=unix',
@@ -543,7 +606,7 @@ function creationBaseline(
     at: seconds * 1000,
     agent,
     kind: 'baseline',
-    root,
+    root: repo.root,
     head,
     dirty: {},
   };
@@ -551,50 +614,57 @@ function creationBaseline(
 
 /** Takes the state of the checkout at the time: the commit HEAD names, null before the first commit, and the content of every file git status names. */
 function baselineOf(
-  root: string,
+  repo: Repo,
   agent: string | null,
   at: number,
 ): BaselineEntry {
-  const paths = statusPaths(root);
+  const paths = statusPaths(repo);
   const ids = contentIds(
-    root,
-    paths.map(path => join(root, path)),
+    repo,
+    paths.map(path => join(repo.root, path)),
   );
 
   const dirty: Record<string, ContentId> = {};
 
   for (const path of paths) {
-    const id = ids.get(join(root, path));
+    const id = ids.get(join(repo.root, path));
 
     if (id !== undefined) {
       dirty[path] = id;
     }
   }
 
-  return { at, agent, kind: 'baseline', root, head: headOf(root), dirty };
+  return {
+    at,
+    agent,
+    kind: 'baseline',
+    root: repo.root,
+    head: headOf(repo),
+    dirty,
+  };
 }
 
 /** Lists the files of the checkout that differ from the content they held when the turn started, deleted files included. */
 function changedIn(
-  root: string,
+  repo: Repo,
   baseline: BaselineEntry | null,
   edits: EditEntry[],
 ): string[] {
   // 1. Gather every path that may have changed and read what it holds now. A path with no content now is a directory, which holds no rule to check.
-  const status = statusPaths(root).map(path => join(root, path));
+  const status = statusPaths(repo).map(path => join(repo.root, path));
   const candidates = new Set([
-    ...committedPaths(root, baseline).map(path => join(root, path)),
+    ...committedPaths(repo, baseline).map(path => join(repo.root, path)),
     ...status,
-    ...Object.keys(baseline?.dirty ?? {}).map(path => join(root, path)),
+    ...Object.keys(baseline?.dirty ?? {}).map(path => join(repo.root, path)),
     ...edits.map(edit => edit.path),
   ]);
 
-  const now = contentIds(root, [...candidates]);
+  const now = contentIds(repo, [...candidates]);
   const paths = [...now.keys()];
 
   // 2. Look up what each path held when the turn started: the dirty content of the baseline, else the blob of its commit, else for a path git names nowhere, a gitignored file, the content before its first Edit.
   const dirty = new Map(Object.entries(baseline?.dirty ?? {}));
-  const started = baseline?.head ? treeIds(root, baseline.head, paths) : null;
+  const started = baseline?.head ? treeIds(repo, baseline.head, paths) : null;
   const firstEdits = new Map(
     edits.toReversed().map(edit => [edit.path, edit.before]),
   );
@@ -606,7 +676,8 @@ function changedIn(
       return firstEdits.get(path) ?? null;
     }
 
-    const content = dirty.get(relativeTo(root, path)) ?? started?.get(path);
+    const content =
+      dirty.get(relativeTo(repo.root, path)) ?? started?.get(path);
 
     if (content !== undefined) {
       return content;
@@ -623,8 +694,8 @@ function changedIn(
  * Lists every path git status names, staged, unstaged and untracked, a rename as its two sides, without a nested repository such as an agent worktree.
  * @see {@link https://git-scm.com/docs/git-status#_porcelain_format_version_1 | git status, porcelain format version 1}
  */
-function statusPaths(root: string): string[] {
-  const output = git(root, [
+function statusPaths(repo: Repo): string[] {
+  const output = git(repo, [
     'status',
     '--porcelain=v1',
     '-z',
@@ -643,15 +714,12 @@ function statusPaths(root: string): string[] {
  * Lists the files of the commits made since the baseline, by committer date, so a commit, an amend, a rebase or a cherry-pick of the turn counts and the commits a checkout or a pull brought in do not. A merge names the files its resolution changed.
  * @see {@link https://git-scm.com/docs/git-log | git log}
  */
-function committedPaths(
-  root: string,
-  baseline: BaselineEntry | null,
-): string[] {
+function committedPaths(repo: Repo, baseline: BaselineEntry | null): string[] {
   if (baseline === null) {
     return [];
   }
 
-  const output = git(root, [
+  const output = git(repo, [
     'log',
     '--no-renames',
     '--name-only',
@@ -671,26 +739,26 @@ function committedPaths(
  * @see {@link https://git-scm.com/docs/git-ls-tree | git ls-tree}
  */
 function treeIds(
-  root: string,
+  repo: Repo,
   commit: string,
   paths: string[],
 ): Map<string, ContentId> {
   const ids = new Map<string, ContentId>();
-  const below = paths.filter(path => segmentsBelow(root, path) !== null);
+  const below = paths.filter(path => segmentsBelow(repo.root, path) !== null);
 
   for (let start = 0; start < below.length; start += PATHS_PER_CALL) {
     const names = below
       .slice(start, start + PATHS_PER_CALL)
-      .map(path => relativeTo(root, path));
+      .map(path => relativeTo(repo.root, path));
 
-    const output = git(root, ['ls-tree', '-r', '-z', commit, '--', ...names]);
+    const output = git(repo, ['ls-tree', '-r', '-z', commit, '--', ...names]);
 
     for (const entry of (output ?? '').split('\0')) {
       const tab = entry.indexOf('\t');
       const id = entry.slice(0, tab).split(' ')[2];
 
       if (tab !== -1) {
-        ids.set(join(root, entry.slice(tab + 1)), id);
+        ids.set(join(repo.root, entry.slice(tab + 1)), id);
       }
     }
   }
@@ -699,8 +767,8 @@ function treeIds(
 }
 
 /** Returns the commit HEAD names, or null in a checkout without a commit and outside a repository. */
-function headOf(root: string): string | null {
-  return git(root, ['rev-parse', 'HEAD'])?.trim() ?? null;
+function headOf(repo: Repo): string | null {
+  return git(repo, ['rev-parse', 'HEAD'])?.trim() ?? null;
 }
 
 /** Returns the path below the root with slashes, as git names it. */
@@ -712,7 +780,7 @@ function relativeTo(root: string, path: string): string {
  * Reads the content id of each path as git would store it, filters of the checkout applied, so the id of a file equals the id of the same content in a commit. A path without a file maps to MISSING and a directory is left out.
  * @see {@link https://git-scm.com/docs/git-hash-object | git hash-object}
  */
-function contentIds(root: string, paths: string[]): Map<string, ContentId> {
+function contentIds(repo: Repo, paths: string[]): Map<string, ContentId> {
   const ids = new Map<string, ContentId>();
   const files: string[] = [];
 
@@ -730,7 +798,7 @@ function contentIds(root: string, paths: string[]): Map<string, ContentId> {
     }
   }
 
-  for (const [index, id] of hashFiles(root, files).entries()) {
+  for (const [index, id] of hashFiles(repo, files).entries()) {
     ids.set(files[index], id);
   }
 
@@ -738,13 +806,13 @@ function contentIds(root: string, paths: string[]): Map<string, ContentId> {
 }
 
 /** Hashes the files with one git call, or one call per file when a name holds a line break or the call fails, so one unreadable file costs only its own id. */
-function hashFiles(root: string, files: string[]): ContentId[] {
+function hashFiles(repo: Repo, files: string[]): ContentId[] {
   if (files.length === 0) {
     return [];
   }
 
   const batch = git(
-    root,
+    repo,
     ['hash-object', '--stdin-paths'],
     files.map(file => `${file}\n`).join(''),
   )
@@ -756,7 +824,7 @@ function hashFiles(root: string, files: string[]): ContentId[] {
   }
 
   return files.map(
-    file => git(root, ['hash-object', '--', file])?.trim() ?? UNREADABLE,
+    file => git(repo, ['hash-object', '--', file])?.trim() ?? UNREADABLE,
   );
 }
 
@@ -776,18 +844,33 @@ function blobId(bytes: Buffer): ContentId {
     .digest('hex');
 }
 
-/** Runs git in the checkout without optional locks, so a stop never holds the index lock another session or the model needs, and with literal pathspecs. Null when git fails. */
-function git(root: string, args: string[], input?: string): string | null {
+/** Runs git in the checkout without optional locks, so a stop never holds the index lock another session or the model needs, and with literal pathspecs. Null when git fails. The call gets the time that is left as its timeout, and a deadline that has passed or hits throws a DeadlineError. */
+function git(repo: Repo, args: string[], input?: string): string | null {
+  const remaining = (repo.deadline ?? Infinity) - Date.now();
+
+  if (remaining <= 0) {
+    throw new DeadlineError();
+  }
+
   const result = spawnSync(
     'git',
-    ['--no-optional-locks', '-C', root, ...args],
+    ['--no-optional-locks', '-C', repo.root, ...args],
     {
       encoding: 'utf8',
       input,
       maxBuffer: 64 * 1024 * 1024,
+      timeout: Number.isFinite(remaining) ? remaining : undefined,
       env: { ...process.env, GIT_LITERAL_PATHSPECS: '1' },
     },
   );
+
+  if (
+    result.error instanceof Error &&
+    'code' in result.error &&
+    result.error.code === 'ETIMEDOUT'
+  ) {
+    throw new DeadlineError();
+  }
 
   return result.status === 0 ? result.stdout : null;
 }

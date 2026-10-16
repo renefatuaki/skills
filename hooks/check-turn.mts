@@ -5,7 +5,7 @@
 
 import {
   agentChanges,
-  type Changes,
+  type Discovery,
   noteEdit,
   noteTurnStart,
   turnChanges,
@@ -15,6 +15,8 @@ import { diagramSyntax, linkedDiagrams } from './lib/diagrams.mts';
 import { docs } from './lib/docs.mts';
 import {
   blockStop,
+  checkSafely,
+  FAILED,
   type Finding,
   parseTurnEvent,
   readHookInput,
@@ -23,10 +25,18 @@ import {
   UNCHECKED,
 } from './lib/hook.mts';
 
-/** The findings of one rule set across every checkout, in the order of the checkouts and then of the files. */
+/** The findings of one rule set across every root, in the order of the roots and then of the files. */
 type Section = {
   heading: string;
   findings: Finding[];
+};
+
+/** Everything a blocked stop tells: the sections of findings, the rule sets that threw, the files a rule set never started and the checkouts whose changes were never listed. */
+type Report = {
+  sections: Section[];
+  failures: string[];
+  unchecked: string[];
+  skipped: string[];
 };
 
 /** Every rule set in the order its section stands in the reason. The one list a new rule set joins. */
@@ -39,7 +49,8 @@ const INTRO =
 /** The time a stop gets to check files, which leaves the rest of the 30 seconds the host allows to print the reason. */
 const DEFAULT_BUDGET_MS = 25_000;
 
-const startedAt = Date.now();
+/** The time in epoch milliseconds after which no git call and no file starts. */
+const deadline = Date.now() + budgetMs();
 
 await main();
 
@@ -61,7 +72,10 @@ async function main(): Promise<void> {
       // A stop that a hook already blocked once stays silent, so a fix that breaks a rule again can never trap the turn.
       // https://code.claude.com/docs/en/hooks.md
       if (!event.continuing) {
-        await blockOnFindings(event.cwd, turnChanges(event.session, event.cwd));
+        await blockOnFindings(
+          event.cwd,
+          turnChanges(event.session, event.cwd, deadline),
+        );
       }
 
       break;
@@ -69,7 +83,7 @@ async function main(): Promise<void> {
       if (!event.continuing) {
         await blockOnFindings(
           event.cwd,
-          agentChanges(event.session, event.cwd, event.agent),
+          agentChanges(event.session, event.cwd, event.agent, deadline),
         );
       }
 
@@ -83,83 +97,111 @@ async function main(): Promise<void> {
   }
 }
 
-/** Runs every rule set over every checkout and blocks the stop with all findings, silent when there is none. */
+/** Runs every rule set over every root and blocks the stop with all findings, silent when there is none. */
 async function blockOnFindings(
   cwd: string,
-  checkouts: Changes[],
+  { changes, skipped }: Discovery,
 ): Promise<void> {
-  // 1. Give every checkout the deadline, and run each rule set over all of them. Each rule set builds its linter or parser once per checkout.
-  const deadline = startedAt + budgetMs();
+  // 1. Give every root the deadline, and run each rule set over all of them. Each rule set builds its linter or parser once per root, and one that throws costs only its own findings.
   const sections: Section[] = [];
 
   for (const ruleSet of RULE_SETS) {
     const findings: Finding[] = [];
 
-    for (const checkout of checkouts) {
-      findings.push(...(await ruleSet.check({ ...checkout, deadline })));
+    for (const root of changes) {
+      findings.push(...(await checkSafely(ruleSet, { ...root, deadline })));
     }
 
     sections.push({ heading: ruleSet.heading, findings });
   }
 
-  // 2. Separate the files a rule set never started from the findings, and keep the sections that hold findings.
-  const unchecked = [
-    ...new Set(
-      sections.flatMap(section =>
-        section.findings.filter(isUnchecked).map(finding => finding.file),
+  // 2. Separate the rule sets that threw and the files a rule set never started from the findings, and keep the sections that hold findings.
+  const all = sections.flatMap(section => section.findings);
+  const report: Report = {
+    sections: sections
+      .map(({ heading, findings }) => ({
+        heading,
+        findings: findings.filter(finding => !isNote(finding)),
+      }))
+      .filter(section => section.findings.length > 0),
+    failures: [
+      ...new Set(
+        all
+          .filter(finding => finding.rule === FAILED)
+          .map(finding => finding.message),
       ),
-    ),
-  ];
+    ],
+    unchecked: [
+      ...new Set(
+        all
+          .filter(finding => finding.rule === UNCHECKED)
+          .map(finding => finding.file),
+      ),
+    ],
+    skipped,
+  };
 
-  const reported = sections
-    .map(({ heading, findings }) => ({
-      heading,
-      findings: findings.filter(finding => !isUnchecked(finding)),
-    }))
-    .filter(section => section.findings.length > 0);
-
-  if (reported.length === 0 && unchecked.length === 0) {
+  if (
+    report.sections.length === 0 &&
+    report.failures.length === 0 &&
+    report.unchecked.length === 0 &&
+    report.skipped.length === 0
+  ) {
     return;
   }
 
-  // 3. Block with the reason, which names the files left unchecked last.
-  blockStop(reasonOf(cwd, reported, unchecked));
+  // 3. Block with the reason, which names what could not run and what was left unchecked last.
+  blockStop(reasonOf(cwd, report));
 }
 
-/** Reads the time a stop may spend on its checks from the environment, which a test sets to run into the deadline. */
+/** Reads the time a stop may spend on its checks from the environment, which a test sets to run into the deadline. An empty setting keeps the default. */
 function budgetMs(): number {
-  const budget = Number(process.env.FORGE_CHECK_BUDGET_MS);
+  const setting = process.env.FORGE_CHECK_BUDGET_MS?.trim();
+  const budget = Number(setting);
 
-  return process.env.FORGE_CHECK_BUDGET_MS === undefined || Number.isNaN(budget)
+  return setting === undefined || setting === '' || Number.isNaN(budget)
     ? DEFAULT_BUDGET_MS
     : budget;
 }
 
-/** Tells whether the finding only stands for a file the deadline kept a rule set from starting. */
-function isUnchecked(finding: Finding): boolean {
-  return finding.rule === UNCHECKED;
+/** Tells whether the finding only stands for a rule set that threw or a file it never started, which the reason words on its own. */
+function isNote(finding: Finding): boolean {
+  return finding.rule === FAILED || finding.rule === UNCHECKED;
 }
 
-/** Writes the intro, then each section as its heading with a colon and one line per finding, sections apart by a blank line, and the note on unchecked files last. */
+/** Writes the intro, then each section as its heading with a colon and one line per finding, sections apart by a blank line, then the rule sets that could not run and the note on what was not checked in time. */
 function reasonOf(
   cwd: string,
-  sections: Section[],
-  unchecked: string[],
+  { sections, failures, unchecked, skipped }: Report,
 ): string {
   const blocks = sections.map(({ heading, findings }) => [
     `${heading}:`,
     ...findings.map(finding => lineOf(cwd, finding)),
   ]);
 
-  if (unchecked.length > 0) {
-    const noun = unchecked.length === 1 ? 'file' : 'files';
+  if (failures.length > 0) {
+    blocks.push(failures);
+  }
 
-    blocks.push([
-      `Not checked in time: ${unchecked.length} ${noun}, starting with ${shown(cwd, unchecked[0])}.`,
-    ]);
+  const late = [
+    unchecked.length > 0
+      ? `${count(unchecked.length, 'file')}, starting with ${shown(cwd, unchecked[0])}`
+      : null,
+    skipped.length > 0
+      ? `${count(skipped.length, 'checkout')}, starting with ${skipped[0]}`
+      : null,
+  ].filter(part => part !== null);
+
+  if (late.length > 0) {
+    blocks.push([`Not checked in time: ${late.join(', and ')}.`]);
   }
 
   return [INTRO, ...blocks.map(block => ['', ...block].join('\n'))].join('\n');
+}
+
+/** Writes the number with its noun, in the plural unless it is one. */
+function count(number: number, noun: string): string {
+  return `${number} ${noun}${number === 1 ? '' : 's'}`;
 }
 
 /** Writes one finding as path:line rule message, the format the skills name. */

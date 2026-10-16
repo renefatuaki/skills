@@ -19,6 +19,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  checkSafely,
+  FAILED,
+  type Finding,
+  type RuleSet,
+} from '../hooks/lib/hook.mts';
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const script = join(root, 'hooks', 'check-turn.mts');
 
@@ -105,7 +112,9 @@ runBaseline();
 runMidTurnCheckouts();
 runCheckoutFilters();
 runMonorepo();
+runAlias();
 runJournal();
+await runRuleSetFailure();
 runDeadline();
 
 console.log(
@@ -318,7 +327,7 @@ function runTurnTwo({ repo }: Story): void {
   );
 }
 
-/** Runs a small repository against the deadline, once with the budget used up and once with the default one. */
+/** Runs a small repository against the deadline, once with the budget used up, once with the default one and once with an empty setting, which means the default. */
 function runDeadline(): void {
   const repo = join(sandbox, 'deadline');
 
@@ -329,9 +338,11 @@ function runDeadline(): void {
   write(join(repo, 'a.ts'), BAD_TS);
 
   expect(
-    'a stop with no time left names the files it did not check',
+    'a stop with no time left names the checkout it could not list',
     stop('s3', repo),
-    [INTRO, '', 'Not checked in time: 1 file, starting with a.ts.'].join('\n'),
+    [INTRO, '', `Not checked in time: 1 checkout, starting with ${repo}.`].join(
+      '\n',
+    ),
     { FORGE_CHECK_BUDGET_MS: '0' },
   );
 
@@ -339,6 +350,13 @@ function runDeadline(): void {
     'the same stop with the default budget checks the file',
     stop('s3', repo),
     [INTRO, '', COMMENTS, `a.ts:3 ${DASH}`].join('\n'),
+  );
+
+  expect(
+    'an empty budget setting keeps the default budget',
+    stop('s3', repo),
+    [INTRO, '', COMMENTS, `a.ts:3 ${DASH}`].join('\n'),
+    { FORGE_CHECK_BUDGET_MS: '' },
   );
 }
 
@@ -532,6 +550,30 @@ function runMonorepo(): void {
   );
 }
 
+/** One checkout reached through a symbolic link and through its real path is one checkout. */
+function runAlias(): void {
+  const repo = makeRepo('real', { 'src/a.ts': GOOD_TS });
+  const alias = join(sandbox, 'alias');
+
+  symlinkSync(repo, alias);
+  hook(prompt('al', alias));
+  hook(edit('al', alias, join(alias, 'src/via-alias.ts')));
+  write(join(repo, 'src/via-alias.ts'), BAD_TS);
+  write(join(repo, 'src/via-shell.ts'), BAD_TS);
+
+  expect(
+    'a file named through a symbolic link and through the real path is named once',
+    stop('al', repo),
+    [
+      INTRO,
+      '',
+      COMMENTS,
+      `src/via-alias.ts:3 ${DASH}`,
+      `src/via-shell.ts:3 ${DASH}`,
+    ].join('\n'),
+  );
+}
+
 /** The journal lives in a folder only its user can write, holds one turn and is never followed through a link. */
 function runJournal(): void {
   const repo = makeRepo('journal', { 'a.ts': GOOD_TS });
@@ -597,6 +639,46 @@ function runJournal(): void {
     'a planted link to a file never receives a journal line',
     readFileSync(victim, 'utf8'),
     'original\n',
+  );
+}
+
+/** A rule set that throws costs only its own findings. */
+async function runRuleSetFailure(): Promise<void> {
+  const changes = { root: sandbox, files: [] };
+  const finding: Finding = {
+    file: join(sandbox, 'a.ts'),
+    line: 3,
+    rule: 'em-dash',
+    message: 'Replace the dash.',
+  };
+
+  const broken: RuleSet = {
+    heading: 'Broken rules',
+    check: () => Promise.reject(new Error('boom\n  second line')),
+  };
+
+  const fine: RuleSet = {
+    heading: 'Fine rules',
+    check: () => Promise.resolve([finding]),
+  };
+
+  check(
+    'a rule set that throws becomes one finding that names it and the reason',
+    await checkSafely(broken, changes),
+    [
+      {
+        file: sandbox,
+        line: 1,
+        rule: FAILED,
+        message: 'Broken rules could not run: boom second line',
+      },
+    ],
+  );
+
+  check(
+    'a rule set that does not throw keeps its findings',
+    await checkSafely(fine, changes),
+    [finding],
   );
 }
 

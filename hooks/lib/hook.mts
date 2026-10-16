@@ -1,9 +1,17 @@
 // The plumbing the hooks share, which reads the hook input from stdin and hands context or a blocked stop back to Claude.
 // https://code.claude.com/docs/en/hooks.md
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from 'node:path';
 
 import type { Changes } from './changes.mts';
 
@@ -49,6 +57,9 @@ export type RuleSet = {
   check(changes: Changes): Promise<Finding[]>;
 };
 
+/** The rule of the finding that stands for a rule set that threw. Its message names the rule set and the reason. */
+export const FAILED = 'failed';
+
 /** The rule of the finding that stands for a file a rule set never started, because the deadline had passed. */
 export const UNCHECKED = 'unchecked';
 
@@ -68,7 +79,9 @@ export function parseTurnEvent(input: unknown): TurnEvent | null {
   // 1. Read the fields of the event, the working directory falling back to the one of the process.
   const fields = input as TurnInput;
   const session = asSessionId(fields.session_id);
-  const cwd = typeof fields.cwd === 'string' ? fields.cwd : process.cwd();
+  const cwd = realPathOf(
+    typeof fields.cwd === 'string' ? fields.cwd : process.cwd(),
+  );
 
   // 2. Accept the id of a subagent only when it is safe as a file name. Only a hook that fires inside a subagent carries one.
   const agent =
@@ -88,7 +101,7 @@ export function parseTurnEvent(input: unknown): TurnEvent | null {
       return { kind: 'prompt', session, cwd };
     case 'PreToolUse':
       return typeof filePath === 'string'
-        ? { kind: 'edit', session, agent, path: resolve(cwd, filePath) }
+        ? { kind: 'edit', session, agent, path: realFileOf(cwd, filePath) }
         : null;
     case 'Stop':
       return { kind: 'stop', session, cwd, continuing };
@@ -99,6 +112,27 @@ export function parseTurnEvent(input: unknown): TurnEvent | null {
     default:
       return null;
   }
+}
+
+/**
+ * Resolves the symbolic links of the path as far as it exists and keeps the rest as it is, so one checkout reached through /tmp and through /private/tmp is one path.
+ * @see {@link https://nodejs.org/api/fs.md#fsrealpathsyncpath-options | Node.js, fs.realpathSync}
+ */
+export function realPathOf(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    const parent = dirname(path);
+
+    return parent === path ? path : join(realPathOf(parent), basename(path));
+  }
+}
+
+/** Returns the absolute path of the file the tool is about to write, the symbolic links of its folder resolved. A link as the file itself stays one, because the tool then writes through it. */
+function realFileOf(cwd: string, file: string): string {
+  const absolute = resolve(cwd, file);
+
+  return join(realPathOf(dirname(absolute)), basename(absolute));
 }
 
 /** Tells whether the path runs through a dot folder or a dependency folder. */
@@ -156,6 +190,27 @@ function asSafeId(value: unknown): string | null {
 /** Brands the value as a session id when it is safe as a file name, otherwise null. */
 function asSessionId(value: unknown): SessionId | null {
   return asSafeId(value) as SessionId | null;
+}
+
+/** Runs a rule set over one checkout. An error it throws costs only its own findings and comes back as the one finding that names the rule set and the reason. */
+export async function checkSafely(
+  ruleSet: RuleSet,
+  changes: Changes,
+): Promise<Finding[]> {
+  try {
+    return await ruleSet.check(changes);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+
+    return [
+      {
+        file: changes.root,
+        line: 1,
+        rule: FAILED,
+        message: `${ruleSet.heading} could not run: ${reason.replace(/\s+/g, ' ')}`,
+      },
+    ];
+  }
 }
 
 /** Checks the files one at a time and stops starting new ones once the deadline has passed. Each file it never started comes back as an unchecked finding. */

@@ -28,7 +28,33 @@ const EXPECTED: Record<string, string[]> = {
 let failures = 0;
 
 for (const [name, expected] of Object.entries(EXPECTED)) {
-  const actual = await run(join(fixtures, name));
+  report(name, await run(join(fixtures, name)), expected);
+}
+
+// A file the deadline kept the rule set from starting comes back as one unchecked finding, next to the findings of the same file with time left.
+report('bad.ts after the deadline', await run(join(fixtures, 'bad.ts'), 0), [
+  '1 unchecked',
+]);
+
+console.log(
+  failures === 0 ? 'All fixtures pass.' : `${failures} fixture(s) failed.`,
+);
+
+process.exit(failures === 0 ? 0 : 1);
+
+/** Checks one fixture as the turn hook checks a changed file and returns "line rule" pairs. */
+async function run(file: string, deadline?: number): Promise<string[]> {
+  const findings = await comments.check({
+    root: fixtures,
+    files: [file],
+    deadline,
+  });
+
+  return findings.map(finding => `${finding.line} ${finding.rule}`);
+}
+
+/** Prints PASS or FAIL for one case with the difference and counts a failure. */
+function report(name: string, actual: string[], expected: string[]): void {
   const ok = JSON.stringify(actual) === JSON.stringify(expected);
 
   if (!ok) {
@@ -42,17 +68,4 @@ for (const [name, expected] of Object.entries(EXPECTED)) {
       `  expected ${JSON.stringify(expected)}\n  actual   ${JSON.stringify(actual)}`,
     );
   }
-}
-
-console.log(
-  failures === 0 ? 'All fixtures pass.' : `${failures} fixture(s) failed.`,
-);
-
-process.exit(failures === 0 ? 0 : 1);
-
-/** Checks one fixture as the turn hook checks a changed file and returns "line rule" pairs. */
-async function run(file: string): Promise<string[]> {
-  const findings = await comments.check({ root: fixtures, files: [file] });
-
-  return findings.map(finding => `${finding.line} ${finding.rule}`);
 }
