@@ -1,4 +1,4 @@
-// The plumbing the hooks share, which reads the hook input from stdin and hands context or a blocked stop back to Claude.
+// The plumbing the hooks share, which reads the hook input from stdin and hands context, a denied edit or a blocked stop back to Claude.
 // https://code.claude.com/docs/en/hooks.md
 
 import { readFileSync, realpathSync } from 'node:fs';
@@ -38,6 +38,17 @@ type TurnInput = {
   agent_id?: unknown;
   cwd?: unknown;
   stop_hook_active?: unknown;
+  tool_input?: {
+    file_path?: unknown;
+  };
+};
+
+/** What a tool hook receives on stdin, the fields the hooks read. A subagent adds its agent_id. */
+export type HookInput = {
+  cwd?: string;
+  session_id?: unknown;
+  transcript_path?: unknown;
+  agent_id?: unknown;
   tool_input?: {
     file_path?: unknown;
   };
@@ -141,6 +152,22 @@ export function isHidden(segments: string[]): boolean {
  */
 export function blockStop(reason: string): void {
   process.stdout.write(JSON.stringify({ decision: 'block', reason }));
+}
+
+/**
+ * Denies the tool call and hands Claude the reason, which it reads before it repeats the call.
+ * @see {@link https://code.claude.com/docs/en/hooks.md#pretooluse-decision-control | Claude Code, PreToolUse decision control}
+ */
+export function deny(reason: string): void {
+  process.stdout.write(
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: reason,
+      },
+    }),
+  );
 }
 
 /**

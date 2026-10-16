@@ -6,9 +6,7 @@ import { extname } from 'node:path';
 
 import type { Changes } from './changes.mts';
 import { checkEach, type Finding, type RuleSet } from './hook.mts';
-
-/** The comment syntax of a language, slashes and blocks or hashes and docstrings. */
-type Syntax = 'c' | 'python';
+import { LANGUAGES, type Syntax } from './languages.mts';
 
 /** One content line of a comment, its delimiters removed, with its line number in the file. */
 type CommentLine = {
@@ -56,23 +54,6 @@ type SourceFinding = {
   message: string;
 };
 
-/** Maps a file extension to its comment syntax, a file with any other extension is not checked. */
-const SYNTAX: Record<string, Syntax> = {
-  '.swift': 'c',
-  '.kt': 'c',
-  '.kts': 'c',
-  '.java': 'c',
-  '.ts': 'c',
-  '.tsx': 'c',
-  '.js': 'c',
-  '.jsx': 'c',
-  '.mjs': 'c',
-  '.cjs': 'c',
-  '.mts': 'c',
-  '.cts': 'c',
-  '.py': 'python',
-};
-
 /** A comment holds a summary line and a link line at most. */
 const MAX_CONTENT_LINES = 2;
 
@@ -89,7 +70,7 @@ const DIRECTIVE =
 /** Matches a URL, a ticket key such as ABC-123 or an issue number such as #12. */
 const TICKET = /https?:\/\/|\b[A-Z][A-Z0-9]+-\d+\b|#\d+/;
 
-/** The comment rules over every changed file in a language of SYNTAX, any path, a dot folder included. */
+/** The comment rules over every changed file in a language of LANGUAGES, any path, a dot folder included. */
 export const comments: RuleSet = {
   heading: 'Comment rules (code-comments skill)',
   check: checkFiles,
@@ -98,11 +79,11 @@ export const comments: RuleSet = {
 /** Reads each changed source file once and adds the file to the findings of checkSource. A deleted or unreadable file gives none. */
 async function checkFiles(changes: Changes): Promise<Finding[]> {
   const sources = changes.files.filter(
-    file => SYNTAX[extname(file).toLowerCase()],
+    file => LANGUAGES[extname(file).toLowerCase()],
   );
 
   return checkEach(changes, sources, async file => {
-    const syntax = SYNTAX[extname(file).toLowerCase()];
+    const { syntax } = LANGUAGES[extname(file).toLowerCase()];
     let source: string;
 
     try {
