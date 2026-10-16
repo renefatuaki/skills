@@ -1,7 +1,5 @@
-#!/usr/bin/env node
-
-// Scans the documentation file an Edit or Write touched for project-docs rule violations and reports them to Claude.
-// https://code.claude.com/docs/en/hooks.md
+// The documentation rules of the project-docs skill and the markdownlint of the project, checked over the changed documentation files of one checkout.
+// https://raw.githubusercontent.com/DavidAnson/markdownlint/main/README.md
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -9,18 +7,21 @@ import { pathToFileURL } from 'node:url';
 
 import type { Configuration } from 'markdownlint';
 
+import type { Changes } from './changes.mts';
 import {
+  checkEach,
+  type Finding,
   isHidden,
-  readEditedFile,
-  report,
+  type RuleSet,
   resolveFromProject,
-} from './lib/hook.mts';
+  segmentsBelow,
+} from './hook.mts';
 import {
   closesFence,
   FENCE,
   linkTargetsOf,
   resolveTarget,
-} from './lib/markdown.mts';
+} from './markdown.mts';
 
 /** One source line, marked as front matter, a fence marker, the code inside a fence, or prose. */
 type Line = {
@@ -43,15 +44,15 @@ type Document = {
   lines: Line[];
 };
 
-/** The rule is one of this hook or the rule name markdownlint reports. */
-type Finding = {
+/** What the rules report for one document, before the rule set adds the file. The rule is one of this module or the rule name markdownlint reports. */
+type DocumentFinding = {
   line: number;
   rule: string;
   message: string;
 };
 
-/** Lints the text of one file and returns what markdownlint reports. */
-type Linter = (text: string) => Finding[];
+/** Lints the text of one file. A project without markdownlint or its configuration gets a linter that reports nothing, a broken setup one that reports why. */
+type Linter = (text: string) => DocumentFinding[];
 
 /** The configuration files looked for in the project root, the first hit wins. */
 const CONFIG_FILES = ['.markdownlint.jsonc', '.markdownlint.json'];
@@ -87,43 +88,51 @@ const BLOCK_START = /^(#|\||>|[-*+]\s|\d+[.)]\s|[-*_]{3,}\s*$|\[[^\]]+\]:)/;
  */
 const LINK_DEFINITION = /^\s*\[(?!\^)[^\]]+\]:\s*(?:<([^>\n]*)>|(\S+))/;
 
-await main();
+/** The documentation rules over every changed file isDocumentation accepts, below the root of the checkout. */
+export const docs: RuleSet = {
+  heading: 'Documentation rules (project-docs skill)',
+  check: checkFiles,
+};
 
-async function main(): Promise<void> {
-  // 1. Read the edited file and stay silent for one outside the documentation list and for one that cannot be read.
-  const file = readEditedFile();
+/** Builds the linter once for the checkout and runs the own rules and markdownlint over each changed documentation file. */
+async function checkFiles(changes: Changes): Promise<Finding[]> {
+  const { root, files } = changes;
+  const documents = files.filter(file => segmentsOf(root, file) !== null);
 
-  if (file === null || !isDocumentation(file.segments)) {
-    return;
+  if (documents.length === 0) {
+    return [];
   }
 
-  const { root, absolute, segments } = file;
-  let source: string;
+  const lint = await createLinter(root);
 
-  try {
-    source = readFileSync(absolute, 'utf8');
-  } catch {
-    return;
-  }
+  return checkEach(changes, documents, async absolute => {
+    const segments = segmentsOf(root, absolute);
+    let source: string;
 
-  // 2. Collect the findings of the own rules and of markdownlint.
-  const findings = [
-    ...check({ root, absolute, segments, lines: classify(source) }),
-    ...(await lintWithMarkdownlint(root, source)),
-  ].sort((a, b) => a.line - b.line);
+    if (segments === null) {
+      return [];
+    }
 
-  if (findings.length === 0) {
-    return;
-  }
+    try {
+      source = readFileSync(absolute, 'utf8');
+    } catch {
+      return [];
+    }
 
-  // 3. Hand the findings to Claude, one line each.
-  const shown = segments.join('/');
-  const lines = findings.map(f => `${shown}:${f.line} ${f.rule} ${f.message}`);
+    const findings = [
+      ...check({ root, absolute, segments, lines: classify(source) }),
+      ...lint(source),
+    ].sort((a, b) => a.line - b.line);
 
-  report([
-    'Documentation rules (project-docs skill) flagged the last edit. Fix each line in your next edit:',
-    ...lines,
-  ]);
+    return findings.map(finding => ({ file: absolute, ...finding }));
+  });
+}
+
+/** Returns the segments of a documentation file below the root, or null for any other file. */
+function segmentsOf(root: string, file: string): string[] | null {
+  const segments = segmentsBelow(root, file);
+
+  return segments !== null && isDocumentation(segments) ? segments : null;
 }
 
 /** Matches the path below the root against the fixed list of documentation files. */
@@ -149,30 +158,39 @@ function isDocumentation(segments: string[]): boolean {
   return segments.length === 1 && ROOT_FILES.has(name);
 }
 
-/** Returns what markdownlint reports, nothing in a project without it, and one finding when it cannot run. */
-async function lintWithMarkdownlint(
-  root: string,
-  source: string,
-): Promise<Finding[]> {
+/** Builds the linter of the checkout once. A project without markdownlint gets a linter that reports nothing, and a setup that cannot run one that reports why. */
+async function createLinter(root: string): Promise<Linter> {
   try {
-    const lint = await createLinter(root);
+    const lint = await loadLinter(root);
 
-    return lint === null ? [] : lint(source);
+    return lint === null ? () => [] : text => lintSafely(lint, text);
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-
-    return [
-      {
-        line: 1,
-        rule: 'markdownlint',
-        message: `markdownlint could not run, check its configuration. ${reason.replace(/\s+/g, ' ')}`,
-      },
-    ];
+    return () => [linterFailureOf(error)];
   }
 }
 
+/** Runs the linter and turns an error it throws into the one finding that tells why markdownlint could not run. */
+function lintSafely(lint: Linter, text: string): DocumentFinding[] {
+  try {
+    return lint(text);
+  } catch (error) {
+    return [linterFailureOf(error)];
+  }
+}
+
+/** Names the reason markdownlint could not run, on the first line of the file. */
+function linterFailureOf(error: unknown): DocumentFinding {
+  const reason = error instanceof Error ? error.message : String(error);
+
+  return {
+    line: 1,
+    rule: 'markdownlint',
+    message: `markdownlint could not run, check its configuration. ${reason.replace(/\s+/g, ' ')}`,
+  };
+}
+
 /** Builds the lint function from the markdownlint of the project and its configuration, or returns null when either is missing. */
-async function createLinter(root: string): Promise<Linter | null> {
+async function loadLinter(root: string): Promise<Linter | null> {
   // 1. Find the configuration and the library in the project, without both there is nothing to lint with.
   const configFile = CONFIG_FILES.map(name => join(root, name)).find(
     existsSync,
@@ -215,7 +233,7 @@ function parseJsonc(text: string): Configuration {
 }
 
 /** Applies the rules this hook owns, markdownlint reports the rest. */
-function check(document: Document): Finding[] {
+function check(document: Document): DocumentFinding[] {
   return [
     ...checkProse(document.lines),
     ...checkLinks(document),
@@ -271,8 +289,8 @@ function frontmatterEndOf(texts: string[]): number {
 }
 
 /** Reports every dash and every semicolon in the prose lines, code and link targets left out. */
-function checkProse(lines: Line[]): Finding[] {
-  const findings: Finding[] = [];
+function checkProse(lines: Line[]): DocumentFinding[] {
+  const findings: DocumentFinding[] = [];
 
   for (const line of lines) {
     if (line.kind !== 'prose') {
@@ -312,8 +330,8 @@ function withoutCodeAndUrls(text: string): string {
 }
 
 /** Reports every relative link whose target does not exist on disk. */
-function checkLinks(document: Document): Finding[] {
-  const findings: Finding[] = [];
+function checkLinks(document: Document): DocumentFinding[] {
+  const findings: DocumentFinding[] = [];
 
   for (const link of linksOf(document.lines)) {
     const target = resolveTarget(link.target, document.absolute, document.root);
@@ -364,7 +382,7 @@ function linksOfFile(path: string): Link[] {
 }
 
 /** Expects one title as the first content line and a paragraph right under it, decoration lines skipped. */
-function checkLead(lines: Line[]): Finding[] {
+function checkLead(lines: Line[]): DocumentFinding[] {
   const content = lines.filter(
     l => l.kind !== 'frontmatter' && l.text.trim() !== '',
   );
@@ -405,7 +423,7 @@ function checkLead(lines: Line[]): Finding[] {
 }
 
 /** Expects a file under docs to be linked from a README in its own folder or in a folder above it. */
-function checkReachable(document: Document): Finding[] {
+function checkReachable(document: Document): DocumentFinding[] {
   if (document.segments[0] !== 'docs') {
     return [];
   }

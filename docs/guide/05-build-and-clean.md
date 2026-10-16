@@ -70,7 +70,7 @@ You'll develop your own shorthand. The skill reads intent fine from terse prompt
 
 Comments need their own pass. The [`code-comments`](../../skills/clean-code/code-comments/SKILL.md) skill keeps a comment only when it tells the reader something the code cannot: what a non-obvious symbol does, why a foreign API is used the way it is, or how a complex workflow proceeds. Everything else the code says through its names. A stale comment gets rewritten or deleted. Commented-out code and a `TODO` without an issue link come out.
 
-The skill runs whenever code that carries comments gets written or edited, and a hook reports rule violations after every edit. Opening a PR runs it once more over the whole diff. To run it by hand:
+The skill runs whenever code that carries comments gets written or edited, and a hook checks the files a turn changed when the turn ends. Opening a PR runs it once more over the whole diff. To run it by hand:
 
 ```text
 check the comments in the diff with code-comments
