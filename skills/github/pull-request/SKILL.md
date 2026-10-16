@@ -9,7 +9,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
 1. **Ensure `gh`.** Run `gh auth status` and do nothing else until it reports a logged-in account. If `gh` is missing, install it after confirmation, following GitHub's [installation guide](https://raw.githubusercontent.com/cli/cli/trunk/README.md#installation). If nobody is logged in, ask the user to run `! gh auth login`, wait for them, then run `gh auth status` again. If the user declines, stop and say what is missing. When the user called a draft ready, continue at step 9.
 2. **Ensure the template.** Read [templates](../templates/SKILL.md) and follow it for the pull request template. Its reply folds into this skill's reply. If the user asked only for a template, this is the end. The body of this pull request follows the asset of the templates skill.
-3. **Read the branch.** The base is the branch the user named, otherwise `dev` when the remote has it and the current branch is another one, otherwise the default branch. Run `git fetch origin <base>`, then read `git status --porcelain`, `git log origin/<base>..HEAD` and `git diff origin/<base>...HEAD`. Stop and say why when the current branch is the base or has no commit beyond it. Uncommitted changes stay out of the pull request. When `gh pr view --json number,url,isDraft,state,title,body` finds an open pull request for the branch, steps 4 to 7 revise it in place of opening one.
+3. **Read the branch.** When `gh pr view --json number,url,isDraft,state,title,body,baseRefName` finds an open pull request for the branch, steps 4 to 7 revise it in place of opening one. The base is the branch the user or the calling playbook named, otherwise the `baseRefName` of that open pull request, otherwise `dev` when the remote has it and the current branch is another one, otherwise the default branch. Run `git fetch origin <base>`, then read `git status --porcelain`, `git log origin/<base>..HEAD` and `git diff origin/<base>...HEAD`. Stop and say why when the current branch is the base or has no commit beyond it. Uncommitted changes stay out of the pull request.
 4. **Find the issue.** Look in the prompt, the branch name and the `Refs`, `Closes`, `Fixes` and `Resolves` trailers of the commits. Read it with `gh issue view <number> --json number,title,body,labels,milestone,url`. A branch without an issue gets a pull request without one. Then bring the diagrams up to date. Run the Update steps of the `diagrams` skill for the files of the diff, and commit each diagram that changed with the `commit` skill, `docs: update the <topic> diagram`, with this issue in its footer. A branch that touches no file a diagram links skips this.
 5. **Write the draft** in English, whatever language the existing pull requests use. The headings stay as the template writes them, because the `pull-request-review` skill finds the test plan by them. The title is a Conventional Commits subject for the whole branch, as the `commit` skill writes one, since a squash merge turns it into the commit message. Then write one value per section, in template order, each filled the way its comment says, the comments left out.
    - Content comes only from the repository, the diff, the commits, the issue and the conversation.
@@ -60,6 +60,31 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    EOF
    ```
 
+   **Stack.** A pull request whose base is the branch of another open pull request, `gh pr list --head <base> --state open --json number`, is a layer of a stack. The `gh stack` extension links and rebases the layers. When `gh extension list` lacks `github/gh-stack`, install it after confirmation, or without one in an unattended run such as an auto run of the Ticket playbook.
+
+   ```sh
+   gh extension install github/gh-stack
+   ```
+
+   - **Link** a layer this run opened. Read the stack number of the pull request below. When it has one, append the branch to that stack, otherwise create the stack from both. The trunk is `dev` when the remote has it, otherwise the default branch. Exit code 9 means stacked pull requests are off for the repository, and the pull request stays on its base unlinked.
+
+     ```sh
+     gh api repos/<owner>/<repo>/pulls/<below> --jq '.stack.number // empty'
+
+     gh stack link <stack-number> <branch>
+     gh stack link --base <trunk> <base> <branch>
+     ```
+   - **Rebase the layers above** after every push of this run, those of step 7 included, when `gh pr list --base <branch> --state open --json number` lists a pull request. From the branch's worktree, drop the local copy of the stack, which can lack a layer added since and then rebase nothing above it, import the stack from GitHub by the pull request of this branch, rebase every layer above it, also those checked out in other worktrees, and push them. `unstack --local` exits with 2 when no local stack holds the branch, which is fine. The push forces with lease, the only force this skill allows, and only on the layers of the stack.
+
+     ```sh
+     gh stack unstack --local
+     gh stack checkout <number>
+     gh stack rebase --upstack
+     gh stack push
+     ```
+
+     Exit code 3 is a conflict, which `gh stack rebase --abort` undoes. A worktree with uncommitted changes makes the rebase refuse before it changes anything. Either way the layers above stay as they were.
+
    **Before and after.** When the diff changes what the application shows, post one comment with every changed screen before and after, in the format of [assets/before-after.md](assets/before-after.md). When you are unsure, capture.
    - **Capture** the base and the head, each in its own worktree with the application running. Drop every pair whose images are identical.
      - A web application gets `desktop` at the viewport the prerequisites name, otherwise 1280x800, and `mobile` at 360x800. Use the `control-ui` skill, or `playwright screenshot --channel chrome --viewport-size <width>,<height> <url> <file>` through the one-off runner of the `package-manager` skill. Chrome's own `--headless --screenshot` renders a page at least 500 pixels wide and never shows the mobile view.
@@ -107,6 +132,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    Check the conditions in this order. The first that fails ends this step, and the pull request stays a draft. When all hold, mark it ready with step 9, without waiting for the user.
 8. **Hand over.** Reply with the URL and the title, whether it is ready for review or still a draft, and for a draft the condition of step 7 that kept it. Then the assumptions, one line each.
    - The base, when the user did not name it.
+   - For a layer of a stack, its pull requests bottom to top, or why it is not linked, and the layers above that a rebase left as they were.
    - The issue and where it was found, or that the pull request has none.
    - The platforms of the prerequisites, and every value the repository did not settle.
    - The uncommitted files left out.
@@ -155,4 +181,4 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
    When the user called it ready and step 7 did not already run the test steps against the current head, test what an agent can. When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, which runs those steps and ticks the passed ones, then give every unticked step its reason as step 7 says. When every step needs a person, end here and say that the review is theirs to start.
 
-Done when the draft exists on GitHub, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the check of step 6 passes, every unticked step of a tested plan that did not fail ends with `(needs a person: <reason>)`, the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
+Done when the draft exists on GitHub, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, every unticked step of a tested plan that did not fail ends with `(needs a person: <reason>)`, the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
