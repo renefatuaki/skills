@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-// Runs the comment check hook over every fixture and compares the findings with the expected ones.
+// Runs the comment rules over every fixture and compares the findings with the expected ones.
 
-import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { comments } from '../hooks/lib/comments.mts';
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const script = join(root, 'hooks', 'check-comments.mts');
 const fixtures = join(root, 'tests', 'fixtures');
 
 const EXPECTED: Record<string, string[]> = {
@@ -28,7 +28,7 @@ const EXPECTED: Record<string, string[]> = {
 let failures = 0;
 
 for (const [name, expected] of Object.entries(EXPECTED)) {
-  const actual = run(join(fixtures, name));
+  const actual = await run(join(fixtures, name));
   const ok = JSON.stringify(actual) === JSON.stringify(expected);
 
   if (!ok) {
@@ -50,34 +50,9 @@ console.log(
 
 process.exit(failures === 0 ? 0 : 1);
 
-/** Feeds one fixture through the hook as Claude Code would and returns "line rule" pairs. */
-function run(filePath: string): string[] {
-  const input = JSON.stringify({
-    cwd: root,
-    hook_event_name: 'PostToolUse',
-    tool_name: 'Edit',
-    tool_input: { file_path: filePath },
-  });
+/** Checks one fixture as the turn hook checks a changed file and returns "line rule" pairs. */
+async function run(file: string): Promise<string[]> {
+  const findings = await comments.check({ root: fixtures, files: [file] });
 
-  const result = spawnSync('node', [script], { input, encoding: 'utf8' });
-
-  if (result.status !== 0) {
-    throw new Error(`hook exited with ${result.status}: ${result.stderr}`);
-  }
-
-  if (result.stdout.trim() === '') {
-    return [];
-  }
-
-  const context: string = JSON.parse(result.stdout).hookSpecificOutput
-    .additionalContext;
-
-  return context
-    .split('\n')
-    .slice(1)
-    .flatMap(line => {
-      const match = line.match(/:(\d+) (\S+) /);
-
-      return match ? [`${match[1]} ${match[2]}`] : [];
-    });
+  return findings.map(finding => `${finding.line} ${finding.rule}`);
 }

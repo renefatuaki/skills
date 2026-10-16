@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 
+import type { Changes } from './changes.mts';
+
 /** What the PostToolUse hook receives on stdin, the fields the hooks read. */
 type HookInput = {
   cwd?: string;
@@ -23,6 +25,23 @@ export type EditedPath = {
 export type EditedFile = EditedPath & {
   segments: string[];
 };
+
+/** One rule violation in a changed file. The file is absolute, the rule is named as its skill names it. */
+export type Finding = {
+  file: string;
+  line: number;
+  rule: string;
+  message: string;
+};
+
+/** One group of rules and the heading its findings stand under, checked over the changed files of one checkout at a time. */
+export type RuleSet = {
+  heading: string;
+  check(changes: Changes): Promise<Finding[]>;
+};
+
+/** The rule of the finding that stands for a file a rule set never started, because the deadline had passed. */
+export const UNCHECKED = 'unchecked';
 
 /** Reads the hook input from stdin, an empty object when the input is no JSON object. */
 export function readHookInput(): unknown {
@@ -112,8 +131,34 @@ export function resolveFromProject(
   }
 }
 
+/** Checks the files one at a time and stops starting new ones once the deadline has passed. Each file it never started comes back as an unchecked finding. */
+export async function checkEach(
+  { deadline = Infinity }: Changes,
+  files: string[],
+  check: (file: string) => Promise<Finding[]>,
+): Promise<Finding[]> {
+  const findings: Finding[] = [];
+
+  for (const file of files) {
+    if (Date.now() >= deadline) {
+      findings.push({
+        file,
+        line: 1,
+        rule: UNCHECKED,
+        message: 'Not checked in time.',
+      });
+
+      continue;
+    }
+
+    findings.push(...(await check(file)));
+  }
+
+  return findings;
+}
+
 /** Returns the segments of the path below the root, or null for a file outside it, which on Windows may sit on another drive. */
-function segmentsBelow(root: string, absolute: string): string[] | null {
+export function segmentsBelow(root: string, absolute: string): string[] | null {
   const path = relative(root, absolute);
 
   return path.startsWith('..') || isAbsolute(path) ? null : path.split(sep);
