@@ -8,7 +8,7 @@ import type { Engine } from 'claude-code/testing';
 /** Declares the timer the test environment has and the engine's declarations leave out. */
 declare function setTimeout(callback: () => void, ms: number): unknown;
 
-const SURFACES = ['terminal', 'desktop'] as const;
+const GRAPHICAL_SURFACES = ['desktop', 'mobile'] as const;
 
 const PROPS = {
   hasSurvey: false,
@@ -32,10 +32,69 @@ test('a TodoWrite of the main loop draws the count and the item in progress', as
   await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
   await settled();
 
-  for (const surface of SURFACES) {
-    expect(await drawn($, surface)).toBe(
-      atEdge('1/3 · Write the parser', 'Codex 5h 62% · week 81%'),
-    );
+  expect(await drawn($)).toBe(
+    atEdge('1/3 · Write the parser', 'Codex 5h 62% · week 81%'),
+  );
+});
+
+test('desktop and mobile draw the count with a bar of the done share, the title the surface truncates and the usage as a caption', async ($, on) => {
+  answerEngine(on, USAGE);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    expect(await graphicalBand($, surface)).toEqual({
+      row: { flexDirection: 'row', alignItems: 'center', gap: 'sm' },
+      progress: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 'xs',
+        flexShrink: 0,
+      },
+      count: { tabular: true, weight: 'medium', text: '1/3' },
+      track: { width: 8, height: 1, backgroundColor: 'subtle' },
+      fill: { width: '33%', height: 1, backgroundColor: 'claude' },
+      title: {
+        flexGrow: 1,
+        minWidth: 0,
+        wrap: 'truncate-end',
+        text: 'Write the parser',
+      },
+      caption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 'xs',
+        flexShrink: 0,
+      },
+      codex: [
+        { size: 'caption', dimColor: true, text: 'Codex' },
+        { size: 'caption', tabular: true, text: '5h 62%' },
+        { size: 'caption', dimColor: true, text: '·' },
+        { size: 'caption', tabular: true, text: 'week 81%' },
+      ],
+    });
+  }
+});
+
+test('desktop and mobile draw a finished list as a full bar in the success color and a dim done', async ($, on) => {
+  answerEngine(on, USAGE);
+  await $.tool.call({
+    tool: 'TaskCreate',
+    subject: 'Write the parser',
+    description: '',
+  });
+
+  await $.tool.call({ tool: 'TaskUpdate', taskId: '7', status: 'completed' });
+  await settled();
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const { count, fill, title } = await graphicalBand($, surface);
+
+    expect({ count, fill, title }).toEqual({
+      count: { tabular: true, weight: 'medium', text: '1/1' },
+      fill: { width: '100%', height: 1, backgroundColor: 'success' },
+      title: { flexGrow: 1, minWidth: 0, dimColor: true, text: 'done' },
+    });
   }
 });
 
@@ -50,7 +109,7 @@ test('a TodoWrite of a subagent draws nothing', async ($, on) => {
 
   await settled();
 
-  expect(await drawn($, 'terminal')).toBe('ENGINE');
+  expect(await drawn($)).toBe('ENGINE');
 });
 
 test('a TodoWrite the tool reports as an error draws nothing', async ($, on) => {
@@ -64,7 +123,7 @@ test('a TodoWrite the tool reports as an error draws nothing', async ($, on) => 
   await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
   await settled();
 
-  expect(await drawn($, 'terminal')).toBe('ENGINE');
+  expect(await drawn($)).toBe('ENGINE');
 });
 
 test('a task takes its id from the result and done ends on the person prompt only', async ($, on) => {
@@ -77,9 +136,7 @@ test('a task takes its id from the result and done ends on the person prompt onl
 
   await $.tool.call({ tool: 'TaskUpdate', taskId: '7', status: 'completed' });
   await settled();
-  expect(await drawn($, 'terminal')).toBe(
-    atEdge('1/1 done', 'Codex 5h 62% · week 81%'),
-  );
+  expect(await drawn($)).toBe(atEdge('1/1 done', 'Codex 5h 62% · week 81%'));
 
   await $.prompt.submit({
     text: 'done?',
@@ -88,9 +145,7 @@ test('a task takes its id from the result and done ends on the person prompt onl
   });
 
   await settled();
-  expect(await drawn($, 'terminal')).toBe(
-    atEdge('1/1 done', 'Codex 5h 62% · week 81%'),
-  );
+  expect(await drawn($)).toBe(atEdge('1/1 done', 'Codex 5h 62% · week 81%'));
 
   await $.prompt.submit({
     text: 'next',
@@ -99,7 +154,7 @@ test('a task takes its id from the result and done ends on the person prompt onl
   });
 
   await settled();
-  expect(await drawn($, 'terminal')).toBe('ENGINE');
+  expect(await drawn($)).toBe('ENGINE');
 });
 
 test('a meta prompt keeps done on the band', async ($, on) => {
@@ -121,9 +176,7 @@ test('a meta prompt keeps done on the band', async ($, on) => {
   } as never);
 
   await settled();
-  expect(await drawn($, 'terminal')).toBe(
-    atEdge('1/1 done', 'Codex 5h 62% · week 81%'),
-  );
+  expect(await drawn($)).toBe(atEdge('1/1 done', 'Codex 5h 62% · week 81%'));
 });
 
 test('a run start reads the usage through the script and a failed read hides it', async ($, on) => {
@@ -142,7 +195,13 @@ test('a run start reads the usage through the script and a failed read hides it'
     ],
   ]);
 
-  expect(await drawn($, 'terminal')).toBe('1/3 · Write the parser');
+  expect(await drawn($)).toBe('1/3 · Write the parser');
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const { caption, codex } = await graphicalBand($, surface);
+
+    expect({ caption, codex }).toEqual({ caption: null, codex: null });
+  }
 });
 
 test('a window below the minimum draws the usage in the error color', async ($, on) => {
@@ -164,6 +223,16 @@ test('a window below the minimum draws the usage in the error color', async ($, 
   );
 
   expect(codex?.props.color).toBe('error');
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    expect((await graphicalBand($, surface)).codex).toEqual([
+      { size: 'caption', dimColor: true, text: 'Codex' },
+      { size: 'caption', tabular: true, color: 'error', text: '5h 12%' },
+      { size: 'caption', dimColor: true, text: '·' },
+      { size: 'caption', tabular: true, color: 'error', text: 'week 81%' },
+      { size: 'caption', color: 'error', text: 'below minimum' },
+    ]);
+  }
 });
 
 test('a Codex call reads the usage again', async ($, on) => {
@@ -202,7 +271,7 @@ test('a survey holds the band and /clear ends the run', async ($, on) => {
   });
 
   await settled();
-  expect(await drawn($, 'terminal')).toBe('ENGINE');
+  expect(await drawn($)).toBe('ENGINE');
 });
 
 /** Answers as the engine beneath the plugin, the tools, the usage script with the given stdout, and the band with ENGINE, and returns the argv of every run. */
@@ -263,14 +332,11 @@ function atEdge(progress: string, codex: string): string {
   return `${progress}${' '.repeat(pad)}${codex}`;
 }
 
-/** Mounts the band on the surface and returns the text it draws, ENGINE when the plugin passed. */
-async function drawn(
-  $: Engine,
-  surface: (typeof SURFACES)[number],
-): Promise<string | undefined> {
+/** Mounts the band on the terminal and returns the text it draws, ENGINE when the plugin passed. */
+async function drawn($: Engine): Promise<string | undefined> {
   const ui = await $.ui.mount({
     plugin: 'forge',
-    surface,
+    surface: 'terminal',
     component: 'AbovePrompt',
     props: PROPS,
   });
@@ -280,6 +346,66 @@ async function drawn(
   await ui.unmount();
 
   return text;
+}
+
+/** An element of a drawn tree as plain data, the kit's `drawn()` answer. */
+type Drawn = {
+  type: string;
+  props?: Record<string, unknown>;
+  children?: (Drawn | string)[];
+};
+
+/** An element with its own props and those of everything inside it in one record, and the text it shows. */
+type Cell = Record<string, unknown> & { text: string };
+
+/** Mounts the band on the surface and returns the props of each box of the row and the cells of the count, the title and the Codex caption, null where the row has no caption. */
+async function graphicalBand(
+  $: Engine,
+  surface: (typeof GRAPHICAL_SURFACES)[number],
+) {
+  const ui = await $.ui.mount({
+    plugin: 'forge',
+    surface,
+    component: 'AbovePrompt',
+    props: PROPS,
+  });
+
+  const tree = (await ui.drawn()) as Drawn;
+
+  await ui.unmount();
+
+  const [progress, title, caption] = elementsOf(tree);
+  const [count, track] = elementsOf(progress);
+  const [fill] = elementsOf(track);
+
+  return {
+    row: tree.props,
+    progress: progress?.props,
+    count: cellOf(count),
+    track: track?.props,
+    fill: fill?.props,
+    title: cellOf(title),
+    caption: caption?.props ?? null,
+    codex: caption === undefined ? null : elementsOf(caption).map(cellOf),
+  };
+}
+
+function elementsOf(element: Drawn | undefined): Drawn[] {
+  return (element?.children ?? []).filter(
+    (child): child is Drawn => typeof child !== 'string',
+  );
+}
+
+/** Merges the props of the element and of everything inside it and joins the strings it shows. */
+function cellOf(element: Drawn | undefined): Cell {
+  const inner = elementsOf(element).map(cellOf);
+  const strings = (element?.children ?? []).filter(
+    (child): child is string => typeof child === 'string',
+  );
+
+  return Object.assign({}, element?.props, ...inner, {
+    text: [...strings, ...inner.map(cell => cell.text)].join(''),
+  });
 }
 
 /** Lets the work a hook left running, the run write and the usage read, land before an assertion. */

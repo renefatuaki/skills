@@ -23,7 +23,7 @@ flowchart TD
   checkTurn --> hook["Read the hook input and hand the context, the denied edit or the blocked stop to Claude"]
   loadCommentRules --> hook
   sessionContext --> hook
-  progress --> run["Fold each event into the run and lay out the line of the band"]
+  progress --> run["Fold each event into the run, read what the band shows and lay out its terminal line"]
   progress -->|"when a run starts and after a Codex call"| codexModel["Report the Codex usage left and whether either window is below the minimum"]
 ```
 
@@ -46,7 +46,15 @@ flowchart TD
 
 The session hook informs. `loadCommentRules` denies the edit of a source file once, until the transcript of the agent holds the comment rules and the guide of the language, and stays silent when it cannot read the transcript. The turn hook blocks the end of a turn once when a file the turn changed breaks a rule, and stays silent on the stop after it. A hook that has nothing to report prints nothing.
 
-`progress/` is a hooks module, named under `modules` in `hooks.json`. It runs inside Claude Code with no Node, keeps the run in a variable of the module and draws one line above the prompt, the progress such as `5/8 · Write the parser` on the left and the Codex usage such as `Codex 5h 62% · week 81%` at the right edge. Only `run.mts` decides what the line shows, and `index.mts` writes the run through it alone.
+`progress/` is a hooks module, named under `modules` in `hooks.json`. It runs inside Claude Code with no Node, keeps the run in a variable of the module and draws it above the prompt. On the terminal the band is one line, the progress such as `5/8 · Write the parser` on the left and the Codex usage such as `Codex 5h 62% · week 81%` at the right edge.
+
+In the desktop app and on mobile the band is one row of three parts, and every color is a key of the theme.
+
+- The count such as `5/8` comes first, beside a short bar filled to the done share of the items rounded down, in the accent color and green once every item is done.
+- The title of the current item takes the free width and the surface cuts it at the width it draws, or a dim `done` stands there once every item is done.
+- The Codex usage closes the row as a small caption with `Codex` and the dots between the windows dim, and the windows turn red with `below minimum` after them once either window is below the minimum.
+
+Only `run.mts` decides what the band shows and how the terminal line reads, and `index.mts` writes the run through it alone.
 
 - Claude Code offers the todo and task tools by default only on Opus 4.7, Sonnet 4.6, Haiku 4.5 and earlier models, so on any other model the band stays empty unless [`CLAUDE_CODE_ENABLE_TODO_TOOLS=1`](https://code.claude.com/docs/en/tools-reference.md#task-tool-availability) is set.
 - The turn hook keeps a journal per session in the temporary folder of the user, never in a working tree. It holds the start of the current turn, the state of each checkout the turn works in and the content of each file before an Edit or a Write touches it. Each prompt replaces the journal by a new one in a single rename, so it holds one turn.

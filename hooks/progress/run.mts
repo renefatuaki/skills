@@ -1,4 +1,4 @@
-// Folds what happens in a session into the run of the progress band and lays out the band's line, with no Node and no engine.
+// Folds what happens in a session into the run of the progress band, reads what the band shows and lays out the terminal's line, with no Node and no engine.
 // https://code.claude.com/docs/en/plugins/mods/events.md
 
 /** Where an item of the list stands, as TodoWrite and the Task tools spell it. */
@@ -55,6 +55,23 @@ export type Step = {
 /** How a part of the line reads, plain for the progress, quiet for the Codex usage, alarm below the Codex minimum. */
 export type Tone = 'plain' | 'quiet' | 'alarm';
 
+/** The Codex usage left as each window that reported it, such as `5h 62%`, alarm when either window is below the minimum. */
+export type CodexUsage = {
+  readonly windows: readonly [string, ...string[]];
+  readonly tone: Exclude<Tone, 'plain'>;
+};
+
+/** What the band shows for a run on every surface, before a surface lays it out. */
+export type Band = {
+  /** The completed items over all items, such as `5/8`. */
+  readonly count: string;
+  /** The completed share of the items as a whole percentage rounded down, such as `62%`, so it reads `100%` only once every item is done. */
+  readonly filled: string;
+  /** The title of the item in progress or else of the first pending one on one line, null once every item is done. */
+  readonly title: string | null;
+  readonly codex: CodexUsage | null;
+};
+
 export type Segment = {
   readonly text: string;
   readonly tone: Tone;
@@ -90,27 +107,40 @@ export function step(run: Run, event: Event): Step {
   }
 }
 
-/** Lays out the band for the run at the given width, null when the band shows nothing. */
-export function bandLine(run: Run, columns: number): BandLine | null {
+/** Reads what the band shows for the run, null when the band shows nothing. */
+export function bandOf(run: Run): Band | null {
   if (run.list === null) {
     return null;
   }
 
   const { items } = run.list;
-  const count = `${items.filter(item => item.status === 'completed').length}/${items.length}`;
+  const done = items.filter(item => item.status === 'completed').length;
   const current =
     items.find(item => item.status === 'in_progress') ??
     items.find(item => item.status === 'pending');
 
-  const codex = codexText(run.budget);
+  return {
+    count: `${done}/${items.length}`,
+    filled: `${Math.floor((done / items.length) * 100)}%`,
+    title: current === undefined ? null : singleLine(current.title),
+    codex: codexUsage(run.budget),
+  };
+}
 
-  if (current === undefined) {
-    return fitted(`${count} done`, '', codex, columns);
+/** Lays out the band in characters at the given width, the terminal's one line. */
+export function bandLine(band: Band, columns: number): BandLine {
+  const codex = codexText(band.codex);
+
+  if (band.title === null) {
+    return fitted(`${band.count} done`, '', codex, columns);
   }
 
-  const title = singleLine(current.title);
-
-  return fitted(title === '' ? count : `${count} · `, title, codex, columns);
+  return fitted(
+    band.title === '' ? band.count : `${band.count} · `,
+    band.title,
+    codex,
+    columns,
+  );
 }
 
 /** Reads the one JSON line of `codex-model.mts --usage`, null when it is no usage report. */
@@ -236,28 +266,40 @@ function singleLine(title: string): string {
   return title.replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, ' ').trim();
 }
 
-type CodexText = { text: string; tone: Tone } | null;
-
-/** Words the usage left, red with `(below minimum)` when either window has less left than the Codex minimum, whether credits pay or not. */
-function codexText(budget: Budget | null): CodexText {
+/** Words each window that reported the usage left, alarm when either window has less left than the Codex minimum, whether credits pay or not. */
+function codexUsage(budget: Budget | null): CodexUsage | null {
   if (budget === null) {
     return null;
   }
 
-  const shown = [
+  const [first, ...rest] = [
     { label: '5h', left: budget.primary },
     { label: 'week', left: budget.secondary },
   ]
     .filter(window => window.left !== null)
     .map(window => `${window.label} ${window.left}%`);
 
-  if (shown.length === 0) {
+  if (first === undefined) {
     return null;
   }
 
-  const text = `Codex ${shown.join(' · ')}`;
+  return {
+    windows: [first, ...rest],
+    tone: budget.belowMinimum ? 'alarm' : 'quiet',
+  };
+}
 
-  return budget.belowMinimum
+type CodexText = { text: string; tone: Tone } | null;
+
+/** Writes the usage as one text, with `(below minimum)` after it in the alarm tone. */
+function codexText(usage: CodexUsage | null): CodexText {
+  if (usage === null) {
+    return null;
+  }
+
+  const text = `Codex ${usage.windows.join(' · ')}`;
+
+  return usage.tone === 'alarm'
     ? { text: `${text} (below minimum)`, tone: 'alarm' }
     : { text, tone: 'quiet' };
 }

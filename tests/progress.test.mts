@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Folds the events of each case into the run of the progress band and compares the band's line and the Codex reads it started with the expected ones.
+// Folds the events of each case into the run of the progress band and compares what the band shows, its terminal line and the Codex reads it started with the expected ones.
 
 import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
@@ -8,11 +8,12 @@ import { fileURLToPath } from 'node:url';
 
 import {
   bandLine,
+  bandOf,
   INITIAL_RUN,
   parseUsage,
   step,
 } from '../hooks/progress/run.mts';
-import type { Event, Item } from '../hooks/progress/run.mts';
+import type { Band, Event, Item, Run } from '../hooks/progress/run.mts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const script = join(
@@ -183,6 +184,75 @@ const CASES: {
   },
 ];
 
+/** What the band shows after the events, the same on every surface. */
+const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
+  {
+    name: 'the band reads the count, the done share, the item in progress and each window of the usage',
+    events: [OPEN, answer(USAGE)],
+    expected: {
+      count: '1/4',
+      filled: '25%',
+      title: 'Write the parser',
+      codex: { windows: ['5h 62%', 'week 81%'], tone: 'quiet' },
+    },
+  },
+  {
+    name: 'the done share rounds down, so two of three read 66%',
+    events: [
+      {
+        kind: 'todosWritten',
+        todos: [
+          todo('Read the issue', 'completed'),
+          todo('Write the parser', 'completed'),
+          todo('Test the parser', 'pending'),
+        ],
+      },
+    ],
+    expected: {
+      count: '2/3',
+      filled: '66%',
+      title: 'Test the parser',
+      codex: null,
+    },
+  },
+  {
+    name: 'a finished list has no title and a full share',
+    events: [OPEN, DONE],
+    expected: { count: '2/2', filled: '100%', title: null, codex: null },
+  },
+  {
+    name: 'a window below the minimum is the alarm tone, a missing window is left out',
+    events: [
+      OPEN,
+      answer('{"primary":null,"secondary":9,"belowMinimum":true}'),
+    ],
+    expected: {
+      count: '1/4',
+      filled: '25%',
+      title: 'Write the parser',
+      codex: { windows: ['week 9%'], tone: 'alarm' },
+    },
+  },
+  {
+    name: 'a read with neither window shows no usage',
+    events: [
+      OPEN,
+      answer('{"primary":null,"secondary":null,"belowMinimum":false}'),
+    ],
+    expected: {
+      count: '1/4',
+      filled: '25%',
+      title: 'Write the parser',
+      codex: null,
+    },
+  },
+  {
+    name: 'no list shows no band',
+    events: [OPEN, { kind: 'cleared' }],
+    expected: null,
+  },
+];
+
 /** Runs the usage script against the stand-in app-server and folds its answer in, so the script and the band agree on the report. */
 const SCRIPT_CASE = {
   name: 'the script reports a reached limit that credits pay for, red all the same',
@@ -197,6 +267,10 @@ let failures = 0;
 
 for (const { name, events, columns, expected } of CASES) {
   failures += report(name, fold(events, columns ?? COLUMNS), expected);
+}
+
+for (const { name, events, expected } of BAND_CASES) {
+  failures += report(name, bandOf(runOf(events)), expected);
 }
 
 failures += report(
@@ -224,11 +298,15 @@ function fold(events: Event[], columns: number): Result {
     }
   }
 
-  const line = bandLine(run, columns);
+  const band = bandOf(run);
 
   return {
     line:
-      line === null ? null : line.map(s => `${s.tone}:${s.text}`).join(' | '),
+      band === null
+        ? null
+        : bandLine(band, columns)
+            .map(s => `${s.tone}:${s.text}`)
+            .join(' | '),
     reads,
   };
 }
@@ -238,7 +316,12 @@ function atEdge(progress: string, codex: string): string {
   return `${' '.repeat(COLUMNS - [...progress].length - [...codex].length)}${codex}`;
 }
 
-function report(name: string, actual: Result, expected: Result): number {
+/** Folds the events through step from the initial run and returns the run alone. */
+function runOf(events: Event[]): Run {
+  return events.reduce((run, event) => step(run, event).run, INITIAL_RUN);
+}
+
+function report<T>(name: string, actual: T, expected: T): number {
   const ok = JSON.stringify(actual) === JSON.stringify(expected);
 
   console.log(`${ok ? 'PASS' : 'FAIL'} ${name}`);
