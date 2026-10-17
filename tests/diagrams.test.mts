@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
-// Runs the diagram check hook over the fixture project, once with the Mermaid of this repository and once in a project without one, and compares the findings with the expected ones.
+// Runs the diagram rules over the fixture project, once with the Mermaid of this repository and once in a project without one, and compares the findings with the expected ones.
 
-import { spawnSync } from 'node:child_process';
 import { cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { diagramSyntax, linkedDiagrams } from '../hooks/lib/diagrams.mts';
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const script = join(root, 'hooks', 'check-diagrams.mts');
 const fixture = join(root, 'tests', 'fixtures', 'diagrams');
 
 const EXPECTED: Record<string, string[]> = {
@@ -39,13 +39,7 @@ const EXPECTED: Record<string, string[]> = {
   'docs/missing.md': [],
 };
 
-/** The lines that open the two lists of the hook output, every other line is a finding. */
-const HEADINGS = [
-  'Mermaid (diagrams skill) cannot parse the last edit.',
-  'Diagrams (diagrams skill) link ',
-];
-
-/** What the hook reports where the project has no Mermaid to parse with, no syntax finding and the same links. */
+/** What the rules report where the project has no Mermaid to parse with, no syntax finding and the same links. */
 const EXPECTED_WITHOUT_MERMAID: Record<string, string[]> = {
   'docs/bad.md': [],
   'src/orders/checkout.ts': EXPECTED['src/orders/checkout.ts'],
@@ -57,8 +51,8 @@ const bare = mkdtempSync(join(tmpdir(), 'diagrams-'));
 cpSync(fixture, bare, { recursive: true });
 
 const failures =
-  compare('diagrams', fixture, EXPECTED) +
-  compare('diagrams-without-mermaid', bare, EXPECTED_WITHOUT_MERMAID);
+  (await compare('diagrams', fixture, EXPECTED)) +
+  (await compare('diagrams-without-mermaid', bare, EXPECTED_WITHOUT_MERMAID));
 
 rmSync(bare, { recursive: true });
 
@@ -68,16 +62,16 @@ console.log(
 
 process.exit(failures === 0 ? 0 : 1);
 
-/** Runs every file of the project through the hook, prints one line per file and returns the number of mismatches. */
-function compare(
+/** Runs every file of the project through the rules, prints one line per file and returns the number of mismatches. */
+async function compare(
   label: string,
   project: string,
   files: Record<string, string[]>,
-): number {
+): Promise<number> {
   let mismatches = 0;
 
   for (const [name, expected] of Object.entries(files)) {
-    const actual = run(project, name);
+    const actual = await run(project, name);
     const ok = JSON.stringify(actual) === JSON.stringify(expected);
 
     console.log(`${ok ? 'PASS' : 'FAIL'} ${label}/${name}`);
@@ -93,39 +87,17 @@ function compare(
   return mismatches;
 }
 
-/** Feeds one file through the hook with its project as working directory and returns "path:line rule" entries. */
-function run(project: string, filePath: string): string[] {
-  const input = JSON.stringify({
-    cwd: project,
-    hook_event_name: 'PostToolUse',
-    tool_name: 'Edit',
-    tool_input: { file_path: filePath },
-  });
+/** Checks one file as the turn hook checks a changed file of its project and returns "path:line rule" entries. */
+async function run(project: string, name: string): Promise<string[]> {
+  const changes = { root: project, files: [join(project, name)] };
+  const findings = [
+    ...(await diagramSyntax.check(changes)),
+    ...(await linkedDiagrams.check(changes)),
+  ];
 
-  const result = spawnSync('node', [script], { input, encoding: 'utf8' });
+  return findings.map(finding => {
+    const path = relative(project, finding.file).split(sep).join('/');
 
-  if (result.status !== 0) {
-    throw new Error(`hook exited with ${result.status}: ${result.stderr}`);
-  }
-
-  if (result.stdout.trim() === '') {
-    return [];
-  }
-
-  const context: string = JSON.parse(result.stdout).hookSpecificOutput
-    .additionalContext;
-
-  return context.split('\n').flatMap(line => {
-    const match = line.match(/^(\S+:\d+ \S+)/);
-
-    if (match) {
-      return [match[1]];
-    }
-
-    if (HEADINGS.some(heading => line.startsWith(heading))) {
-      return [];
-    }
-
-    throw new Error(`unexpected line in the hook output: ${line}`);
+    return `${path}:${finding.line} ${finding.rule}`;
   });
 }

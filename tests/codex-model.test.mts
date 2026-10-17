@@ -3,6 +3,8 @@
 // Runs the codex-model script against a stand-in Codex app-server and compares its output and exit code with the expected ones.
 
 import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,6 +19,18 @@ const script = join(
 );
 
 const fakeCodex = join(root, 'tests', 'fixtures', 'codex', 'bin');
+
+/** A home without a rule file, so a case reads the minimum of 20 unless it names another home. */
+const homeWithoutRules = join(root, 'tests', 'fixtures', 'codex');
+
+/** A home whose ~/.claude/rules/models.md holds `codex minimum: 30%`, written fresh because the repository ignores every .claude folder. */
+const homeWithRules = mkdtempSync(join(tmpdir(), 'codex-model-home-'));
+
+mkdirSync(join(homeWithRules, '.claude', 'rules'), { recursive: true });
+writeFileSync(
+  join(homeWithRules, '.claude', 'rules', 'models.md'),
+  'codex minimum: 30%\n',
+);
 
 /** What the script prints on stdout, the code it exits with, and its message on stderr, which a case expects empty or containing a part. */
 type Result = {
@@ -168,6 +182,57 @@ const CASES: {
     env: { PATH: join(root, 'tests', 'fixtures', 'codex') },
     expected: { stdout: '', status: 1, message: 'is not installed' },
   },
+  {
+    name: 'the minimum of the codex minimum line',
+    args: ['sol'],
+    env: {
+      PATH: `${fakeCodex}:${process.env.PATH}`,
+      HOME: homeWithRules,
+      FAKE_CODEX_USAGE: 'enough',
+    },
+    expected: {
+      stdout: '',
+      status: 1,
+      message: '20 % left of its 7-day usage window, below the minimum of 30 %',
+    },
+  },
+  {
+    name: 'the usage left of both windows',
+    args: ['--usage'],
+    env: { PATH: `${fakeCodex}:${process.env.PATH}` },
+    expected: {
+      stdout: '{"primary":100,"secondary":100,"belowMinimum":false}',
+      status: 0,
+      message: '',
+    },
+  },
+  {
+    name: 'the usage of a reached limit that credits pay for, below the minimum all the same',
+    args: ['--usage'],
+    env: {
+      PATH: `${fakeCodex}:${process.env.PATH}`,
+      FAKE_CODEX_USAGE: 'credits',
+    },
+    expected: {
+      stdout: '{"primary":100,"secondary":0,"belowMinimum":true}',
+      status: 0,
+      message: '',
+    },
+  },
+  {
+    name: 'the usage judged against the codex minimum line',
+    args: ['--usage'],
+    env: {
+      PATH: `${fakeCodex}:${process.env.PATH}`,
+      HOME: homeWithRules,
+      FAKE_CODEX_USAGE: 'enough',
+    },
+    expected: {
+      stdout: '{"primary":100,"secondary":20,"belowMinimum":true}',
+      status: 0,
+      message: '',
+    },
+  },
 ];
 
 let failures = 0;
@@ -194,6 +259,8 @@ for (const { name, args, env, expected } of CASES) {
   }
 }
 
+rmSync(homeWithRules, { recursive: true });
+
 console.log(failures === 0 ? 'All cases pass.' : `${failures} case(s) failed.`);
 
 process.exit(failures === 0 ? 0 : 1);
@@ -202,7 +269,7 @@ process.exit(failures === 0 ? 0 : 1);
 function run(args: string[], env: Record<string, string>): Result {
   const result = spawnSync(process.execPath, [script, ...args], {
     encoding: 'utf8',
-    env: { ...process.env, ...env },
+    env: { ...process.env, HOME: homeWithoutRules, ...env },
   });
 
   return {

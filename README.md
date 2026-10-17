@@ -30,14 +30,14 @@ pnpm install
 | `pnpm run lint` | runs oxlint |
 | `pnpm run lint:fix` | runs oxlint and applies its fixes |
 | `pnpm run typecheck` | checks the `.mts` files with tsc |
-| `pnpm test` | runs the tests of the comment hook, the documentation hook, the diagram hook, the session hook and the Codex model script |
+| `pnpm test` | runs the tests of the comment rules, the documentation rules, the diagram rules, the session hook, the Codex model script and the turn hook |
 | `pnpm run check-upstream` | lists what changed upstream since the base commit of every file in [UPSTREAM.md](UPSTREAM.md), with `gh` logged in |
 
 - The pre-commit hook judges the staged files with oxfmt and oxlint.
 - The commit-msg hook runs commitlint.
 - The [Check workflow](.github/workflows/check.yml) runs the checks on every pull request and before every release.
 - Each change ships with a changeset under `.changeset/`.
-- The hooks under `hooks/` run when a session starts and after every edit. [hooks/README.md](hooks/README.md) shows how they work together.
+- The hooks under `hooks/` run when a session starts and while a turn runs. [hooks/README.md](hooks/README.md) shows how they work together.
 
 The clean-code skill carries a formatter and linter configuration per language under `skills/clean-code/clean-code/formatting/`. Which rule each tool covers, and where the agent fills the gap, is listed in [coverage.md](skills/clean-code/clean-code/formatting/coverage.md).
 

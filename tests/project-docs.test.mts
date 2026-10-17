@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-// Runs the documentation check hook over the fixture projects, which differ in their markdownlint configuration, and compares the findings with the expected ones.
+// Runs the documentation rules over the fixture projects, which differ in their markdownlint configuration, and compares the findings with the expected ones.
 
-import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { docs } from '../hooks/lib/docs.mts';
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const script = join(root, 'hooks', 'check-docs.mts');
 const fixtures = join(root, 'tests', 'fixtures');
 
 const EXPECTED: Record<string, Record<string, string[]>> = {
@@ -48,7 +48,7 @@ let failures = 0;
 
 for (const [project, files] of Object.entries(EXPECTED)) {
   for (const [name, expected] of Object.entries(files)) {
-    const actual = run(join(fixtures, project), name);
+    const actual = await run(join(fixtures, project), name);
     const ok = JSON.stringify(actual) === JSON.stringify(expected);
 
     if (!ok) {
@@ -71,34 +71,12 @@ console.log(
 
 process.exit(failures === 0 ? 0 : 1);
 
-/** Feeds one fixture through the hook with its project as working directory and returns "line rule" pairs. */
-function run(project: string, filePath: string): string[] {
-  const input = JSON.stringify({
-    cwd: project,
-    hook_event_name: 'PostToolUse',
-    tool_name: 'Edit',
-    tool_input: { file_path: filePath },
+/** Checks one fixture as the turn hook checks a changed file of its project and returns "line rule" pairs. */
+async function run(project: string, name: string): Promise<string[]> {
+  const findings = await docs.check({
+    root: project,
+    files: [join(project, name)],
   });
 
-  const result = spawnSync('node', [script], { input, encoding: 'utf8' });
-
-  if (result.status !== 0) {
-    throw new Error(`hook exited with ${result.status}: ${result.stderr}`);
-  }
-
-  if (result.stdout.trim() === '') {
-    return [];
-  }
-
-  const context: string = JSON.parse(result.stdout).hookSpecificOutput
-    .additionalContext;
-
-  return context
-    .split('\n')
-    .slice(1)
-    .flatMap(line => {
-      const match = line.match(/:(\d+) (\S+) /);
-
-      return match ? [`${match[1]} ${match[2]}`] : [];
-    });
+  return findings.map(finding => `${finding.line} ${finding.rule}`);
 }

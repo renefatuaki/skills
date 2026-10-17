@@ -1,15 +1,12 @@
-#!/usr/bin/env node
-
-// Scans the file an Edit or Write touched for comment rule violations and reports them to Claude.
+// The comment rules of the code-comments skill, checked over the changed source files of one checkout.
 // https://code.claude.com/docs/en/hooks.md
 
 import { readFileSync } from 'node:fs';
-import { extname, relative } from 'node:path';
+import { extname } from 'node:path';
 
-import { readEditedPath, report } from './lib/hook.mts';
-
-/** The comment syntax of a language, slashes and blocks or hashes and docstrings. */
-type Syntax = 'c' | 'python';
+import type { Changes } from './changes.mts';
+import { checkEach, type Finding, type RuleSet } from './hook.mts';
+import { LANGUAGES, type Syntax } from './languages.mts';
 
 /** One content line of a comment, its delimiters removed, with its line number in the file. */
 type CommentLine = {
@@ -50,27 +47,11 @@ type Group = {
   exempt: boolean;
 };
 
-type Finding = {
+/** What the rules report for one source, before the rule set adds the file. */
+type SourceFinding = {
   line: number;
   rule: 'em-dash' | 'semicolon' | 'todo-link' | 'too-long';
   message: string;
-};
-
-/** Maps a file extension to its comment syntax, a file with any other extension is not checked. */
-const SYNTAX: Record<string, Syntax> = {
-  '.swift': 'c',
-  '.kt': 'c',
-  '.kts': 'c',
-  '.java': 'c',
-  '.ts': 'c',
-  '.tsx': 'c',
-  '.js': 'c',
-  '.jsx': 'c',
-  '.mjs': 'c',
-  '.cjs': 'c',
-  '.mts': 'c',
-  '.cts': 'c',
-  '.py': 'python',
 };
 
 /** A comment holds a summary line and a link line at most. */
@@ -89,53 +70,38 @@ const DIRECTIVE =
 /** Matches a URL, a ticket key such as ABC-123 or an issue number such as #12. */
 const TICKET = /https?:\/\/|\b[A-Z][A-Z0-9]+-\d+\b|#\d+/;
 
-main();
+/** The comment rules over every changed file in a language of LANGUAGES, any path, a dot folder included. */
+export const comments: RuleSet = {
+  heading: 'Comment rules (code-comments skill)',
+  check: checkFiles,
+};
 
-function main(): void {
-  // 1. Read the edited path and stay silent for a language outside the list and for a file that cannot be read.
-  const edited = readEditedPath();
+/** Reads each changed source file once and adds the file to the findings of checkSource. A deleted or unreadable file gives none. */
+async function checkFiles(changes: Changes): Promise<Finding[]> {
+  const sources = changes.files.filter(
+    file => LANGUAGES[extname(file).toLowerCase()],
+  );
 
-  if (edited === null) {
-    return;
-  }
+  return checkEach(changes, sources, async file => {
+    const { syntax } = LANGUAGES[extname(file).toLowerCase()];
+    let source: string;
 
-  const syntax = SYNTAX[extname(edited.absolute).toLowerCase()];
+    try {
+      source = readFileSync(file, 'utf8');
+    } catch {
+      return [];
+    }
 
-  if (!syntax) {
-    return;
-  }
-
-  let source: string;
-
-  try {
-    source = readFileSync(edited.absolute, 'utf8');
-  } catch {
-    return;
-  }
-
-  // 2. Collect the findings of every rule.
-  const findings = check(source, syntax);
-
-  if (findings.length === 0) {
-    return;
-  }
-
-  // 3. Hand the findings to Claude, one line each.
-  const shown = relative(edited.root, edited.absolute) || edited.absolute;
-  const lines = findings.map(f => `${shown}:${f.line} ${f.rule} ${f.message}`);
-
-  report([
-    'Comment rules (code-comments skill) flagged the last edit. Fix each line in your next edit:',
-    ...lines,
-  ]);
+    return checkSource(source, syntax).map(finding => ({ file, ...finding }));
+  });
 }
 
 /** Applies the punctuation rules and the ticket rule to every comment line and the length limit to every comment group. */
-function check(source: string, syntax: Syntax): Finding[] {
+function checkSource(source: string, syntax: Syntax): SourceFinding[] {
   const comments =
     syntax === 'python' ? extractPython(source) : extractCStyle(source);
 
-  const findings: Finding[] = [];
+  const findings: SourceFinding[] = [];
 
   for (const comment of comments) {
     for (const line of comment.lines) {
