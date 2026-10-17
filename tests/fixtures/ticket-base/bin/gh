@@ -1,0 +1,43 @@
+#!/usr/bin/env node
+
+// Stands in for gh and answers `gh repo view` and the Ticket and Board queries of the ticket-base script from the board FAKE_GH_DATA holds, one page of board items per array entry.
+
+const { readFileSync } = require('node:fs');
+
+const data = JSON.parse(process.env.FAKE_GH_DATA);
+const [command] = process.argv.slice(2);
+
+if (command === 'repo') {
+  process.stdout.write(`${data.repository}\n`);
+} else if (command === 'api') {
+  const { query, variables } = JSON.parse(readFileSync(0, 'utf8'));
+
+  if (query.startsWith('query Ticket')) {
+    reply({
+      checkout: {
+        defaultBranchRef: { name: 'main' },
+        dev: data.dev ? { name: 'dev' } : null,
+      },
+      ticket: { issue: data.issue },
+    });
+  } else if (query.startsWith('query Board')) {
+    const pages = data.boards[variables.projectId];
+    const page = variables.after ? Number(variables.after) : 0;
+
+    reply({
+      node: {
+        items: {
+          pageInfo: {
+            hasNextPage: page < pages.length - 1,
+            endCursor: String(page + 1),
+          },
+          nodes: pages[page],
+        },
+      },
+    });
+  }
+}
+
+function reply(payload) {
+  process.stdout.write(JSON.stringify({ data: payload }));
+}
