@@ -3,15 +3,17 @@
 
 import type {
   BuiltinToolInputs,
+  ElementTable,
   EngineInterface,
   PromptOrigin,
   Register,
+  RenderElement,
   TextProps,
   ToolCallResult,
 } from 'claude-code';
 
-import { bandLine, INITIAL_RUN, parseUsage, step } from './run.mts';
-import type { Budget, Event, Run, Tone } from './run.mts';
+import { bandLine, bandOf, INITIAL_RUN, parseUsage, step } from './run.mts';
+import type { Band, Budget, CodexUsage, Event, Run, Tone } from './run.mts';
 
 /** The run of the session, written only by `dispatch`. */
 let run: Run = INITIAL_RUN;
@@ -32,6 +34,15 @@ const TONES: Record<Tone, TextProps> = {
   quiet: { dimColor: true },
   alarm: { color: 'error' },
 };
+
+/** Colors the windows of the Codex caption, which stay in the text color unless below the minimum. */
+const WINDOW_TONES: Record<CodexUsage['tone'], TextProps> = {
+  quiet: {},
+  alarm: { color: 'error' },
+};
+
+/** Cells the bar of the done share takes beside the count. */
+const BAR_CELLS = 8;
 
 export const register: Register = on => {
   on('tool.call', { tool: 'TodoWrite' }, async ($, e, next) => {
@@ -104,20 +115,121 @@ export const register: Register = on => {
   });
 
   on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
-    const line = bandLine(run, e.props.bodyColumns);
+    const band = bandOf(run);
 
-    if (line === null || e.props.hasSurvey) {
+    if (band === null || e.props.hasSurvey) {
       return next(e);
     }
 
-    const { Text } = $.ui.resolve(e);
-    const children = line.map(({ text, tone }) =>
-      Text({ ...TONES[tone], children: [text] }),
-    );
-
-    return Text({ wrap: 'truncate-end', children });
+    // Every other surface has the Box and Text the graphical tree draws with, mobile included.
+    return e.surface === 'terminal'
+      ? terminalBand($.ui.resolve(e), band, e.props.bodyColumns)
+      : graphicalBand($.ui.resolve(e), band);
   });
 };
+
+/** Draws the band as one line of characters cut to the columns, the Codex usage padded to the right edge. */
+function terminalBand(
+  { Text }: Pick<ElementTable, 'Text'>,
+  band: Band,
+  columns: number,
+): RenderElement {
+  const children = bandLine(band, columns).map(({ text, tone }) =>
+    Text({ ...TONES[tone], children: [text] }),
+  );
+
+  return Text({ wrap: 'truncate-end', children });
+}
+
+/** Draws the band as a row of the count with a bar of the done share, the title the surface truncates by its own width, and the Codex usage as a caption at the right. */
+function graphicalBand(
+  { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
+  band: Band,
+): RenderElement {
+  const progress = Box({
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 'xs',
+    flexShrink: 0,
+    children: [
+      Text({ tabular: true, weight: 'medium', children: [band.count] }),
+      Box({
+        width: BAR_CELLS,
+        height: 1,
+        backgroundColor: 'subtle',
+        children: [
+          Box({
+            width: band.filled,
+            height: 1,
+            backgroundColor: band.title === null ? 'success' : 'claude',
+          }),
+        ],
+      }),
+    ],
+  });
+
+  // A flex item does not shrink below its content without a minimum width, so the title would push the Codex usage out instead of truncating.
+  // https://developer.mozilla.org/en-US/docs/Web/CSS/min-width#auto
+  const title = Box({
+    flexGrow: 1,
+    minWidth: 0,
+    children: [
+      band.title === null
+        ? Text({ dimColor: true, children: ['done'] })
+        : Text({ wrap: 'truncate-end', children: [band.title] }),
+    ],
+  });
+
+  const codex =
+    band.codex === null ? [] : [codexCaption({ Box, Text }, band.codex)];
+
+  return Box({
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 'sm',
+    children: [progress, title, ...codex],
+  });
+}
+
+/** Draws `Codex` and each window as small text, the windows and `below minimum` in the error color in the alarm tone. */
+function codexCaption(
+  { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
+  { windows, tone }: CodexUsage,
+): RenderElement {
+  const separator = Text({ size: 'caption', dimColor: true, children: ['·'] });
+  const parts = windows.flatMap((window, index) => [
+    ...(index === 0 ? [] : [separator]),
+    Text({
+      size: 'caption',
+      tabular: true,
+      ...WINDOW_TONES[tone],
+      children: [window],
+    }),
+  ]);
+
+  const alarm =
+    tone === 'alarm'
+      ? [
+          Text({
+            size: 'caption',
+            ...WINDOW_TONES.alarm,
+            children: ['below minimum'],
+          }),
+        ]
+      : [];
+
+  return Box({
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 'xs',
+    flexShrink: 0,
+    children: [
+      Text({ size: 'caption', dimColor: true, children: ['Codex'] }),
+      ...parts,
+      ...alarm,
+    ],
+  });
+}
 
 /** Applies an event to the run, the one writer of the run, draws the band again and reads the usage when the step started a run. */
 function dispatch($: EngineInterface, event: Event): void {

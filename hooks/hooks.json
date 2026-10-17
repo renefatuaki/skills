@@ -63,6 +63,6 @@
     ]
   },
   "modules": [
-    "./progress/index.mts"
+    "./module.mts"
   ]
 }
