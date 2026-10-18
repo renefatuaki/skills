@@ -31,6 +31,7 @@
     "./skills/github/project",
     "./skills/github/pull-request",
     "./skills/github/pull-request-review",
+    "./skills/github/review-queue",
     "./skills/github/templates",
     "./skills/github/today-issues",
     "./skills/meta/automate-me",

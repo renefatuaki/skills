@@ -1,23 +1,18 @@
 #!/usr/bin/env node
 
-// Lays out the pane for each case's pull requests and compares the review order and the depths with the expected ones, then parses answers of the GraphQL query, cuts the header and the rows to the pane's width and words the caption of a graphical surface.
+// Lays out the rows for each case's pull requests and compares the review order with the expected one, then parses answers of the GraphQL query and lays out the Markdown table.
 
 import {
-  headerCaption,
-  headerLine,
-  paneRows,
   parsePullRequests,
-  rowLine,
-} from '../hooks/review-queue/order.mts';
+  queueRows,
+  queueTable,
+} from '../skills/github/review-queue/scripts/order.mts';
 import type {
-  HeaderLine,
   OpenPullRequest,
-  PaneRow,
-  RepositoryPullRequests,
-  RowLine,
-} from '../hooks/review-queue/order.mts';
+  QueueRow,
+} from '../skills/github/review-queue/scripts/order.mts';
 
-/** The numbers of the pull requests in the order of the pane, each with the number it waits on or null. */
+/** The numbers of the pull requests in the review order, each with the number it waits on or null. */
 type Order = [number, number | null][];
 
 const ORDER_CASES: {
@@ -361,15 +356,25 @@ const ELYSIA = {
       createdAt: '2026-10-17T00:33:11Z',
     }),
   ],
-  numbers: [67, 85, 69, 83, 70, 94, 74, 86, 88, 91, 90, 93],
-  depths: [0, 1, 0, 1, 0, 1, 1, 2, 2, 3, 4, 5],
+  expected: [
+    [67, null],
+    [85, 67],
+    [69, null],
+    [83, 69],
+    [70, null],
+    [94, 70],
+    [74, 70],
+    [86, 74],
+    [88, 74],
+    [91, 88],
+    [90, 91],
+    [93, 90],
+  ] as Order,
 };
 
 const REAL_ANSWER = JSON.stringify({
   data: {
     repository: {
-      nameWithOwner: 'cli/cli',
-      url: 'https://github.com/cli/cli',
       pullRequests: {
         nodes: [
           {
@@ -424,52 +429,49 @@ const REAL_ANSWER = JSON.stringify({
   },
 });
 
-const PARSED: RepositoryPullRequests = {
-  repository: { name: 'cli/cli', url: 'https://github.com/cli/cli' },
-  pullRequests: [
-    {
-      number: 9847,
-      title: '[gh search issues] Support multiple author options',
-      url: 'https://github.com/cli/cli/pull/9847',
-      isDraft: true,
-      createdAt: '2024-10-30T05:40:06Z',
-      head: 'shion/9828',
-      base: 'trunk',
-      closes: [9828],
-      blockedBy: [],
-    },
-    {
-      number: 10253,
-      title: 'Include headRepositoryId when creating a new PR',
-      url: 'https://github.com/cli/cli/pull/10253',
-      isDraft: false,
-      createdAt: '2025-01-16T00:21:47Z',
-      head: 'include-head-repository-id',
-      base: 'trunk',
-      closes: [10093, 10094],
-      blockedBy: [10001],
-    },
-    {
-      number: 10300,
-      title: 'No issue',
-      url: 'https://github.com/cli/cli/pull/10300',
-      isDraft: false,
-      createdAt: '2025-02-01T08:00:00Z',
-      head: 'no-issue',
-      base: 'trunk',
-      closes: [],
-      blockedBy: [],
-    },
-  ],
-};
+const PARSED: OpenPullRequest[] = [
+  {
+    number: 9847,
+    title: '[gh search issues] Support multiple author options',
+    url: 'https://github.com/cli/cli/pull/9847',
+    isDraft: true,
+    createdAt: '2024-10-30T05:40:06Z',
+    head: 'shion/9828',
+    base: 'trunk',
+    closes: [9828],
+    blockedBy: [],
+  },
+  {
+    number: 10253,
+    title: 'Include headRepositoryId when creating a new PR',
+    url: 'https://github.com/cli/cli/pull/10253',
+    isDraft: false,
+    createdAt: '2025-01-16T00:21:47Z',
+    head: 'include-head-repository-id',
+    base: 'trunk',
+    closes: [10093, 10094],
+    blockedBy: [10001],
+  },
+  {
+    number: 10300,
+    title: 'No issue',
+    url: 'https://github.com/cli/cli/pull/10300',
+    isDraft: false,
+    createdAt: '2025-02-01T08:00:00Z',
+    head: 'no-issue',
+    base: 'trunk',
+    closes: [],
+    blockedBy: [],
+  },
+];
 
 const NO_PULL_REQUESTS =
-  '{"data":{"repository":{"nameWithOwner":"o/r","url":"https://github.com/o/r","pullRequests":{"nodes":[]}}}}';
+  '{"data":{"repository":{"pullRequests":{"nodes":[]}}}}';
 
 const PARSE_CASES: {
   name: string;
   stdout: string;
-  expected: RepositoryPullRequests | null;
+  expected: OpenPullRequest[] | null;
 }[] = [
   {
     name: 'an answer of the query parses into its pull requests with the open blockers only',
@@ -479,10 +481,7 @@ const PARSE_CASES: {
   {
     name: 'an answer without pull requests parses into none',
     stdout: NO_PULL_REQUESTS,
-    expected: {
-      repository: { name: 'o/r', url: 'https://github.com/o/r' },
-      pullRequests: [],
-    },
+    expected: [],
   },
   { name: 'empty output is no answer', stdout: '', expected: null },
   { name: 'text is no answer', stdout: 'gh: not found', expected: null },
@@ -496,32 +495,6 @@ const PARSE_CASES: {
   {
     name: 'GraphQL errors are no answer',
     stdout: '{"errors":[{"message":"Could not resolve to a Repository"}]}',
-    expected: null,
-  },
-  {
-    name: 'a repository without its nameWithOwner is no answer',
-    stdout: REAL_ANSWER.replace('"nameWithOwner":"cli/cli",', ''),
-    expected: null,
-  },
-  {
-    name: 'a repository whose nameWithOwner is no string is no answer',
-    stdout: REAL_ANSWER.replace(
-      '"nameWithOwner":"cli/cli"',
-      '"nameWithOwner":7',
-    ),
-    expected: null,
-  },
-  {
-    name: 'a repository without its url is no answer',
-    stdout: REAL_ANSWER.replace('"url":"https://github.com/cli/cli",', ''),
-    expected: null,
-  },
-  {
-    name: 'a repository whose url is no string is no answer',
-    stdout: REAL_ANSWER.replace(
-      '"url":"https://github.com/cli/cli",',
-      '"url":null,',
-    ),
     expected: null,
   },
   {
@@ -541,91 +514,38 @@ const PARSE_CASES: {
   },
 ];
 
-const ROW: PaneRow = {
-  position: 2,
-  number: 42,
-  title: 'Add the parser',
-  url: 'https://github.com/o/r/pull/42',
-  isDraft: false,
-  waitsOn: null,
-  depth: 0,
-};
-
-const LINE_CASES: {
+const TABLE_CASES: {
   name: string;
-  row: PaneRow;
-  columns: number;
-  expected: RowLine;
+  pullRequests: OpenPullRequest[];
+  expected: string;
 }[] = [
   {
-    name: 'a ready pull request shows its position and its label',
-    row: ROW,
-    columns: 80,
-    expected: { lead: '2. ', label: '#42 Add the parser', notes: '' },
+    name: 'the table links each pull request and names the one it waits on',
+    pullRequests: [
+      pr(10, { head: 'bottom' }),
+      pr(11, { head: 'middle', base: 'bottom', isDraft: true }),
+      pr(12, { head: 'top', base: 'middle' }),
+      pr(13, { title: '' }),
+    ],
+    expected: [
+      '| # | Pull request | After | Status |',
+      '| --- | --- | --- | --- |',
+      '| 1 | [#10 Pull request 10](https://github.com/o/r/pull/10) |  | Ready |',
+      '| 2 | [#11 Pull request 11](https://github.com/o/r/pull/11) | #10 | Draft |',
+      '| 3 | [#12 Pull request 12](https://github.com/o/r/pull/12) | #11 | Ready |',
+      '| 4 | [#13](https://github.com/o/r/pull/13) |  | Ready |',
+    ].join('\n'),
   },
   {
-    name: 'a draft that waits on another shows both notes',
-    row: { ...ROW, isDraft: true, waitsOn: 41 },
-    columns: 80,
-    expected: {
-      lead: '2. ',
-      label: '#42 Add the parser',
-      notes: ' draft after #41',
-    },
-  },
-  {
-    name: 'a long title is cut with an ellipsis so the notes stay in the width',
-    row: { ...ROW, isDraft: true, waitsOn: 41 },
-    columns: 36,
-    expected: {
-      lead: '2. ',
-      label: '#42 Add the pars…',
-      notes: ' draft after #41',
-    },
-  },
-  {
-    name: 'a pull request two deep is indented in the lead and its label still fits the width',
-    row: { ...ROW, waitsOn: 41, depth: 2 },
-    columns: 30,
-    expected: {
-      lead: '2.     ',
-      label: '#42 Add the …',
-      notes: ' after #41',
-    },
+    name: 'a pipe and brackets in a title are escaped so the cell and the link stay whole',
+    pullRequests: [pr(7, { title: 'Fix [a|b] \\ c' })],
+    expected: [
+      '| # | Pull request | After | Status |',
+      '| --- | --- | --- | --- |',
+      '| 1 | [#7 Fix \\[a\\|b\\] \\\\ c](https://github.com/o/r/pull/7) |  | Ready |',
+    ].join('\n'),
   },
 ];
-
-const HEADER_CASES: {
-  name: string;
-  open: RepositoryPullRequests;
-  columns: number;
-  expected: HeaderLine;
-}[] = [
-  {
-    name: 'the header shows the repository and the count of its open pull requests',
-    open: PARSED,
-    columns: 60,
-    expected: { label: 'cli/cli', notes: ' · 3 open' },
-  },
-  {
-    name: 'a long repository name is cut with an ellipsis so the count stays in the width',
-    open: {
-      repository: {
-        name: 'renefatuaki/grocery-lens-elysia',
-        url: 'https://github.com/renefatuaki/grocery-lens-elysia',
-      },
-      pullRequests: ELYSIA.pullRequests,
-    },
-    columns: 24,
-    expected: { label: 'renefatuaki/g…', notes: ' · 12 open' },
-  },
-];
-
-const CAPTION_CASE = {
-  name: 'the caption counts the open pull requests and says the order reads top to bottom',
-  open: PARSED,
-  expected: '3 open · top to bottom',
-};
 
 const TITLE_CASE = {
   name: 'a title with line breaks is one line',
@@ -636,20 +556,16 @@ const TITLE_CASE = {
 let failures = 0;
 
 for (const { name, pullRequests, expected } of ORDER_CASES) {
-  failures += report(name, orderOf(paneRows(pullRequests)), expected);
+  failures += report(name, orderOf(queueRows(pullRequests)), expected);
 }
 
-const elysiaRows = paneRows(ELYSIA.pullRequests);
+const elysiaRows = queueRows(ELYSIA.pullRequests);
 
-failures += report(
-  ELYSIA.name,
-  [elysiaRows.map(row => row.number), elysiaRows.map(row => row.depth)],
-  [ELYSIA.numbers, ELYSIA.depths],
-);
+failures += report(ELYSIA.name, orderOf(elysiaRows), ELYSIA.expected);
 
 failures += report(
   TITLE_CASE.name,
-  paneRows(TITLE_CASE.pullRequests)[0]?.title,
+  queueRows(TITLE_CASE.pullRequests)[0]?.title,
   TITLE_CASE.expected,
 );
 
@@ -657,25 +573,15 @@ for (const { name, stdout, expected } of PARSE_CASES) {
   failures += report(name, parsePullRequests(stdout), expected);
 }
 
-for (const { name, row, columns, expected } of LINE_CASES) {
-  failures += report(name, rowLine(row, columns), expected);
+for (const { name, pullRequests, expected } of TABLE_CASES) {
+  failures += report(name, queueTable(pullRequests), expected);
 }
-
-for (const { name, open, columns, expected } of HEADER_CASES) {
-  failures += report(name, headerLine(open, columns), expected);
-}
-
-failures += report(
-  CAPTION_CASE.name,
-  headerCaption(CAPTION_CASE.open),
-  CAPTION_CASE.expected,
-);
 
 console.log(failures === 0 ? 'All cases pass.' : `${failures} case(s) failed.`);
 
 process.exit(failures === 0 ? 0 : 1);
 
-function orderOf(rows: PaneRow[]): Order {
+function orderOf(rows: QueueRow[]): Order {
   return rows.map(row => [row.number, row.waitsOn]);
 }
 
