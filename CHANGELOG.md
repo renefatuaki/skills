@@ -1,5 +1,16 @@
 # forge
 
+## 1.5.0
+
+### Minor Changes
+
+- 5ad5c0d: The description of the `diagrams` skill names every chat answer that explains how code, a set of files or a feature works. A folder that needs more than one diagram keeps the overview in its `README.md` and puts each further diagram into its own file in the `docs/` folder next to the code. Every diagram must make sense without the code. A table explains the terms the reader needs. An edge that ends a flow early names its reason and its error or log code. A flow that computes or checks a limit gets a worked example with real values from the repository. The `project-docs` skill and the turn hook treat a `docs/` folder at any depth like the one in the root.
+- 9cca85d: An auto run of the Ticket playbook no longer files an issue for every piece of work a subagent reports. A judge on the new `follow-up judge` role, `fable/xhigh` by default, decides first whether the work is needed and whether it belongs in the ticket's branch. Work that is not needed is dropped, work that belongs to the ticket lands in the branch as its own commit, and only the rest becomes an issue. The Notes for the reviewer name what the judge dropped or took in.
+- a7e0544: A GitHub App of the user can open the pull requests, so the user can approve them and GitHub shows which ones wait for their review. `app-token.mts` of the `pull-request` skill reads `~/.config/forge/github-app.json`, signs a JSON Web Token with the app's private key and prints an installation token of the current repository, or with `--login` the login gh shows for the app. Without the file it prints nothing and every command runs as the user. With the app, the `pull-request` skill creates, edits, comments on and marks the pull request ready with its token, assigns the user, adds the projects under the user's login and requests the user as the reviewer when nobody else was named. `pull-request-review` posts its review on the app's pull request as a comment of the app. The worktree audit of the `engineering` skill lists the pull requests of every author. The GitHub workflow guide describes how to create the app.
+- 23007ff: The `pull-request` skill posts a comment with real examples when a pull request changes what code, a script or a skill outputs. Each changed behaviour gets a table of real inputs with the output of the base and of the head, and a Tradeoffs section lists the inputs where the new output is worse.
+- 9cca85d: The `pull-request` skill adds the pull request to every project of its issue, read from the issue's `projectItems`, so the pull request shows on the same boards as its issue.
+- d9f39fb: The `review-queue` skill shows the open pull requests of the repository of the current directory as one Markdown table in the order to review them, with the columns `#`, `Pull request`, `After` and `Status`. Each pull request links to GitHub. A pull request comes after the one its base branch is the head branch of, and after the one that closes an issue blocking one of its own closing issues. `After` names the one it waits on. Each stack is listed in one piece, depth first, and of two children the one with fewer pull requests after it comes first. Stacks among themselves go ready before draft, then the oldest. The reply is the table alone.
+
 ## 1.4.0
 
 ### Minor Changes
