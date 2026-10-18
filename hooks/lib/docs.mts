@@ -151,11 +151,20 @@ function isDocumentation(segments: string[]): boolean {
     return true;
   }
 
-  if (segments[0] === 'docs') {
-    return segments[1] !== 'adr';
+  if (isUnderDocs(segments)) {
+    return true;
   }
 
   return segments.length === 1 && ROOT_FILES.has(name);
+}
+
+/** Tells whether the file lies in a docs folder at any depth, outside the adr folder of that docs folder. */
+function isUnderDocs(segments: string[]): boolean {
+  const folders = segments.slice(0, -1);
+
+  return folders.some(
+    (folder, index) => folder === 'docs' && folders[index + 1] !== 'adr',
+  );
 }
 
 /** Builds the linter of the checkout once. A project without markdownlint gets a linter that reports nothing, and a setup that cannot run one that reports why. */
@@ -422,9 +431,9 @@ function checkLead(lines: Line[]): DocumentFinding[] {
   ];
 }
 
-/** Expects a file under docs to be linked from a README in its own folder or in a folder above it. */
+/** Expects a file under a docs folder to be linked from a README in its own folder or in a folder above it. */
 function checkReachable(document: Document): DocumentFinding[] {
-  if (document.segments[0] !== 'docs') {
+  if (!isUnderDocs(document.segments)) {
     return [];
   }
 
