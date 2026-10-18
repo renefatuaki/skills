@@ -72,7 +72,7 @@ export const diagramSyntax: RuleSet = {
   check: checkSyntax,
 };
 
-/** The diagrams in the READMEs above a changed file and under docs whose table links a changed file, deleted files included. A diagram whose own file changed is left out. */
+/** The diagrams in the READMEs above a changed file and in the docs folders beside them whose table links a changed file, deleted files included. A diagram whose own file changed is left out. */
 export const linkedDiagrams: RuleSet = {
   heading:
     'Diagrams that link a changed file (diagrams skill). Check that each one still shows what the code does, and update it when it does not',
@@ -254,20 +254,25 @@ async function syntaxErrorOf(
   }
 }
 
-/** Lists the README of every folder from each changed file up to the root and every Markdown file under docs, each once. */
+/** Lists the README of every folder from each changed file up to the root, then every Markdown file in the docs folder of one of those folders, each once. */
 function documentsNear(root: string, changed: string[]): string[] {
-  const readmes = changed.flatMap(file => {
-    const segments = segmentsBelow(root, file) ?? [];
+  const folders = new Set([
+    root,
+    ...changed.flatMap(file => {
+      const segments = segmentsBelow(root, file) ?? [];
 
-    return segments.map((_, depth) =>
-      join(root, ...segments.slice(0, depth), 'README.md'),
-    );
-  });
+      return segments.map((_, depth) =>
+        join(root, ...segments.slice(0, depth)),
+      );
+    }),
+  ]);
 
   return [
     ...new Set([
-      ...readmes.filter(existsSync),
-      ...markdownUnder(join(root, 'docs')),
+      ...[...folders]
+        .map(folder => join(folder, 'README.md'))
+        .filter(existsSync),
+      ...[...folders].flatMap(folder => markdownUnder(join(folder, 'docs'))),
     ]),
   ];
 }

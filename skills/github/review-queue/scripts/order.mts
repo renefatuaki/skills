@@ -1,15 +1,5 @@
-// Parses the open pull requests of the repository and puts them in the order to review them and lays out the header and the rows of the pane, with no Node and no engine.
+// Parses the open pull requests of the repository, puts them in the order to review them and lays them out as a Markdown table.
 // https://docs.github.com/en/graphql/reference/objects#pullrequest
-
-/** The open pull requests of one repository. */
-export type RepositoryPullRequests = {
-  readonly repository: {
-    /** The `nameWithOwner`, such as `cli/cli`. */
-    readonly name: string;
-    readonly url: string;
-  };
-  readonly pullRequests: readonly OpenPullRequest[];
-};
 
 /** An open pull request of the repository as the review order needs it. */
 export type OpenPullRequest = {
@@ -29,8 +19,8 @@ export type OpenPullRequest = {
   readonly blockedBy: readonly number[];
 };
 
-/** One line of the pane, the pull request at its place in the review order. */
-export type PaneRow = {
+/** The pull request at its place in the review order. */
+export type QueueRow = {
   /** Counts from 1. */
   readonly position: number;
   readonly number: number;
@@ -40,23 +30,6 @@ export type PaneRow = {
   readonly isDraft: boolean;
   /** The number of the listed pull request above that this one waits on, null for none. */
   readonly waitsOn: number | null;
-  /** The number of listed pull requests in the chain it waits on, 0 when it waits on none. */
-  readonly depth: number;
-};
-
-/** A row cut to the pane's width, the label being the part that links to the pull request. */
-export type RowLine = {
-  readonly lead: string;
-  readonly label: string;
-  /** The dim part after the label, empty for a ready pull request that waits on none. */
-  readonly notes: string;
-};
-
-/** The header of the pane cut to its width, the label being the repository that links to its pull requests. */
-export type HeaderLine = {
-  readonly label: string;
-  /** The dim count after the label, such as ` · 3 open`. */
-  readonly notes: string;
 };
 
 /** A free pull request as the review order weighs it. */
@@ -68,11 +41,9 @@ type Candidate = {
   readonly subtree: number;
 };
 
-/** Asks GraphQL for the repository `gh` runs in and its open pull requests, the oldest first. */
+/** Asks GraphQL for the open pull requests of a repository, the oldest first. */
 export const PULL_REQUESTS_QUERY = `query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
-    nameWithOwner
-    url
     pullRequests(states: OPEN, first: 100, orderBy: {field: CREATED_AT, direction: ASC}) {
       nodes {
         number
@@ -99,9 +70,7 @@ export const PULL_REQUESTS_QUERY = `query($owner: String!, $name: String!) {
 }`;
 
 /** Reads the answer of `PULL_REQUESTS_QUERY`, null when it is not that answer. */
-export function parsePullRequests(
-  stdout: string,
-): RepositoryPullRequests | null {
+export function parsePullRequests(stdout: string): OpenPullRequest[] | null {
   let value: unknown;
 
   try {
@@ -114,12 +83,7 @@ export function parsePullRequests(
   const repository = recordOf(recordOf(data)?.repository);
   const nodes = nodesOf(repository?.pullRequests);
 
-  if (
-    repository === null ||
-    nodes === null ||
-    typeof repository.nameWithOwner !== 'string' ||
-    typeof repository.url !== 'string'
-  ) {
+  if (nodes === null) {
     return null;
   }
 
@@ -135,10 +99,7 @@ export function parsePullRequests(
     pullRequests.push(pr);
   }
 
-  return {
-    repository: { name: repository.nameWithOwner, url: repository.url },
-    pullRequests,
-  };
+  return pullRequests;
 }
 
 /** Puts the pull requests in the order to review them, each after the ones it builds on and each stack in one piece, depth first. */
@@ -175,19 +136,16 @@ export function reviewOrder(
   return ordered;
 }
 
-/** Lays out the review order as the rows of the pane. */
-export function paneRows(pullRequests: readonly OpenPullRequest[]): PaneRow[] {
+/** Lays out the review order as rows, each with the pull request it waits on. */
+export function queueRows(
+  pullRequests: readonly OpenPullRequest[],
+): QueueRow[] {
   const ordered = reviewOrder(pullRequests);
-  const depths = new Map<OpenPullRequest, number>();
 
   return ordered.map((pr, index) => {
     const waitsOn = ordered
       .slice(0, index)
       .findLast(other => comesBefore(other, pr));
-
-    const depth = waitsOn === undefined ? 0 : (depths.get(waitsOn) ?? 0) + 1;
-
-    depths.set(pr, depth);
 
     return {
       position: index + 1,
@@ -196,42 +154,28 @@ export function paneRows(pullRequests: readonly OpenPullRequest[]): PaneRow[] {
       url: pr.url,
       isDraft: pr.isDraft,
       waitsOn: waitsOn?.number ?? null,
-      depth,
     };
   });
 }
 
-/** Cuts the label so lead, label and notes fit the columns, the lead indenting the label two spaces per depth. */
-export function rowLine(row: PaneRow, columns: number): RowLine {
-  const lead = `${row.position}. ${'  '.repeat(row.depth)}`;
-  const label =
-    row.title === '' ? `#${row.number}` : `#${row.number} ${row.title}`;
+/** Lays out the review order as a Markdown table. */
+export function queueTable(pullRequests: readonly OpenPullRequest[]): string {
+  const rows = queueRows(pullRequests).map(row => {
+    const label =
+      row.title === '' ? `#${row.number}` : `#${row.number} ${row.title}`;
 
-  const notes = `${row.isDraft ? ' draft' : ''}${row.waitsOn === null ? '' : ` after #${row.waitsOn}`}`;
+    const link = `[${linkText(label)}](${row.url})`;
+    const after = row.waitsOn === null ? '' : `#${row.waitsOn}`;
+    const status = row.isDraft ? 'Draft' : 'Ready';
 
-  return {
-    lead,
-    label: cutTo(label, columns - width(lead) - width(notes)),
-    notes,
-  };
-}
+    return `| ${row.position} | ${link} | ${after} | ${status} |`;
+  });
 
-/** Cuts the repository's name so it and the count of its open pull requests fit the columns. */
-export function headerLine(
-  open: RepositoryPullRequests,
-  columns: number,
-): HeaderLine {
-  const notes = ` · ${open.pullRequests.length} open`;
-
-  return {
-    label: cutTo(open.repository.name, columns - width(notes)),
-    notes,
-  };
-}
-
-/** Says how many pull requests are open and which way the review order reads, the caption under the repository on a graphical surface. */
-export function headerCaption(open: RepositoryPullRequests): string {
-  return `${open.pullRequests.length} open · top to bottom`;
+  return [
+    '| # | Pull request | After | Status |',
+    '| --- | --- | --- | --- |',
+    ...rows,
+  ].join('\n');
 }
 
 /** Tells whether the first pull request has to be reviewed before the second, because the second is stacked on it or closes an issue that the first one's issue blocks. */
@@ -370,19 +314,12 @@ function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
 }
 
-/** Turns every run of line breaks and control characters into one space, so a title draws on one line. */
+/** Turns every run of line breaks and control characters into one space, so a title fits one table row. */
 function singleLine(title: string): string {
   return title.replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, ' ').trim();
 }
 
-/** Cuts the text to the columns of the room, its last one an ellipsis when it does not fit. */
-function cutTo(text: string, room: number): string {
-  return width(text) <= room
-    ? text
-    : `${[...text].slice(0, Math.max(0, room - 1)).join('')}…`;
-}
-
-/** Counts a character as one column, with the outer Text cutting at the cell edge for a wide glyph. */
-function width(text: string): number {
-  return [...text].length;
+/** Escapes what would end the link text or the table cell early. */
+function linkText(text: string): string {
+  return text.replace(/[\\[\]|]/g, '\\$&');
 }

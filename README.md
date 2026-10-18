@@ -30,7 +30,7 @@ pnpm install
 | `pnpm run lint` | runs oxlint |
 | `pnpm run lint:fix` | runs oxlint and applies its fixes |
 | `pnpm run typecheck` | checks the `.mts` files with tsc |
-| `pnpm test` | runs the tests of the comment rules, the documentation rules, the diagram rules, the session hook, the Codex model script and the turn hook |
+| `pnpm test` | runs the tests of the comment rules, the documentation rules, the diagram rules, the session hook, the Codex model script, the turn hook and the app token script |
 | `pnpm run check-upstream` | lists what changed upstream since the base commit of every file in [UPSTREAM.md](UPSTREAM.md), with `gh` logged in |
 
 - The pre-commit hook judges the staged files with oxfmt and oxlint.
@@ -89,7 +89,7 @@ The skills of the plugin live in one folder per category.
 | [`docs`](skills/docs) | diagrams, project-docs, unslop, technical-writing | write documentation and prose |
 | [`clean-code`](skills/clean-code) | clean-code, code-comments, typescript-best-practices | write readable code |
 | [`git`](skills/git) | commit | write commits |
-| [`github`](skills/github) | issue, project, pull-request, pull-request-review, templates, today-issues, loop-on-ci | plan and ship work on GitHub |
+| [`github`](skills/github) | issue, project, pull-request, pull-request-review, review-queue, templates, today-issues, loop-on-ci | plan and ship work on GitHub |
 | [`tooling`](skills/tooling) | package-manager | run the package manager of the repository |
 
 A skill with `disable-model-invocation: true` in its frontmatter starts only through its slash command. The engineering skill and its playbooks read such a skill from its `SKILL.md` instead.

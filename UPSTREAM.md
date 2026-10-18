@@ -119,7 +119,7 @@ One row per copied file. Cuts are changes beyond the port wording and the mappin
 | `pstack/skills/poteto-mode/playbooks/trace-forensics.md` | `skills/workflow/engineering/playbooks/trace-forensics.md` | none |
 | `pstack/skills/poteto-mode/playbooks/visual-parity.md` | `skills/workflow/engineering/playbooks/visual-parity.md` | none |
 | `pstack/skills/poteto-mode/playbooks/worktree-cleanup.md` | `skills/workflow/engineering/playbooks/worktree-cleanup.md` | none |
-| `pstack/skills/poteto-mode/scripts/worktree-audit.sh` | `skills/workflow/engineering/scripts/worktree-audit.sh` | The comment on the transcript directory, garbled in the port, reads `<cwd with every non-alphanumeric char replaced by "-">/`. |
+| `pstack/skills/poteto-mode/scripts/worktree-audit.sh` | `skills/workflow/engineering/scripts/worktree-audit.sh` | The comment on the transcript directory, garbled in the port, reads `<cwd with every non-alphanumeric char replaced by "-">/`. The pull request list drops `--author "@me"`, so a pull request a GitHub App opened for the user still counts. |
 | `pstack/skills/principle-attack-the-premise/SKILL.md` | `skills/principles/attack-the-premise/SKILL.md` | none |
 | `pstack/skills/principle-boundary-discipline/SKILL.md` | `skills/principles/boundary-discipline/SKILL.md` | none |
 | `pstack/skills/principle-build-the-lever/SKILL.md` | `skills/principles/build-the-lever/SKILL.md` | none |
