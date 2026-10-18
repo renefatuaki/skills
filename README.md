@@ -30,7 +30,7 @@ pnpm install
 | `pnpm run lint` | runs oxlint |
 | `pnpm run lint:fix` | runs oxlint and applies its fixes |
 | `pnpm run typecheck` | checks the `.mts` files with tsc |
-| `pnpm test` | runs the tests of the comment rules, the documentation rules, the diagram rules, the session hook, the Codex model script and the turn hook |
+| `pnpm test` | runs the tests of the comment rules, the documentation rules, the diagram rules, the session hook, the Codex model script, the turn hook and the app token script |
 | `pnpm run check-upstream` | lists what changed upstream since the base commit of every file in [UPSTREAM.md](UPSTREAM.md), with `gh` logged in |
 
 - The pre-commit hook judges the staged files with oxfmt and oxlint.
