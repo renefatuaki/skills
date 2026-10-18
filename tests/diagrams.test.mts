@@ -36,6 +36,8 @@ const EXPECTED: Record<string, string[]> = {
     'docs/edge.md:56 linked',
   ],
   'src/orders/unlinked.ts': [],
+  'src/orders/refund.ts': ['src/orders/docs/refund.md:5 linked'],
+  'src/orders/docs/refund.md': [],
   'docs/missing.md': [],
 };
 

@@ -1,6 +1,6 @@
 ---
 name: diagrams
-description: diagrams, the rules for every Mermaid diagram. Use when a flow, a process, a lifecycle, a data model, a type hierarchy or an architecture is explained in chat or in documentation, when the user plans a change to one, when an issue or a pull request changes one, when a code change touches a file a diagram links, or when the user names the diagrams skill.
+description: diagrams, the rules for every Mermaid diagram. Use whenever you explain in chat how code, a set of files or a feature works, even when the user only asks what the files do. Also use when a flow, a process, a lifecycle, a data model, a type hierarchy or an architecture is explained in documentation, when the user plans a change to one, when an issue or a pull request changes one, when a code change touches a file a diagram links, or when the user names the diagrams skill.
 ---
 
 Rules for every diagram you draw or touch. A diagram answers one question about a flow or a structure faster than the code or a page of prose does. It is a `mermaid` code block in Markdown. The text is the only source, so a person reads the picture and an agent reads the block. GitHub, VS Code and JetBrains render it without a build step.
@@ -12,15 +12,16 @@ Rules for every diagram you draw or touch. A diagram answers one question about 
 3. **Pick the type.** Take it from [Types](#types) by the question. Another type only when the user asks for it.
 4. **Read the code.** Every element of a diagram of the current state exists in the code. Every edge is a call, a transition or a relation you read there. What you did not read is left out, never guessed. A diagram of something that is not built yet is a [planned state](#planned-state).
 5. **Draw.** Every line follows [Form](#form). A diagram the reader cannot take in at a glance is split. The overview keeps the main path and folds each group of steps into one element. Every folded group gets a diagram of its own.
-6. **Link the elements.** Put the table of [Sources](#sources) under the diagram.
+6. **Explain and link.** Add the [terms and the example](#terms-and-example) and the table of [Sources](#sources).
 7. **Place it.** The file follows the `project-docs` skill. An existing structure of the project wins.
    - A diagram of the whole project, such as its architecture, its data model or a process across features, lives in `docs/<topic>.md`.
    - A diagram of one flow or one feature lives in the `README.md` of the folder that holds its code, such as `src/orders/README.md`. GitHub shows that file when the reader opens the folder.
    - Code that has no folder of its own sends the diagram to `docs/<topic>.md`.
    - A detail diagram lives in the `README.md` of the subfolder it describes. The overview links it from its table.
+   - A folder that needs more than one diagram keeps the overview in its `README.md`. Every detail diagram without a subfolder of its own gets a file in the `docs/` folder next to the code, one diagram per file and named after what it shows, such as `src/extraction/pdf/docs/byte-checks.md`. The overview links each file from its table.
 8. **Show it.** A terminal prints a `mermaid` block as text. Write every diagram you show in chat into `$TMPDIR/diagrams/<topic>.md` as well, outside the repository, and name the path. The user opens it in the Markdown preview of the IDE.
 
-Done when every diagram names its one question, takes the type of that question, shows only what the code holds, links each element to its source, sits where the reader looks for it, and parses without an error.
+Done when every diagram names its one question, takes the type of that question, shows only what the code holds, links each element to its source, sits where the reader looks for it, parses without an error, and a reader understands it without opening the code.
 
 ## Types
 
@@ -44,8 +45,8 @@ The same question takes the same type inside the code, around it and in the doma
 
 - The first line after the keyword is `accTitle`, followed by the question of step 2. A type that knows no `accTitle`, such as `mindmap`, `sankey-beta` and `block-beta`, takes the question as `title` in its front matter.
 - An ID is the name the element has in the code, in lowerCamelCase, such as `checkOrder`. Never a single letter and never `end`.
-- A label says what happens in the words of the domain, a step with its verb first, such as `"Charge the payment"`. It stands in double quotes and in the language of the surrounding document.
-- Every branch of a decision carries its condition as the label of its edge.
+- A label says what happens in the words of the domain, a step with its verb first, such as `"Charge the payment"`, never the operator or the call in the code, such as `"amount > limit"`. It stands in double quotes and in the language of the surrounding document.
+- Every branch of a decision carries its condition as the label of its edge. An edge that ends the flow early also names the reason, unless the condition already explains it. An error or a log code follows in parentheses, such as `-->|"over 20 MB, the parser holds the whole file in memory (file_too_large)"|`.
 - A `flowchart` runs `TD`. A pipeline without a branch runs `LR`.
 - Declare the elements in reading order, so the edges cross as little as possible.
 - A comment is `%%` on a line of its own.
@@ -54,7 +55,7 @@ The same question takes the same type inside the code, around it and in the doma
 
 ## Sources
 
-The table stands right under the diagram, with only a blank line between them. It has one row per element that exists in the code, a node, a participant, a state, an entity, a class or a service. The first cell is the ID as the diagram writes it. The second cell is a relative link to the file, with the symbol as its text. An element that folds a group links the `README.md` that holds its detail diagram.
+The table stands right under the diagram, with only a blank line between them. It has one row per element that exists in the code, a node, a participant, a state, an entity, a class or a service. The first cell is the ID as the diagram writes it. The second cell is a relative link to the file, with the symbol as its text. An element that folds a group links the file that holds its detail diagram, a `README.md` or a file under `docs/`.
 
 ````markdown
 ```mermaid
@@ -74,6 +75,11 @@ flowchart TD
 ````
 
 `timeline`, `gantt`, `gitGraph`, `journey` and `mindmap` take no table, because no file stands behind their elements.
+
+## Terms and example
+
+- Every term the reader needs, of the domain or of the code, is explained once, in a table with the columns `Term` and `Meaning` above the diagram. The diagrams of one folder share the table in its `README.md`.
+- A flow that computes a value or checks a limit gets a worked example under the table of sources. It runs one input through the flow with real values from the repository, such as the limit its configuration sets, and names the edge each step takes.
 
 ## Planned state
 
@@ -117,7 +123,7 @@ A thick border is added, a dashed border is changed, a dotted grey border is rem
 
 A diagram in the repository is true for the current code. Bring it up to date when the user asks, when the hook reports `path:line linked` at the end of a turn, and when the `pull-request` skill asks for the files of a branch.
 
-1. **Find the diagrams.** The hook names the ones in a `README.md` above the changed file and under `docs/`. For a diagram anywhere else, and without the hook, search the Markdown files for links to each changed file with `grep -rn --include='*.md' -F '<file name>' .` and keep the hits that stand in a table under a `mermaid` block.
+1. **Find the diagrams.** The hook names the ones in a `README.md` above the changed file and in a `docs/` folder beside one of those. For a diagram anywhere else, and without the hook, search the Markdown files for links to each changed file with `grep -rn --include='*.md' -F '<file name>' .` and keep the hits that stand in a table under a `mermaid` block.
 2. **Read the code again**, as step 4 of [Steps](#steps) does.
 3. **Change what differs**, in the diagram and in its table. An element whose file is gone leaves both.
 4. **Report.** Show the old and the new block as a diff. A diagram that still holds is named as unchanged.

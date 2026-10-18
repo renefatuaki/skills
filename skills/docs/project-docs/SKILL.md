@@ -7,13 +7,13 @@ Rules for every documentation file you write or touch. A doc answers one questio
 
 ## Scope
 
-Documentation is `README.md` in any folder, every file under `docs/`, and `CONTRIBUTING.md`, `ARCHITECTURE.md`, `SECURITY.md` and their like in the repository root. A `README.md` inside a dot folder or a dependency folder stays as it is. `docs/adr/` and `CONTEXT.md` keep their own format. `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, changelogs, changesets, issue and pull request templates and licenses follow their own rules.
+Documentation is `README.md` in any folder, every file in a `docs/` folder at any depth, and `CONTRIBUTING.md`, `ARCHITECTURE.md`, `SECURITY.md` and their like in the repository root. A `README.md` inside a dot folder or a dependency folder stays as it is. `docs/adr/` and `CONTEXT.md` keep their own format. `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, changelogs, changesets, issue and pull request templates and licenses follow their own rules.
 
 ## Steps
 
 1. **Pick the language.** Read the existing documentation and write in the language most of it uses. English when there is none.
 2. **Pick the type.** Name the one question the file answers and take its type from [Types](#types). New content that answers a second question goes into its own file.
-3. **Place the file.** A new file is `docs/<topic>.md` in kebab-case and gets a row in the README table. An existing structure of the project wins. A file that explains one flow or one feature with a diagram is the `README.md` of the folder that holds its code, as the `diagrams` skill places it.
+3. **Place the file.** A new file is `docs/<topic>.md` in kebab-case and gets a row in the README table. An existing structure of the project wins. A file that explains one flow or one feature with a diagram is the `README.md` of the folder that holds its code, as the `diagrams` skill places it. Further diagrams of that folder go into the `docs/` folder next to its code.
 4. **Open with the question.** One `#` title, then the question the file answers as one sentence. The README opens with its purpose instead. The README table carries the opening sentence of each file word for word.
 5. **Write each block in its form.** Every block follows [Form](#form), every link follows [Links](#links). Every sentence follows the [technical-writing](../technical-writing/SKILL.md) skill, which holds the rules at sentence level (Google developer style, STE, Global English).
 6. **Prune.** Bring the whole file to these rules, and make every statement in it true for the current code. When an existing file answers two questions, name the split in your reply and split after the user agrees.
