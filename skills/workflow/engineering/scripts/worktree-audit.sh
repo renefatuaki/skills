@@ -19,7 +19,7 @@ git fetch origin main --quiet 2>/dev/null || echo "warn: could not fetch origin/
 
 # PR state by branch, fetched once. Empty if gh is unavailable.
 prs=$(mktemp)
-gh pr list --author "@me" --state all --limit 1000 \
+gh pr list --state all --limit 1000 \
 	--json number,state,headRefName 2>/dev/null > "$prs" || echo "[]" > "$prs"
 
 # Claude Code transcripts: ~/.claude/projects/<cwd with every non-alphanumeric char replaced by "-">/.

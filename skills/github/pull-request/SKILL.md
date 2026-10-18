@@ -7,7 +7,13 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
 ## Steps
 
-1. **Ensure `gh`.** Run `gh auth status` and do nothing else until it reports a logged-in account. If `gh` is missing, install it after confirmation, following GitHub's [installation guide](https://raw.githubusercontent.com/cli/cli/trunk/README.md#installation). If nobody is logged in, ask the user to run `! gh auth login`, wait for them, then run `gh auth status` again. If the user declines, stop and say what is missing. When the user called a draft ready, continue at step 9.
+1. **Ensure `gh`.** Run `gh auth status` and do nothing else until it reports a logged-in account. If `gh` is missing, install it after confirmation, following GitHub's [installation guide](https://raw.githubusercontent.com/cli/cli/trunk/README.md#installation). If nobody is logged in, ask the user to run `! gh auth login`, wait for them, then run `gh auth status` again. If the user declines, stop and say what is missing. Then run `node ${CLAUDE_SKILL_DIR}/scripts/app-token.mts --login`, with Node 24 or newer, which runs TypeScript directly. `${CLAUDE_SKILL_DIR}` is the folder of this file. Write it out in the command, because the shell does not know it. A printed login, such as `app/<slug>`, means the user's GitHub App opens the pull request, so the user can approve it. No output means no app is configured. When it fails, name its error in step 8 and continue without the app. When the user called a draft ready, continue at step 9.
+
+   **As the app.** With an app, every `gh pr` command of this skill that writes to the pull request, the reviewer included, runs with the app's token. The push, `gh stack`, the projects and the reads stay with the user's login, because GitHub gives an app no access to the projects of a user.
+
+   ```sh
+   GH_TOKEN="$(node ${CLAUDE_SKILL_DIR}/scripts/app-token.mts)" gh pr <command> …
+   ```
 2. **Ensure the template.** Read [templates](../templates/SKILL.md) and follow it for the pull request template. Its reply folds into this skill's reply. If the user asked only for a template, this is the end. The body of this pull request follows the asset of the templates skill.
 3. **Read the branch.** When `gh pr view --json number,url,isDraft,state,title,body,baseRefName` finds an open pull request for the branch, steps 4 to 7 revise it in place of opening one. The base is the branch the user or the calling playbook named, otherwise the `baseRefName` of that open pull request, otherwise `dev` when the remote has it and the current branch is another one, otherwise the default branch. Run `git fetch origin <base>`, then read `git status --porcelain`, `git log origin/<base>..HEAD` and `git diff origin/<base>...HEAD`. Stop and say why when the current branch is the base or has no commit beyond it. Uncommitted changes stay out of the pull request.
 4. **Find the issue.** Look in the prompt, the branch name and the `Refs`, `Closes`, `Fixes` and `Resolves` trailers of the commits. Read it with `gh issue view <number> --json number,title,body,labels,milestone,projectItems,url`. A branch without an issue gets a pull request without one. Then bring the diagrams up to date. Run the Update steps of the `diagrams` skill for the files of the diff, and commit each diagram that changed with the `commit` skill, `docs: update the <topic> diagram`, with this issue in its footer. A branch that touches no file a diagram links skips this.
@@ -26,7 +32,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - **Collapsed sections.** Tradeoffs, Automated coverage and Prerequisites put their content under the heading into `<details>` … `</details>`, with a one-line `<summary>` of the gist and a blank line after it. Code in the summary is `<code>`, not backticks. Notes for the reviewer collapse only the review history, into `<details><summary>Review history</summary>` … `</details>`.
    - **A pull request that already exists** is revised from what it says. Read its title and body first, then bring every section up to date with the branch and keep what still holds, whoever wrote it.
    - Cut pass, once the sections are written. Reread the draft and delete every sentence, collapsed or not, whose removal changes neither what the reviewer does nor how they judge a step.
-   - Metadata. The assignee is the author. Label, milestone and projects are the issue's, the projects by the `title` of each of its `projectItems`. The reviewer is the one the user named and waits for step 8.
+   - Metadata. The assignee is the author, `@me`, or with an app the user's login from `gh api user --jq .login`. Label, milestone and projects are the issue's, the projects by the `title` of each of its `projectItems`. The reviewer is the one the user named, with an app otherwise the user, and waits for step 9.
 6. **Open the draft**, without asking. Push the branch, then create the pull request, the body from a quoted heredoc. A flag without a value is left out.
 
    ```sh
@@ -36,7 +42,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
      --draft \
      --base <base> \
      --title "<title>" \
-     --assignee @me \
+     --assignee <assignee> \
      --label <label> \
      --milestone "<milestone>" \
      --project "<project>" \
@@ -45,7 +51,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    EOF
    ```
 
-   Pass `--project` once per project. If the command fails for a missing `project` scope, ask the user to run `! gh auth refresh -s project`. Report a rejected push and stop, never force it. A failure without a URL may have left the pull request behind, so check `gh pr view` before creating again.
+   Pass `--project` once per project. With an app, leave `--project` and `--add-project` out of the app's commands and add the projects as the user with `gh pr edit <number> --add-project "<project>"`. If the command fails for a missing `project` scope, ask the user to run `! gh auth refresh -s project`. Report a rejected push and stop, never force it. A failure without a URL may have left the pull request behind, so check `gh pr view` before creating again.
 
    For a pull request that already exists, draft or ready, push the same way and write the title and the body back in place of creating. GitHub tells nobody about an edited description, so only when the pull request is ready for review and the test plan changed, add a comment that names the steps that are new, changed or gone.
 
@@ -145,11 +151,12 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - The uncommitted files left out.
    - When the diff changes what the application shows, the screens with before and after images, or why there are none.
    - When the diff changes an output, the behaviours of the examples comment and its tradeoffs, or why there is none.
+   - Whether the app or the user opened it, and the error of `app-token.mts` when it failed.
    - The reviewer, or that none was named.
    - For an updated pull request, the steps that are new, changed or gone.
 
    End the reply of a draft by saying that it stays a draft until the user calls it ready.
-9. **Mark ready**, from step 7 or on the user's word, in this run or a later one. From step 7, the pull request is the one this run opened or revised. On the user's word, it is the one the user named, otherwise the open one of the current branch, otherwise the single draft in `gh pr list --author @me --draft --json number,title,url`. Several drafts go to the user with the AskUserQuestion tool. A reviewer the user named is requested with the `--add-reviewer` command below. When the user named nobody, skip that command and say that the pull request is ready for review but nobody was asked to review it.
+9. **Mark ready**, from step 7 or on the user's word, in this run or a later one. From step 7, the pull request is the one this run opened or revised. On the user's word, it is the one the user named, otherwise the open one of the current branch, otherwise the single draft in `gh pr list --author @me --draft --json number,title,url`, with an app `--author <app login>`. Several drafts go to the user with the AskUserQuestion tool. A reviewer the user named is requested with the `--add-reviewer` command below. With an app and no named reviewer, request the user. Otherwise, when the user named nobody, skip that command and say that the pull request is ready for review but nobody was asked to review it.
 
    ```sh
    gh pr ready <number>
@@ -189,4 +196,4 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
    When the user called it ready and step 7 did not already run the test steps against the current head, test what an agent can. When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, which runs those steps and ticks the passed ones, then give every unticked step its reason as step 7 says. When every step needs a person, end here and say that the review is theirs to start.
 
-Done when the draft exists on GitHub, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the pull request is in every project of its issue, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, every unticked step of a tested plan that did not fail ends with `(needs a person: <reason>)`, the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
+Done when the draft exists on GitHub, opened by the app when one is configured, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the pull request is in every project of its issue, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, every unticked step of a tested plan that did not fail ends with `(needs a person: <reason>)`, the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.

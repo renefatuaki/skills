@@ -1,7 +1,7 @@
 ---
 name: pull-request-review
 description: pull-request-review, the rules for testing a pull request in the running application. Use whenever the user wants a pull request tested or accepted by its test plan, or asks which pull requests wait for their review. Use it before every `gh pr review` you run, even when the user did not name the pull-request-review skill.
-allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/mark-steps.mts *)
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/mark-steps.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts *)
 disable-model-invocation: true
 ---
 
@@ -61,7 +61,15 @@ Rules for every pull request you test. This skill runs the test plan of a pull r
    EOF
    ```
 
-   Post with `--request-changes` in place of `--comment` when a step failed and the pull request is someone else's. On the user's own pull request, where `author.login` equals `gh api user --jq .login`, it stays `--comment`, because GitHub accepts neither an approval nor a request for changes from the author. End the reply with the URL of the pull request. When every step passed on someone else's pull request, add that it is now the user's turn to approve it on GitHub.
+   Post with `--request-changes` in place of `--comment` when a step failed and the pull request is someone else's. On the user's own pull request, where `author.login` equals `gh api user --jq .login`, it stays `--comment`, because GitHub accepts neither an approval nor a request for changes from the author. A pull request of the user's app, where `author.login` equals what `node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts --login` prints, also stays `--comment`, posted with the app's token, so the user's own review on GitHub stays the user's click.
+
+   ```sh
+   GH_TOKEN="$(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts)" gh pr review <number> --comment --body-file - <<'EOF'
+   <review>
+   EOF
+   ```
+
+   End the reply with the URL of the pull request. When every step passed on someone else's pull request or on the app's, add that it is now the user's turn to approve it on GitHub.
 9. **Leave as found**, on every exit, also when an earlier step ended the run. Stop what you started in step 4. After a checkout in place, return with `git switch <branch>`, or with `git switch --detach <commit>` when step 3 noted a commit. After a worktree, run `git worktree remove --force "<path>"`. Done when the repository stands where step 3 noted, the test's worktree is removed and nothing from step 4 still runs.
 
 Done when the review is on the pull request with one row per step, the description shows a tick on every passed step unless the edit was refused, and step 9 left the repository as it found it.

@@ -65,6 +65,36 @@ Otherwise the PR stays a draft until you call it ready:
 the draft is ready
 ```
 
+## Approve your own PRs
+
+GitHub lets nobody approve their own PR. When a GitHub App of yours opens it, you can. The app is the author, you are the requested reviewer, and GitHub shows which PRs you approved and which still wait for you. Without the app the skills open the PR under your own login, as before.
+
+1. Create the app under **Settings**, **Developer settings**, **GitHub Apps**, **New GitHub App**. Any name and homepage URL will do. Turn **Webhook** off. Under **Repository permissions** set **Contents** to Read-only, **Pull requests** to Read and write and **Issues** to Read and write. Leave **Only on this account** selected.
+2. On the app's page, note the **Client ID** and under **Private keys** generate a key. The browser downloads a `.pem` file.
+3. Under **Install App**, install it on your account, for all repositories or the ones the skills work in.
+4. Put the key next to the configuration and write the configuration.
+
+   ```sh
+   mkdir -p ~/.config/forge
+   mv ~/Downloads/<app>.*.private-key.pem ~/.config/forge/github-app.pem
+   chmod 600 ~/.config/forge/github-app.pem
+   cat > ~/.config/forge/github-app.json <<'EOF'
+   {
+     "clientId": "<client ID>",
+     "privateKey": "github-app.pem"
+   }
+   EOF
+   ```
+
+5. Check it in a repository the app is installed on. The first command prints the app's login, the second a token that starts with `ghs_`.
+
+   ```sh
+   node skills/github/pull-request/scripts/app-token.mts --login
+   node skills/github/pull-request/scripts/app-token.mts
+   ```
+
+A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CONFIG_HOME/forge` when that is set. The [`app-token.mts`](../../skills/github/pull-request/scripts/app-token.mts) script signs a JSON Web Token with the key and trades it for an installation token of the current repository, valid for an hour. The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill creates, edits, comments on and marks the PR ready with that token, and requests you as the reviewer when you named nobody else. Your commits, the push and the projects stay under your login, because GitHub gives an app no access to the projects of a user. The review that [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) posts on the app's PR is a comment of the app, so the approval and the request for changes stay yours.
+
 ## Review the PR
 
 ```text
