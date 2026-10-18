@@ -10,7 +10,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 1. **Ensure `gh`.** Run `gh auth status` and do nothing else until it reports a logged-in account. If `gh` is missing, install it after confirmation, following GitHub's [installation guide](https://raw.githubusercontent.com/cli/cli/trunk/README.md#installation). If nobody is logged in, ask the user to run `! gh auth login`, wait for them, then run `gh auth status` again. If the user declines, stop and say what is missing. When the user called a draft ready, continue at step 9.
 2. **Ensure the template.** Read [templates](../templates/SKILL.md) and follow it for the pull request template. Its reply folds into this skill's reply. If the user asked only for a template, this is the end. The body of this pull request follows the asset of the templates skill.
 3. **Read the branch.** When `gh pr view --json number,url,isDraft,state,title,body,baseRefName` finds an open pull request for the branch, steps 4 to 7 revise it in place of opening one. The base is the branch the user or the calling playbook named, otherwise the `baseRefName` of that open pull request, otherwise `dev` when the remote has it and the current branch is another one, otherwise the default branch. Run `git fetch origin <base>`, then read `git status --porcelain`, `git log origin/<base>..HEAD` and `git diff origin/<base>...HEAD`. Stop and say why when the current branch is the base or has no commit beyond it. Uncommitted changes stay out of the pull request.
-4. **Find the issue.** Look in the prompt, the branch name and the `Refs`, `Closes`, `Fixes` and `Resolves` trailers of the commits. Read it with `gh issue view <number> --json number,title,body,labels,milestone,url`. A branch without an issue gets a pull request without one. Then bring the diagrams up to date. Run the Update steps of the `diagrams` skill for the files of the diff, and commit each diagram that changed with the `commit` skill, `docs: update the <topic> diagram`, with this issue in its footer. A branch that touches no file a diagram links skips this.
+4. **Find the issue.** Look in the prompt, the branch name and the `Refs`, `Closes`, `Fixes` and `Resolves` trailers of the commits. Read it with `gh issue view <number> --json number,title,body,labels,milestone,projectItems,url`. A branch without an issue gets a pull request without one. Then bring the diagrams up to date. Run the Update steps of the `diagrams` skill for the files of the diff, and commit each diagram that changed with the `commit` skill, `docs: update the <topic> diagram`, with this issue in its footer. A branch that touches no file a diagram links skips this.
 5. **Write the draft** in English, whatever language the existing pull requests use. The headings stay as the template writes them, because the `pull-request-review` skill finds the test plan by them. The title is a Conventional Commits subject for the whole branch, as the `commit` skill writes one, since a squash merge turns it into the commit message. Then write one value per section, in template order, each filled the way its comment says, the comments left out.
    - Content comes only from the repository, the diff, the commits, the issue and the conversation.
    - The prose follows [technical-writing](../../docs/technical-writing/SKILL.md), every layer except Diátaxis.
@@ -26,7 +26,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - **Collapsed sections.** Tradeoffs, Automated coverage and Prerequisites put their content under the heading into `<details>` … `</details>`, with a one-line `<summary>` of the gist and a blank line after it. Code in the summary is `<code>`, not backticks. Notes for the reviewer collapse only the review history, into `<details><summary>Review history</summary>` … `</details>`.
    - **A pull request that already exists** is revised from what it says. Read its title and body first, then bring every section up to date with the branch and keep what still holds, whoever wrote it.
    - Cut pass, once the sections are written. Reread the draft and delete every sentence, collapsed or not, whose removal changes neither what the reviewer does nor how they judge a step.
-   - Metadata. The assignee is the author. Label and milestone are the issue's. The reviewer is the one the user named and waits for step 8.
+   - Metadata. The assignee is the author. Label, milestone and projects are the issue's, the projects by the `title` of each of its `projectItems`. The reviewer is the one the user named and waits for step 8.
 6. **Open the draft**, without asking. Push the branch, then create the pull request, the body from a quoted heredoc. A flag without a value is left out.
 
    ```sh
@@ -39,18 +39,20 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
      --assignee @me \
      --label <label> \
      --milestone "<milestone>" \
+     --project "<project>" \
      --body-file - <<'EOF'
    <body>
    EOF
    ```
 
-   Report a rejected push and stop, never force it. A failure without a URL may have left the pull request behind, so check `gh pr view` before creating again.
+   Pass `--project` once per project. If the command fails for a missing `project` scope, ask the user to run `! gh auth refresh -s project`. Report a rejected push and stop, never force it. A failure without a URL may have left the pull request behind, so check `gh pr view` before creating again.
 
    For a pull request that already exists, draft or ready, push the same way and write the title and the body back in place of creating. GitHub tells nobody about an edited description, so only when the pull request is ready for review and the test plan changed, add a comment that names the steps that are new, changed or gone.
 
    ```sh
    gh pr edit <number> \
      --title "<title>" \
+     --add-project "<project>" \
      --body-file - <<'EOF'
    <body>
    EOF
@@ -187,4 +189,4 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
    When the user called it ready and step 7 did not already run the test steps against the current head, test what an agent can. When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, which runs those steps and ticks the passed ones, then give every unticked step its reason as step 7 says. When every step needs a person, end here and say that the review is theirs to start.
 
-Done when the draft exists on GitHub, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, every unticked step of a tested plan that did not fail ends with `(needs a person: <reason>)`, the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
+Done when the draft exists on GitHub, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the pull request is in every project of its issue, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, every unticked step of a tested plan that did not fail ends with `(needs a person: <reason>)`, the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
