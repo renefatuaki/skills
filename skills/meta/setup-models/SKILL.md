@@ -54,6 +54,7 @@ perf-issue: sonnet/high
 hillclimb: sonnet/high
 judgment and prose: opus/xhigh
 hardest tasks: opus/xhigh
+follow-up judge: fable/xhigh
 how explorer: sonnet/high
 how explainer: opus/xhigh
 why investigators: sonnet/high

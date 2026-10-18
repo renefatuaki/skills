@@ -115,7 +115,7 @@ The [`today-issues`](../../skills/github/today-issues/SKILL.md) skill reads the 
 /engineering https://github.com/<owner>/<repo>/issues/42
 ```
 
-In an auto run, add `auto`. The session then asks nothing. A ticket that needs your decision ends as Blocked, with the question in a comment on the issue.
+In an auto run, add `auto`. The session then asks nothing. A ticket that needs your decision ends as Blocked, with the question in a comment on the issue. Work the ticket does not name gets no new issue right away. An agent on Fable first decides whether the work is needed and whether it belongs in this branch. Work that is not needed is dropped, work that belongs to the ticket lands in the branch, and only the rest becomes a new issue.
 
 ```text
 /engineering https://github.com/<owner>/<repo>/issues/42 auto
