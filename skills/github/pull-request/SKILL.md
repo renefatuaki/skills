@@ -33,7 +33,15 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - **A pull request that already exists** is revised from what it says. Read its title and body first, then bring every section up to date with the branch and keep what still holds, whoever wrote it.
    - Cut pass, once the sections are written. Reread the draft and delete every sentence, collapsed or not, whose removal changes neither what the reviewer does nor how they judge a step.
    - Metadata. The assignee is the author, `@me`, or with an app the user's login from `gh api user --jq .login`. Label, milestone and projects are the issue's, the projects by the `title` of each of its `projectItems`. The reviewer is the one the user named, with an app otherwise the user, and waits for step 9.
-6. **Open the draft**, without asking. Push the branch, then create the pull request, the body from a quoted heredoc. A flag without a value is left out.
+6. **Open the draft**, without asking. Tidy the history, push the branch, then create the pull request, the body from a quoted heredoc. A flag without a value is left out.
+
+   **Tidy the history** before every push while the pull request is not ready for review. A reviewer reads one commit per change, such as a criterion of the issue, a refactoring it builds on or a diagram update. A commit that only finishes an earlier one of the branch belongs to that commit, such as a fix from a review or a check, a revert, a format or lint pass, or work in progress. Read `git log --reverse --format='%h %s%n%b' <fork>..HEAD`, where `<fork>` is `git merge-base origin/<base> HEAD`, and name the changes. When the branch holds more commits than changes and the stage is empty, note `git rev-parse HEAD` as `<old>` and rebuild the branch.
+
+   ```sh
+   git reset --soft <fork>
+   ```
+
+   Commit the stage with the `commit` skill, one commit per named change in the order of the old history, each with the `Refs` and `Closes` trailers its old commits carried. Its plan is printed without waiting, and the issue comes from those trailers. Then `git diff --quiet <old> HEAD` must succeed, because the tree stays the same. When it fails, `git reset <old>` restores the branch and leaves the working tree alone. Once the branch is on the remote, the rebuilt history goes up with `git push --force-with-lease origin <branch>`. A pull request that is ready for review keeps its pushed history.
 
    ```sh
    git push --set-upstream origin <branch>
@@ -51,7 +59,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    EOF
    ```
 
-   Pass `--project` once per project. With an app, leave `--project` and `--add-project` out of the app's commands and add the projects as the user with `gh pr edit <number> --add-project "<project>"`. If the command fails for a missing `project` scope, ask the user to run `! gh auth refresh -s project`. Report a rejected push and stop, never force it. A failure without a URL may have left the pull request behind, so check `gh pr view` before creating again.
+   Pass `--project` once per project. With an app, leave `--project` and `--add-project` out of the app's commands and add the projects as the user with `gh pr edit <number> --add-project "<project>"`. If the command fails for a missing `project` scope, ask the user to run `! gh auth refresh -s project`. Report a rejected push and stop. Never force it, except the tidied history with lease. A failure without a URL may have left the pull request behind, so check `gh pr view` before creating again.
 
    For a pull request that already exists, draft or ready, push the same way and write the title and the body back in place of creating. GitHub tells nobody about an edited description, so only when the pull request is ready for review and the test plan changed, add a comment that names the steps that are new, changed or gone.
 
@@ -82,7 +90,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
      gh stack link <stack-number> <branch>
      gh stack link --base <trunk> <base> <branch>
      ```
-   - **Rebase the layers above** after every push of this run, those of step 7 included, when `gh pr list --base <branch> --state open --json number` lists a pull request. From the branch's worktree, drop the local copy of the stack, which can lack a layer added since and then rebase nothing above it, import the stack from GitHub by the pull request of this branch, rebase every layer above it, also those checked out in other worktrees, and push them. `unstack --local` exits with 2 when no local stack holds the branch, which is fine. The push forces with lease, the only force this skill allows, and only on the layers of the stack.
+   - **Rebase the layers above** after every push of this run, those of step 7 included, when `gh pr list --base <branch> --state open --json number` lists a pull request. From the branch's worktree, drop the local copy of the stack, which can lack a layer added since and then rebase nothing above it, import the stack from GitHub by the pull request of this branch, rebase every layer above it, also those checked out in other worktrees, and push them. `unstack --local` exits with 2 when no local stack holds the branch, which is fine. The push forces with lease, which this skill allows only here and for the tidy of step 6.
 
      ```sh
      gh stack unstack --local
@@ -149,6 +157,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - The issue and where it was found, or that the pull request has none.
    - The platforms of the prerequisites, and every value the repository did not settle.
    - The uncommitted files left out.
+   - The commits before and after the tidy, or why it did not run.
    - When the diff changes what the application shows, the screens with before and after images, or why there are none.
    - When the diff changes an output, the behaviours of the examples comment and its tradeoffs, or why there is none.
    - Whether the app or the user opened it, and the error of `app-token.mts` when it failed.
@@ -196,4 +205,4 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
    When the user called it ready and step 7 did not already run the test steps against the current head, test what an agent can. When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, which runs those steps and ticks the passed ones, then give every unticked step its reason as step 7 says. When every step needs a person, end here and say that the review is theirs to start.
 
-Done when the draft exists on GitHub, opened by the app when one is configured, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the pull request is in every project of its issue, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, every unticked step of a tested plan that did not fail ends with `(needs a person: <reason>)`, the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
+Done when the draft exists on GitHub, opened by the app when one is configured, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, a draft's history holds one commit per change with the tree unchanged, the pull request is in every project of its issue, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, every unticked step of a tested plan that did not fail ends with `(needs a person: <reason>)`, the reply lists the assumptions and whether the pull request is ready, and, once step 7 or the user called it ready, the pull request is ready for review, the named reviewer is requested, the issue is In review and the steps an agent can run are tested.
