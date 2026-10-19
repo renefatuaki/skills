@@ -30,14 +30,10 @@ body:
     id: acceptance
     attributes:
       label: Acceptance criteria
-      description: What must be observably true when this is done. Three to seven items, checklist or Given/When/Then.
+      description: What must be observably true when this is done. Three to seven checklist items, a Given/When/Then goes inside its item.
       placeholder: |
+        - [ ] Given <context>, when <event>, then <observable result>.
         - [ ] ...
-        - [ ] ...
-
-        Given <context>
-        When <event>
-        Then <observable result>
     validations:
       required: true
   # The check the implementer can run, an agent works best with a pass or fail signal it can read.
