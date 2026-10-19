@@ -44,9 +44,11 @@ const requested = new Set(
   (values.criteria ?? '').split(',').filter(Boolean).map(Number),
 );
 
+const hasOneSelection = values.all !== (values.criteria !== undefined);
+
 if (
   positionals.length !== 1 ||
-  values.all === (values.criteria !== undefined) ||
+  !hasOneSelection ||
   [...requested].some(Number.isNaN)
 ) {
   fail(USAGE);
