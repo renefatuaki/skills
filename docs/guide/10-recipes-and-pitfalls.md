@@ -32,7 +32,7 @@ You pick from things that run, not from descriptions. The agent answers its own 
 /engineering turn this design into an epic. one sub-issue per small verifiable PR, each with its own proof.
 ```
 
-Ask only after the design settles. The epic is the deliverable, and each sub-issue is a ticket that `/engineering #<issue>` works to a draft PR.
+Ask only after the design settles. The epic is the deliverable, and each sub-issue is a ticket that `/engineering #<issue>` works to a PR ready for review.
 
 ## Get a second opinion on a design
 
