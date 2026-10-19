@@ -1,11 +1,11 @@
 ---
 name: today-issues
 description: today-issues, the plan for today's tickets of a GitHub Project. Use whenever the user asks what to work on today, which ticket comes next, or which tickets can run in parallel.
-allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/read-board.mts *)
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/read-board.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts *)
 disable-model-invocation: true
 ---
 
-The plan for one day of work on a GitHub Project. This skill reads the open tickets of the board, asks the user for today's three budgets and the Sizes to run, ranks the tickets, groups them into tracks that run side by side, and shows one table per track in the format of [assets/plan.md](assets/plan.md). It only reads. The board is the state, so every run plans from what the board says now. A ticket of the plan starts with `/engineering <issue-url>`, which works it through the Ticket playbook of the engineering skill. In an auto run it starts with `/engineering <issue-url> auto`, so the session asks nothing.
+The plan for one day of work on a GitHub Project. This skill reads the open tickets of the board, asks the user for today's three budgets and the Sizes to run, ranks the tickets, groups them into tracks that run side by side, and shows one table per track in the format of [assets/plan.md](assets/plan.md). It only reads, except for the finished epics it closes on the user's word. The board is the state, so every run plans from what the board says now. A ticket of the plan starts with `/engineering <issue-url>`, which works it through the Ticket playbook of the engineering skill. In an auto run it starts with `/engineering <issue-url> auto`, so the session asks nothing.
 
 ## Steps
 
@@ -80,5 +80,12 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    - A ticket that exceeds a budget goes to Not today with the name of that budget, and the walk goes on with the next unit.
    - An epic takes its candidate sub-issues in order. When all of them are placed, the walk goes on with the next unit. When the first of them exceeds a budget, the epic does not start today, all of them go to Not today with the name of that budget, and the walk goes on as well. When a later one exceeds a budget, the epic has started and stops there. Its candidate sub-issues left go to Not today as continuing on another day, and so does every unit ranked after the epic.
 9. **Show the plan** as the reply, in the format of [assets/plan.md](assets/plan.md) and in English. The Reason of a ticket names the rule that put it where it stands. Gaps name every candidate without a Size or a Priority, every candidate without an `app: <name>` label that lands in a repository where another ticket carries one, and every finished epic.
+10. **Close the finished epics.** When step 4 found finished epics, ask once after the plan, with the AskUserQuestion tool and every epic's link in the question, whether to tick their Success criteria and close them. On yes, run for each epic [tick-criteria.mts](../issue/scripts/tick-criteria.mts) of the issue skill, then close it. An epic without a checkbox under Success criteria, which the script reports, is closed all the same. Name the closed epics. On no, nothing changes.
 
-Done when every candidate stands in a table or under Not today with its reason, every Blocked ticket stands under Not today, the planned sums stand against the three budgets, and every gap is named.
+    ```sh
+    node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts <epic-url> --all
+
+    gh issue close <epic-url> --reason completed
+    ```
+
+Done when every candidate stands in a table or under Not today with its reason, every Blocked ticket stands under Not today, the planned sums stand against the three budgets, every gap is named, and every finished epic is ticked and closed or left open on the user's word.

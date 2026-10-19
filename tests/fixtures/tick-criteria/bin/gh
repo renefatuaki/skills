@@ -1,0 +1,13 @@
+#!/usr/bin/env node
+
+// Stands in for gh, serves the body FAKE_GH_BODY holds to `gh issue view` and writes the body of `gh issue edit` to the file FAKE_GH_EDIT names.
+
+const { readFileSync, writeFileSync } = require('node:fs');
+
+const [command, action] = process.argv.slice(2);
+
+if (command === 'issue' && action === 'view') {
+  process.stdout.write(JSON.stringify({ body: process.env.FAKE_GH_BODY }));
+} else if (command === 'issue' && action === 'edit') {
+  writeFileSync(process.env.FAKE_GH_EDIT, readFileSync(0, 'utf8'));
+}

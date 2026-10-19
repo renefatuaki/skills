@@ -9,7 +9,7 @@
     "url": "https://github.com/renefatuaki/skills"
   },
   "scripts": {
-    "test": "node tests/code-comments.test.mts && node tests/project-docs.test.mts && node tests/diagrams.test.mts && node tests/session-context.test.mts && node tests/codex-model.test.mts && node tests/ticket-base.test.mts && node tests/progress.test.mts && node tests/review-queue.test.mts && node tests/load-comment-rules.test.mts && node tests/turn.test.mts && node tests/app-token.test.mts",
+    "test": "node tests/code-comments.test.mts && node tests/project-docs.test.mts && node tests/diagrams.test.mts && node tests/session-context.test.mts && node tests/codex-model.test.mts && node tests/ticket-base.test.mts && node tests/progress.test.mts && node tests/review-queue.test.mts && node tests/load-comment-rules.test.mts && node tests/turn.test.mts && node tests/app-token.test.mts && node tests/tick-criteria.test.mts",
     "test:mod": "claude plugin validate --strict .claude-plugin/plugin.json && claude plugin test .",
     "version": "changeset version && node scripts/sync-plugin-version.mts",
     "prepare": "husky",

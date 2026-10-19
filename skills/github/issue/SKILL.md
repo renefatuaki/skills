@@ -43,6 +43,7 @@ Rules for every GitHub issue you create. This skill ensures templates exist, int
 6. **Write the draft.** Search for duplicates first with `gh issue list --search "<keywords>" --state all`. If one matches, show it and stop. Then write the title in one sentence and one value per field of the template, in template order, each filled the way its `description` says. Required fields are never empty, empty optional fields are left out.
    - Content comes only from the request, the interview, the code and the conversation. What none of them settles is asked, never guessed. One goal per issue.
    - The body carries decisions, the interview comment of step 7 carries the reasoning. Each settled point is one line that states what was decided.
+   - Every item under Acceptance criteria, Done when and Success criteria is a checkbox, `- [ ]`, one criterion each. A Given/When/Then goes inside its item.
    - Point instead of paste. Files as `path:line`, documentation as URLs, commits as SHAs. Whatever the implementer can read at the pointer stays there. The one quotation is a bug's error output, in a code block, trimmed to the lines that matter.
    - An issue that changes a flow or a structure, however small the change is, shows the change as a diagram, the planned state of the `diagrams` skill, at the end of the field that describes the solution. The diagram replaces the sentences that would retell it.
    - When a third-party library or API is involved and no source is named, find its official documentation yourself and add it to the sources field.

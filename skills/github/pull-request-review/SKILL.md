@@ -1,7 +1,7 @@
 ---
 name: pull-request-review
 description: pull-request-review, the rules for testing a pull request in the running application. Use whenever the user wants a pull request tested or accepted by its test plan, or asks which pull requests wait for their review. Use it before every `gh pr review` you run, even when the user did not name the pull-request-review skill.
-allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/mark-steps.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts *)
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/mark-steps.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts *)
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,7 @@ Rules for every pull request you test. This skill runs the test plan of a pull r
 ## Steps
 
 1. **Ensure `gh`.** Run `gh auth status` and do nothing else until it reports a logged-in account. If `gh` is missing, install it after confirmation, following GitHub's [installation guide](https://raw.githubusercontent.com/cli/cli/trunk/README.md#installation). If nobody is logged in, ask the user to run `! gh auth login`, wait for them, then run `gh auth status` again. If the user declines, stop and say what is missing.
-2. **Pick the pull request.** The number or URL from the request, or the pull request of the current branch when the user means their own. Without either, list the pull requests that wait for the user with `gh pr list --search "review-requested:@me" --json number,title,author,updatedAt`. One is the choice without a question, several go to the user with the AskUserQuestion tool, none ends the skill. Read it with `gh pr view <number> --json number,title,body,author,headRefOid,isCrossRepository,reviewRequests,url`. The test plan is the `## Test plan` section of the body, its steps the numbered checkboxes under `### Steps`. A plan without checkboxes has nothing to test, so say that, post nothing and stop. A pull request from a fork, `isCrossRepository`, runs a stranger's code on this machine, so wait for the user to confirm before step 3.
+2. **Pick the pull request.** The number or URL from the request, or the pull request of the current branch when the user means their own. Without either, list the pull requests that wait for the user with `gh pr list --search "review-requested:@me" --json number,title,author,updatedAt`. One is the choice without a question, several go to the user with the AskUserQuestion tool, none ends the skill. Read it with `gh pr view <number> --json number,title,body,author,headRefOid,isCrossRepository,reviewRequests,closingIssuesReferences,url`. The test plan is the `## Test plan` section of the body, its steps the numbered checkboxes under `### Steps`. A plan without checkboxes has nothing to test, so say that, post nothing and stop. A pull request from a fork, `isCrossRepository`, runs a stranger's code on this machine, so wait for the user to confirm before step 3.
 3. **Check out**, without asking. Note where the repository stands for step 9, the branch from `git branch --show-current` or, when that prints nothing, the commit from `git rev-parse HEAD`. Then fetch the pull request. `<remote>` is the remote of the repository the pull request lives in, `origin` unless the clone is a fork.
 
    ```sh
@@ -49,10 +49,12 @@ Rules for every pull request you test. This skill runs the test plan of a pull r
    - One table row per step, in plan order. A step tested by the reviewer names `(needs a person: <reason>)` after Reviewer, with its reason of step 5.
    - One finding per failed or blocked step. Without one, the section is left out.
    - The evidence of the steps you passed goes into the collapsed block, which is left out when none of your steps passed.
-8. **Post.** When a step failed, show the review and wait for the user to confirm it, because the request blocks the author and the failure may be yours. Corrections go back to step 7. Otherwise post without asking. Every run tests the whole plan against the current head, so [scripts/mark-steps.mts](scripts/mark-steps.mts) first clears the checkboxes of an earlier run and ticks the passed steps, with Node 24 or newer, which runs TypeScript directly. `${CLAUDE_SKILL_DIR}` is the folder of this file. Write it out in the command, because the shell does not know it. Leave out `--passed` when no step passed. A refused edit leaves the review as the only record.
+8. **Post.** When a step failed, show the review and wait for the user to confirm it, because the request blocks the author and the failure may be yours. Corrections go back to step 7. Otherwise post without asking. Every run tests the whole plan against the current head, so [scripts/mark-steps.mts](scripts/mark-steps.mts) first clears the checkboxes of an earlier run and ticks the passed steps, with Node 24 or newer, which runs TypeScript directly. `${CLAUDE_SKILL_DIR}` is the folder of this file. Write it out in the command, because the shell does not know it. Leave out `--passed` when no step passed. A refused edit leaves the review as the only record. A passed step whose line ends with `(criterion <n>)` proves that criterion of the issue in `closingIssuesReferences`, so [tick-criteria.mts](../issue/scripts/tick-criteria.mts) of the issue skill ticks it there. A failed step leaves the issue as it is.
 
    ```sh
    node ${CLAUDE_SKILL_DIR}/scripts/mark-steps.mts <number> --passed 1,2,4
+
+   node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts <issue-url> --criteria 3
 
    gh pr review <number> \
      --comment \
@@ -72,4 +74,4 @@ Rules for every pull request you test. This skill runs the test plan of a pull r
    End the reply with the URL of the pull request. When every step passed on someone else's pull request or on the app's, add that it is now the user's turn to approve it on GitHub.
 9. **Leave as found**, on every exit, also when an earlier step ended the run. Stop what you started in step 4. After a checkout in place, return with `git switch <branch>`, or with `git switch --detach <commit>` when step 3 noted a commit. After a worktree, run `git worktree remove --force "<path>"`. Done when the repository stands where step 3 noted, the test's worktree is removed and nothing from step 4 still runs.
 
-Done when the review is on the pull request with one row per step, the description shows a tick on every passed step unless the edit was refused, and step 9 left the repository as it found it.
+Done when the review is on the pull request with one row per step, the description shows a tick on every passed step unless the edit was refused, the issue shows a tick on the criterion of every passed step that names one, and step 9 left the repository as it found it.

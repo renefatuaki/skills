@@ -27,7 +27,7 @@ Describe the work, and ask for an issue:
 the csv export drops its last row since yesterday's deploy. write an issue for it.
 ```
 
-The [`issue`](../../skills/github/issue/SKILL.md) skill picks the template, bug, feature, refactor, chore or epic. Where the request leaves a field open, it interviews you with the grilling skill. It creates the issue and asks you with its link whether anything should change. Work with several parts that ship on their own becomes an epic with one sub-issue per part.
+The [`issue`](../../skills/github/issue/SKILL.md) skill picks the template, bug, feature, refactor, chore or epic. Where the request leaves a field open, it interviews you with the grilling skill. It writes every criterion as a checkbox, so the skills below can tick it once it is proven. It creates the issue and asks you with its link whether anything should change. Work with several parts that ship on their own becomes an epic with one sub-issue per part.
 
 A board with the Status, Priority and Size fields comes from the [`project`](../../skills/github/project/SKILL.md) skill. Run `/project` to create one for the repository.
 
@@ -44,7 +44,7 @@ The [Ticket playbook](../../skills/workflow/engineering/playbooks/ticket.md) run
 3. It asks you through the grilling skill where a criterion reads two ways, two criteria contradict each other, or several approaches lead to a result you would see differently. It may also ask whether to set up a test runner or a verification skill.
 4. It opens the playbook the label names. `bug` gives Bug fix, `refactor` gives Refactoring, and every other label gives Feature.
 5. It builds each criterion in a fresh subagent, test first, with the test named after the criterion. A refactoring pins today's behaviour with a test before it changes the structure.
-6. It commits criterion by criterion with the [`commit`](../../skills/git/commit/SKILL.md) skill, `Refs` on every commit and `Closes` on the last.
+6. It commits criterion by criterion with the [`commit`](../../skills/git/commit/SKILL.md) skill, `Refs` on every commit and `Closes` on the last. Once a criterion's test is green and verified, it ticks the criterion in the issue.
 7. It reviews the diff with [`/interrogate`](../../skills/workflow/interrogate/SKILL.md), and with [`/blast-radius`](../../skills/workflow/blast-radius/SKILL.md) when the diff changes a schema, a public API, the dependencies or a flag.
 8. It runs [Opening a PR](../../skills/workflow/engineering/playbooks/pull-request.md).
 
@@ -86,11 +86,11 @@ GitHub lets nobody approve their own PR. When a GitHub App of yours opens it, yo
    EOF
    ```
 
-5. Check it in a repository the app is installed on. The first command prints the app's login, the second a token that starts with `ghs_`.
+5. Check it in a repository the app is installed on. The first command prints the app's login, the second `ghs_`, the first four characters of a token. The full token never shows up in the terminal or in a session.
 
    ```sh
    node skills/github/pull-request/scripts/app-token.mts --login
-   node skills/github/pull-request/scripts/app-token.mts
+   node skills/github/pull-request/scripts/app-token.mts | cut -c1-4
    ```
 
 A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CONFIG_HOME/forge` when that is set. The [`app-token.mts`](../../skills/github/pull-request/scripts/app-token.mts) script signs a JSON Web Token with the key and trades it for an installation token of the current repository, valid for an hour. The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill creates, edits, comments on and marks the PR ready with that token, and requests you as the reviewer when you named nobody else. Your commits, the push and the projects stay under your login, because GitHub gives an app no access to the projects of a user. The review that [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) posts on the app's PR is a comment of the app, so the approval and the request for changes stay yours.
@@ -101,7 +101,7 @@ A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CON
 /pull-request-review 42
 ```
 
-The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with its reason in parentheses. Then it posts the result as a comment or a request for changes. The approval stays your own click on GitHub.
+The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with its reason in parentheses. Then it posts the result as a comment or a request for changes. A passed step marked `(criterion <n>)` ticks that criterion in the issue, for the criteria no test could prove. The approval stays your own click on GitHub.
 
 ## Plan a day of tickets
 
@@ -109,7 +109,7 @@ The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) sk
 /today-issues
 ```
 
-The [`today-issues`](../../skills/github/today-issues/SKILL.md) skill reads the open tickets of the board and asks for today's three budgets: how long sessions may run, how long you answer their questions, and how long you review PRs. It also asks which Sizes run today. Naming some, such as XS and S, pulls tickets of those Sizes from Backlog too. A questions budget of none plans an auto run, which leaves out every ticket with an open decision or with work only you can do. It ranks the tickets and groups them into tracks that run side by side, one table per track. Tickets that change code in the same repository, named by their `repo: <name>` label, share a track. A ticket that does not fit a budget lands under Not today with the reason. The skill only reads. Start each ticket of the plan with its URL:
+The [`today-issues`](../../skills/github/today-issues/SKILL.md) skill reads the open tickets of the board and asks for today's three budgets: how long sessions may run, how long you answer their questions, and how long you review PRs. It also asks which Sizes run today. Naming some, such as XS and S, pulls tickets of those Sizes from Backlog too. A questions budget of none plans an auto run, which leaves out every ticket with an open decision or with work only you can do. It ranks the tickets and groups them into tracks that run side by side, one table per track. Tickets that change code in the same repository, named by their `repo: <name>` label, share a track. A ticket that does not fit a budget lands under Not today with the reason. The skill only reads, except for epics whose sub-issues are all closed. It asks you once whether to tick their success criteria and close them. Start each ticket of the plan with its URL:
 
 ```text
 /engineering https://github.com/<owner>/<repo>/issues/42
