@@ -97,11 +97,11 @@ Apps change and feature maps rot. Run this at least once a day, ideally from a s
 /engineering open the pr. evidence in the description.
 ```
 
-The [Opening a PR playbook](../../skills/workflow/engineering/playbooks/pull-request.md) cleans the diff with `clean-code` and `code-comments`, commits what is still open with the `commit` skill, and has the [`pull-request`](../../skills/github/pull-request/SKILL.md) skill open one draft per branch against its base. It never rebases a branch onto its base. A branch based on another PR's branch becomes a layer of a [stacked PR](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs), and a push to a lower layer rebases the layers above with the `gh stack` extension. The description carries a test plan, the steps a reviewer runs in the running app before approving. Five narrow PRs beat one fat one.
+The [Opening a PR playbook](../../skills/workflow/engineering/playbooks/pull-request.md) cleans the diff with `clean-code` and `code-comments`, commits what is still open with the `commit` skill, and has the [`pull-request`](../../skills/github/pull-request/SKILL.md) skill open one PR per branch against its base, ready for review. It never rebases a branch onto its base. A branch based on another PR's branch becomes a layer of a [stacked PR](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs), and a push to a lower layer rebases the layers above with the `gh stack` extension. The description carries a test plan, the steps a reviewer runs in the running app before approving. Five narrow PRs beat one fat one.
 
 ## Get the checks green with `/loop-on-ci`
 
-An open PR starts collecting blockers immediately. Checks fail, reviewers comment, trunk moves. The `pull-request` skill watches its own draft first. It spawns the [ci-watcher](../../agents/ci-watcher.md) agent, follows `/loop-on-ci` when a check fails, and marks the draft ready for review once nothing waits for you, no assumption is open, every check passes, and its own test steps pass. Hand later failing checks to [`/loop-on-ci`](../../skills/github/loop-on-ci/SKILL.md):
+An open PR starts collecting blockers immediately. Checks fail, reviewers comment, trunk moves. The `pull-request` skill watches its own PR first. It spawns the [ci-watcher](../../agents/ci-watcher.md) agent, follows `/loop-on-ci` when a check fails, and runs the test steps it can run itself. Hand later failing checks to [`/loop-on-ci`](../../skills/github/loop-on-ci/SKILL.md):
 
 ```text
 /loop-on-ci get this pr green.

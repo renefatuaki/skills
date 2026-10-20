@@ -104,7 +104,7 @@ forge has no planning skill, on purpose. When you do want a written plan, ask fo
 /engineering turn this design into an epic. one sub-issue per small verifiable PR, each with its own verification steps.
 ```
 
-The [`issue`](../../skills/github/issue/SKILL.md) skill creates the epic first, then one sub-issue per part from its own template, each with the criteria its template asks for. The epic is the deliverable. It is never implemented itself. Each sub-issue is a ticket that `/engineering #<issue>` works to a draft PR, as [Work a GitHub issue](./11-github-workflow.md) shows. A part that builds on another is blocked by it, and its PR stacks on that part's PR, so it starts before the one below is merged.
+The [`issue`](../../skills/github/issue/SKILL.md) skill creates the epic first, then one sub-issue per part from its own template, each with the criteria its template asks for. The epic is the deliverable. It is never implemented itself. Each sub-issue is a ticket that `/engineering #<issue>` works to a PR ready for review, as [Work a GitHub issue](./11-github-workflow.md) shows. A part that builds on another is blocked by it, and its PR stacks on that part's PR, so it starts before the one below is merged.
 
 For a migration, state the bar in the prompt:
 

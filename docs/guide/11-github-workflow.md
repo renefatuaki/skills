@@ -1,15 +1,15 @@
 # Work a GitHub issue
 
-How does a GitHub issue become a draft PR, and how do you plan a day of them?
+How does a GitHub issue become a PR ready for review, and how do you plan a day of them?
 
-The pages before this one start work from a prompt. This page starts it from an issue on a GitHub Project. Each step is a skill or a playbook of this plugin. `/engineering #<issue>` works an existing issue to a draft PR, and you review the draft.
+The pages before this one start work from a prompt. This page starts it from an issue on a GitHub Project. Each step is a skill or a playbook of this plugin. `/engineering #<issue>` works an existing issue to a PR ready for review, and you review and approve it.
 
 ```mermaid
 flowchart LR
-  accTitle: How does a GitHub issue become a draft PR?
+  accTitle: How does a GitHub issue become a PR ready for review?
   issue["Write the ticket"] --> ticket["Work the ticket in its own worktree"]
-  ticket --> pullRequest["Open the draft"]
-  pullRequest --> pullRequestReview["Test the draft by its test plan"]
+  ticket --> pullRequest["Open the PR"]
+  pullRequest --> pullRequestReview["Test the PR by its test plan"]
 ```
 
 | Element | Source |
@@ -50,24 +50,13 @@ The [Ticket playbook](../../skills/workflow/engineering/playbooks/ticket.md) run
 
 A ticket that already has a branch or an open PR resumes where it stopped. A ticket that needs something outside the repository, such as an account or a secret, ends as Blocked, with the obstacle in a comment on the issue.
 
-## Open the draft
+## Open the PR
 
-The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill opens one draft per branch against `dev` when the remote has it, otherwise against the default branch. A layer of a stack targets the branch below it, and the skill links it into the [stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) on GitHub with the `gh stack` extension. After a push to a lower layer it rebases the layers above. GitHub merges a stack bottom-up and moves the layers left to `dev`. Its description carries a test plan, the steps a reviewer runs in the running app before approving. When the branch changes what the application shows, the skill posts a comment with every changed screen before and after, a web application on desktop and on mobile. It rewrites that comment after each push that changes the screens. When the branch changes what code, a script or a skill outputs, the skill posts a second comment with real examples. Each changed behaviour gets a table of real inputs with the output before and after, and a Tradeoffs section lists the inputs where the new output is worse. The skill marks the draft ready for review on its own when all of these hold.
-
-- Nothing waits for you, such as a finding marked "needs your call".
-- No assumption is open.
-- Every check passes. The [ci-watcher](../../agents/ci-watcher.md) agent watches them, and a failed check goes through `/loop-on-ci`.
-- Every test step the agent can run itself passes.
-
-Otherwise the PR stays a draft until you call it ready:
-
-```text
-the draft is ready
-```
+The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill opens one PR per branch, ready for review and with you as the reviewer. Its base is `dev` when the remote has it, otherwise the default branch. A layer of a stack targets the branch below it, and the skill links it into the [stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) on GitHub with the `gh stack` extension. After a push to a lower layer it rebases the layers above. Before every push until a person has reviewed the PR, it tidies the history to one commit per change, so a fix from a check folds into the commit it finishes. A pushed PR goes up again with `--force-with-lease`, and a PR you have reviewed keeps its history. GitHub merges a stack bottom-up and moves the layers left to `dev`. Its description carries a test plan, the steps a reviewer runs in the running app before approving. When the branch changes what the application shows, the skill posts a comment with every changed screen before and after, a web application on desktop and on mobile. It rewrites that comment after each push that changes the screens. When the branch changes what code, a script or a skill outputs, the skill posts a second comment with real examples. Each changed behaviour gets a table of real inputs with the output before and after, and a Tradeoffs section lists the inputs where the new output is worse. Then the [ci-watcher](../../agents/ci-watcher.md) agent watches the checks, a failed check goes through `/loop-on-ci`, and the skill runs every test step it can run itself. Its reply names what failed and every assumption it took.
 
 ## Approve your own PRs
 
-GitHub lets nobody approve their own PR. When a GitHub App of yours opens it, you can. The app is the author, you are the requested reviewer, and GitHub shows which PRs you approved and which still wait for you. Without the app the skills open the PR under your own login, as before.
+GitHub lets nobody approve their own PR. When a GitHub App of yours opens it, you can. The app is the author, you are the requested reviewer, and GitHub shows which PRs you approved and which still wait for you. Without the app the skill opens no PR and says what is missing.
 
 1. Create the app under **Settings**, **Developer settings**, **GitHub Apps**, **New GitHub App**. Any name and homepage URL will do. Turn **Webhook** off. Under **Repository permissions** set **Contents** to Read-only, **Pull requests** to Read and write and **Issues** to Read and write. Leave **Only on this account** selected.
 2. On the app's page, note the **Client ID** and under **Private keys** generate a key. The browser downloads a `.pem` file.
@@ -93,7 +82,7 @@ GitHub lets nobody approve their own PR. When a GitHub App of yours opens it, yo
    node skills/github/pull-request/scripts/app-token.mts | cut -c1-4
    ```
 
-A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CONFIG_HOME/forge` when that is set. The [`app-token.mts`](../../skills/github/pull-request/scripts/app-token.mts) script signs a JSON Web Token with the key and trades it for an installation token of the current repository, valid for an hour. The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill creates, edits, comments on and marks the PR ready with that token, and requests you as the reviewer when you named nobody else. Your commits, the push and the projects stay under your login, because GitHub gives an app no access to the projects of a user. The review that [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) posts on the app's PR is a comment of the app, so the approval and the request for changes stay yours.
+A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CONFIG_HOME/forge` when that is set. The [`app-token.mts`](../../skills/github/pull-request/scripts/app-token.mts) script signs a JSON Web Token with the key and trades it for an installation token of the current repository, valid for an hour. The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill creates, edits and comments on the PR with that token, and requests you as the reviewer, plus whoever you named. Your commits, the push and the projects stay under your login, because GitHub gives an app no access to the projects of a user. The review that [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) posts on the app's PR is a comment of the app, so the approval and the request for changes stay yours.
 
 ## Review the PR
 
