@@ -1,5 +1,13 @@
 # forge
 
+## 1.6.0
+
+### Minor Changes
+
+- ec75ac3: The `pull-request` skill opens every pull request ready for review, never as a draft. The user's GitHub App always opens it, with the user requested as reviewer, so the user can approve it. Without a configured app the skill stops and names what is missing. The issue moves to In review when the pull request opens. Checks and the agent's own test steps still run afterwards, and the reply names what failed. The history is tidied before every push until a person has reviewed the pull request.
+- 7f2ad57: Finished criteria are now ticked in the issue. The Ticket playbook ticks a criterion once its test is green and verified, and a resumed ticket catches up on the ticks it missed. A criterion no test can prove becomes a test step marked `(criterion <n>)`, and `pull-request-review` ticks it once that step passes. `today-issues` asks whether to tick the success criteria of finished epics and close them. The `issue` skill writes every criterion as a checkbox, a Given/When/Then inside its item. The new `tick-criteria.mts` script of the `issue` skill does the ticking and never clears a tick.
+- e5a7f8c: The `pull-request` skill tidies the history of a draft before every push. A reviewer now reads one commit per change, and a fix from a review or a check, a revert, a format pass or work in progress folds into the commit it finishes. The skill rebuilds the branch with the `commit` skill, proves the tree unchanged, and pushes a draft that is already on the remote with `--force-with-lease`. A pull request that is ready for review keeps its history.
+
 ## 1.5.1
 
 ### Patch Changes
