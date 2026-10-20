@@ -43,22 +43,22 @@ The clean-code skill carries a formatter and linter configuration per language u
 
 ## The engineering skill
 
-The engineering skill works every development task through the playbook that matches it. It reads the task, opens that playbook and follows its steps, from a question about the code to a GitHub issue worked to a draft pull request.
+The engineering skill works every development task through the playbook that matches it. It reads the task, opens that playbook and follows its steps, from a question about the code to a GitHub issue worked to a pull request ready for review.
 
 - [pstack](https://github.com/cursor/plugins/tree/main/pstack) is the source the engineering skill adapts to Claude Code.
-- The [guide](docs/guide/README.md) explains the workflow in depth, from the first prompt to a draft pull request.
+- The [guide](docs/guide/README.md) explains the workflow in depth, from the first prompt to a pull request ready for review.
 - [UPSTREAM.md](UPSTREAM.md) names every copied file and what changed in it.
 
 | Entry point | What it does |
 | --- | --- |
 | `/engineering` | turns engineering on for the rest of the session, so every task runs the playbook that matches it |
-| `/engineering #<issue>` | works the GitHub issue through the Ticket playbook, from the board to a draft pull request |
+| `/engineering #<issue>` | works the GitHub issue through the Ticket playbook, from the board to a pull request ready for review |
 
 The today-issues skill starts each ticket of its plan with `/engineering <issue-url>`, which takes the same route.
 
 | Playbook | Runs for |
 | --- | --- |
-| [Ticket](skills/workflow/engineering/playbooks/ticket.md) | a GitHub issue, worked in its own worktree to a draft pull request |
+| [Ticket](skills/workflow/engineering/playbooks/ticket.md) | a GitHub issue, worked in its own worktree to a pull request ready for review |
 | [Feature](skills/workflow/engineering/playbooks/feature.md) | new or changed behaviour |
 | [Bug fix](skills/workflow/engineering/playbooks/bug-fix.md) | a reported defect to reproduce, find the root cause of and fix |
 | [Refactoring](skills/workflow/engineering/playbooks/refactoring.md) | a change to the structure that keeps the behaviour |
@@ -74,7 +74,7 @@ The today-issues skill starts each ticket of its plan with `/engineering <issue-
 | [Autonomous run](skills/workflow/engineering/playbooks/autonomous-run.md) | a long task driven to a checkable exit condition without stopping |
 | [Session pickup](skills/workflow/engineering/playbooks/session-pickup.md) | the unfinished work of an earlier session, resumed from its transcript or branch |
 | [Worktree cleanup](skills/workflow/engineering/playbooks/worktree-cleanup.md) | disk space, reclaimed from merged worktrees and stale simulators |
-| [Opening a PR](skills/workflow/engineering/playbooks/pull-request.md) | the end of every other playbook, the diff cleaned, committed and opened as a draft |
+| [Opening a PR](skills/workflow/engineering/playbooks/pull-request.md) | the end of every other playbook, the diff cleaned, committed and opened ready for review |
 
 A large or cross-cutting task, or one that no playbook fits, goes to the figure-it-out skill.
 

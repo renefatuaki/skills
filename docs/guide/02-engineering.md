@@ -23,7 +23,7 @@ flowchart TD
     J --> K
 ```
 
-The diagram shows the common routes. There are also playbooks for hillclimbing a metric, diagnosing runtime symptoms and captured traces, prototypes, visual parity, authoring and evaluating skills, autonomous runs, working a GitHub issue as a ticket, opening a draft PR, session pickup, and worktree cleanup. The [playbook directory](../../skills/workflow/engineering/playbooks/) has the full set.
+The diagram shows the common routes. There are also playbooks for hillclimbing a metric, diagnosing runtime symptoms and captured traces, prototypes, visual parity, authoring and evaluating skills, autonomous runs, working a GitHub issue as a ticket, opening a PR, session pickup, and worktree cleanup. The [playbook directory](../../skills/workflow/engineering/playbooks/) has the full set.
 
 ## Say the goal, not the ceremony
 
