@@ -33,21 +33,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - **A pull request that already exists** is revised from what it says. Read its title and body first, then bring every section up to date with the branch and keep what still holds, whoever wrote it.
    - Cut pass, once the sections are written. Reread the body and delete every sentence, collapsed or not, whose removal changes neither what the reviewer does nor how they judge a step.
    - Metadata. The assignee is the user's login from `gh api user --jq .login`. The reviewer is the user, plus whoever the user named. Label, milestone and projects are the issue's, the projects by the `title` of each of its `projectItems`.
-6. **Open the pull request**, ready for review and without asking. Tidy the history, push the branch, then create the pull request, the body from a quoted heredoc. A flag without a value is left out.
-
-   **Tidy the history** before every push until a person has reviewed the pull request, so always before it exists. Once it exists, the command below prints 0 while only the app has reviewed it, `<slug>` the app login of step 1 without `app/`.
-
-   ```sh
-   gh pr view <number> --json reviews --jq '[.reviews[] | select(.author.login != "<slug>")] | length'
-   ```
-
-   A reviewer reads one commit per change, such as a criterion of the issue, a refactoring it builds on or a diagram update. A commit that only finishes an earlier one of the branch belongs to that commit, such as a fix from a review or a check, a revert, a format or lint pass, or work in progress. Read `git log --reverse --format='%h %s%n%b' <fork>..HEAD`, where `<fork>` is `git merge-base origin/<base> HEAD`, and name the changes. When the branch holds more commits than changes and the stage is empty, note `git rev-parse HEAD` as `<old>` and rebuild the branch.
-
-   ```sh
-   git reset --soft <fork>
-   ```
-
-   Commit the stage with the `commit` skill, one commit per named change in the order of the old history, each with the `Refs` and `Closes` trailers its old commits carried. Its plan is printed without waiting, and the issue comes from those trailers. Then `git diff --quiet <old> HEAD` must succeed, because the tree stays the same. When it fails, `git reset <old>` restores the branch and leaves the working tree alone. Once the branch is on the remote, the rebuilt history goes up with `git push --force-with-lease origin <branch>`. A pull request a person has reviewed keeps its pushed history.
+6. **Open the pull request**, ready for review and without asking. Tidy the history with the `tidy-history` skill, naming the base of step 3 and that this skill rebases the layers above. Then push the branch and create the pull request, the body from a quoted heredoc. A flag without a value is left out.
 
    ```sh
    git push --set-upstream origin <branch>
@@ -64,7 +50,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    EOF
    ```
 
-   Pass `--reviewer` once per reviewer. Add each project as the user, without the app's token, with `gh pr edit <number> --add-project "<project>"`. If the command fails for a missing `project` scope, ask the user to run `! gh auth refresh -s project`. Report a rejected push and stop. Never force it, except the tidied history with lease. A failure without a URL may have left the pull request behind, so check `gh pr view` before creating again.
+   Pass `--reviewer` once per reviewer. Add each project as the user, without the app's token, with `gh pr edit <number> --add-project "<project>"`. If the command fails for a missing `project` scope, ask the user to run `! gh auth refresh -s project`. Report a rejected push and stop. Never force it. A failure without a URL may have left the pull request behind, so check `gh pr view` before creating again.
 
    For a pull request that already exists, push the same way and write the title and the body back in place of creating. Add the reviewers and projects it lacks the same way. GitHub tells nobody about an edited description, so when the test plan changed, add a comment that names the steps that are new, changed or gone.
 
@@ -125,7 +111,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
      gh stack link <stack-number> <branch>
      gh stack link --base <trunk> <base> <branch>
      ```
-   - **Rebase the layers above** after every push of this run, those of step 7 included, when `gh pr list --base <branch> --state open --json number` lists a pull request. From the branch's worktree, drop the local copy of the stack, which can lack a layer added since and then rebase nothing above it, import the stack from GitHub by the pull request of this branch, rebase every layer above it, also those checked out in other worktrees, and push them. `unstack --local` exits with 2 when no local stack holds the branch, which is fine. The push forces with lease, which this skill allows only here and for the tidy of step 6.
+   - **Rebase the layers above** after every push of this run, those of step 7 included, when `gh pr list --base <branch> --state open --json number` lists a pull request. From the branch's worktree, drop the local copy of the stack, which can lack a layer added since and then rebase nothing above it, import the stack from GitHub by the pull request of this branch, rebase every layer above it, also those checked out in other worktrees, and push them. `unstack --local` exits with 2 when no local stack holds the branch, which is fine. The push forces with lease, which this skill allows only here.
 
      ```sh
      gh stack unstack --local

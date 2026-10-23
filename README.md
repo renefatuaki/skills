@@ -88,7 +88,7 @@ The skills of the plugin live in one folder per category.
 | [`meta`](skills/meta) | reflect, correct, recall, automate-me, teach, bro, setup-models | learn from past sessions, explain, and configure the models |
 | [`docs`](skills/docs) | diagrams, project-docs, unslop, technical-writing | write documentation and prose |
 | [`clean-code`](skills/clean-code) | clean-code, code-comments, typescript-best-practices | write readable code |
-| [`git`](skills/git) | commit | write commits |
+| [`git`](skills/git) | commit, tidy-history | write commits and tidy the history of a branch |
 | [`github`](skills/github) | issue, project, pull-request, pull-request-review, review-queue, templates, today-issues, loop-on-ci | plan and ship work on GitHub |
 | [`tooling`](skills/tooling) | package-manager | run the package manager of the repository |
 

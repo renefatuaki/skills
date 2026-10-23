@@ -26,6 +26,7 @@
     "./skills/docs/technical-writing",
     "./skills/docs/unslop",
     "./skills/git/commit",
+    "./skills/git/tidy-history",
     "./skills/github/issue",
     "./skills/github/loop-on-ci",
     "./skills/github/project",
