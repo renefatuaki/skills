@@ -19,11 +19,11 @@ The frame for every task of a session. Once invoked, engineering stays on for th
    | `meta` | reflect, correct, recall, automate-me, teach, bro, setup-models |
    | `docs` | diagrams, project-docs, unslop, technical-writing |
    | `clean-code` | clean-code, code-comments, typescript-best-practices |
-   | `git` | commit |
+   | `git` | commit, tidy-history |
    | `github` | issue, project, pull-request, pull-request-review, today-issues |
    | `tooling` | package-manager |
 
-   A skill of this plugin that is user-invocable only, with `disable-model-invocation: true`, is read from its `SKILL.md` and followed whenever a reference or a playbook names it, in bold or not, control-ui, control-cli and every principle included. In a skill read by path, the `CLAUDE_SKILL_DIR` variable stands for the folder of that `SKILL.md`. The model-invocable skills of this plugin, clean-code, code-comments, diagrams, project-docs, package-manager, commit, issue, pull-request and setup-models, run through the Skill tool, so their allowed-tools apply.
+   A skill of this plugin that is user-invocable only, with `disable-model-invocation: true`, is read from its `SKILL.md` and followed whenever a reference or a playbook names it, in bold or not, control-ui, control-cli and every principle included. In a skill read by path, the `CLAUDE_SKILL_DIR` variable stands for the folder of that `SKILL.md`. The model-invocable skills of this plugin, clean-code, code-comments, diagrams, project-docs, package-manager, commit, tidy-history, issue, pull-request and setup-models, run through the Skill tool, so their allowed-tools apply.
 2. **Read the core.** Read [references/core.md](references/core.md) in full before any work. It holds the non-negotiables, the principles index, autonomy, subagents, the reply and the playbook index. The playbooks live in `playbooks/`.
 3. **Ground with graphify.** When the repository holds `graphify-out/`, the explorers of the how skill get the result of `graphify query "<question>"` as their entry point.
 4. **Route an issue to the Ticket playbook.** An issue number or an issue URL in the user's request, such as `/engineering #42`, or a request to work something as a ticket, routes to the Ticket playbook, [playbooks/ticket.md](playbooks/ticket.md), the one entry for a GitHub issue. Its step 4 sends a request without an issue to the `issue` skill first. A subagent never runs the Ticket playbook, its brief is its task.
