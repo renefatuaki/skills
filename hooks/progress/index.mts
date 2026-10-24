@@ -1,4 +1,4 @@
-// Turns the main session's todo calls, Codex calls and prompts into events of the run, and draws the run above the prompt.
+// Turns the main session's todo calls, Codex calls and prompts into events of the run, reads the Codex usage when the session starts, on each prompt and after each Codex call, and draws the run above the prompt.
 // https://code.claude.com/docs/en/plugins/mods/events.md
 
 import type {
@@ -13,7 +13,15 @@ import type {
 } from 'claude-code';
 
 import { bandLine, bandOf, INITIAL_RUN, parseUsage, step } from './run.mts';
-import type { Band, Budget, CodexUsage, Event, Run, Tone } from './run.mts';
+import type {
+  Band,
+  Budget,
+  CodexUsage,
+  Event,
+  Progress,
+  Run,
+  Tone,
+} from './run.mts';
 
 /** The run of the session, written only by `dispatch`. */
 let run: Run = INITIAL_RUN;
@@ -99,12 +107,24 @@ export const register: Register = on => {
   ).catch(($, e, next) => next(e));
 
   on('prompt.submit', ($, e, next) => {
-    if (e.isMeta !== true && PERSON_ORIGINS.has(e.origin.kind)) {
+    if (e.isMeta === true) {
+      return next(e);
+    }
+
+    if (PERSON_ORIGINS.has(e.origin.kind)) {
       dispatch($, { kind: 'personPrompted' });
     }
 
+    void readUsage($);
+
     return next(e);
   }).catch(($, e, next) => next(e));
+
+  on('session.start', ($, e, next) => {
+    void readUsage($);
+
+    return next(e);
+  });
 
   on('session.end', ($, e, next) => {
     if (e.reason === 'clear') {
@@ -141,44 +161,19 @@ function terminalBand(
   return Text({ wrap: 'truncate-end', children });
 }
 
-/** Draws the band as a row of the count with a bar of the done share, the title the surface truncates by its own width, and the Codex usage as a caption at the right. */
+/** Draws the band as a row of the progress and the Codex usage as a caption at the right end. */
 function graphicalBand(
   { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
   band: Band,
 ): RenderElement {
-  const progress = Box({
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 'xs',
-    flexShrink: 0,
-    children: [
-      Text({ tabular: true, weight: 'medium', children: [band.count] }),
-      Box({
-        width: BAR_CELLS,
-        height: 1,
-        backgroundColor: 'subtle',
-        children: [
-          Box({
-            width: band.filled,
-            height: 1,
-            backgroundColor: band.title === null ? 'success' : 'claude',
-          }),
-        ],
-      }),
-    ],
-  });
-
-  // A flex item does not shrink below its content without a minimum width, so the title would push the Codex usage out instead of truncating.
-  // https://developer.mozilla.org/en-US/docs/Web/CSS/min-width#auto
-  const title = Box({
-    flexGrow: 1,
-    minWidth: 0,
-    children: [
-      band.title === null
-        ? Text({ dimColor: true, children: ['done'] })
-        : Text({ wrap: 'truncate-end', children: [band.title] }),
-    ],
-  });
+  if (band.progress === null) {
+    return Box({
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      children: [codexCaption({ Box, Text }, band.codex)],
+    });
+  }
 
   const codex =
     band.codex === null ? [] : [codexCaption({ Box, Text }, band.codex)];
@@ -187,8 +182,50 @@ function graphicalBand(
     flexDirection: 'row',
     alignItems: 'center',
     gap: 'sm',
-    children: [progress, title, ...codex],
+    children: [...progressParts({ Box, Text }, band.progress), ...codex],
   });
+}
+
+/** Draws the count with a bar of the done share and the title the surface truncates by its own width. */
+function progressParts(
+  { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
+  { count, filled, title }: Progress,
+): RenderElement[] {
+  const progress = Box({
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 'xs',
+    flexShrink: 0,
+    children: [
+      Text({ tabular: true, weight: 'medium', children: [count] }),
+      Box({
+        width: BAR_CELLS,
+        height: 1,
+        backgroundColor: 'subtle',
+        children: [
+          Box({
+            width: filled,
+            height: 1,
+            backgroundColor: title === null ? 'success' : 'claude',
+          }),
+        ],
+      }),
+    ],
+  });
+
+  // A flex item does not shrink below its content without a minimum width, so the title would push the Codex usage out instead of truncating.
+  // https://developer.mozilla.org/en-US/docs/Web/CSS/min-width#auto
+  const titleBox = Box({
+    flexGrow: 1,
+    minWidth: 0,
+    children: [
+      title === null
+        ? Text({ dimColor: true, children: ['done'] })
+        : Text({ wrap: 'truncate-end', children: [title] }),
+    ],
+  });
+
+  return [progress, titleBox];
 }
 
 /** Draws `Codex` and each window as small text, the windows and `below minimum` in the error color in the alarm tone. */
@@ -231,16 +268,10 @@ function codexCaption(
   });
 }
 
-/** Applies an event to the run, the one writer of the run, draws the band again and reads the usage when the step started a run. */
+/** Applies an event to the run, the one writer of the run, and draws the band again. */
 function dispatch($: EngineInterface, event: Event): void {
-  const next = step(run, event);
-
-  run = next.run;
+  run = step(run, event);
   $.ui.invalidate('ui.render');
-
-  if (next.startRead) {
-    void readUsage($);
-  }
 }
 
 /** Reads the usage outside any hook's time and applies the answer as one more event. */

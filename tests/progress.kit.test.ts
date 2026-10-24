@@ -27,8 +27,11 @@ const TODOS = [
 
 const USAGE = '{"primary":62,"secondary":81,"belowMinimum":false}\n';
 
+const LOW_USAGE = '{"primary":12,"secondary":81,"belowMinimum":true}\n';
+
 test('a TodoWrite of the main loop draws the count and the item in progress', async ($, on) => {
   answerEngine(on, USAGE);
+  await startSession($);
   await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
   await settled();
 
@@ -39,6 +42,7 @@ test('a TodoWrite of the main loop draws the count and the item in progress', as
 
 test('desktop and mobile draw the count with a bar of the done share, the title the surface truncates and the usage as a caption', async ($, on) => {
   answerEngine(on, USAGE);
+  await startSession($);
   await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
   await settled();
 
@@ -78,6 +82,7 @@ test('desktop and mobile draw the count with a bar of the done share, the title 
 
 test('desktop and mobile draw a finished list as a full bar in the success color and a dim done', async ($, on) => {
   answerEngine(on, USAGE);
+  await startSession($);
   await $.tool.call({
     tool: 'TaskCreate',
     subject: 'Write the parser',
@@ -126,8 +131,9 @@ test('a TodoWrite the tool reports as an error draws nothing', async ($, on) => 
   expect(await drawn($)).toBe('ENGINE');
 });
 
-test('a task takes its id from the result and done ends on the person prompt only', async ($, on) => {
+test('a task takes its id from the result and done ends on the person prompt only, leaving the usage alone', async ($, on) => {
   answerEngine(on, USAGE);
+  await startSession($);
   await $.tool.call({
     tool: 'TaskCreate',
     subject: 'Write the parser',
@@ -154,11 +160,12 @@ test('a task takes its id from the result and done ends on the person prompt onl
   });
 
   await settled();
-  expect(await drawn($)).toBe('ENGINE');
+  expect(await drawn($)).toBe(atEdge('', 'Codex 5h 62% · week 81%'));
 });
 
 test('a meta prompt keeps done on the band', async ($, on) => {
   answerEngine(on, USAGE);
+  await startSession($);
   await $.tool.call({
     tool: 'TaskCreate',
     subject: 'Write the parser',
@@ -179,9 +186,10 @@ test('a meta prompt keeps done on the band', async ($, on) => {
   expect(await drawn($)).toBe(atEdge('1/1 done', 'Codex 5h 62% · week 81%'));
 });
 
-test('a run start reads the usage through the script and a failed read hides it', async ($, on) => {
+test('the session start reads the usage through the script and a failed read hides it', async ($, on) => {
   const argvs = answerEngine(on, 'not json');
 
+  await startSession($);
   await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
   await settled();
 
@@ -205,7 +213,8 @@ test('a run start reads the usage through the script and a failed read hides it'
 });
 
 test('a window below the minimum draws the usage in the error color', async ($, on) => {
-  answerEngine(on, '{"primary":12,"secondary":81,"belowMinimum":true}\n');
+  answerEngine(on, LOW_USAGE);
+  await startSession($);
   await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
   await settled();
 
@@ -236,8 +245,9 @@ test('a window below the minimum draws the usage in the error color', async ($, 
 });
 
 test('a Codex call reads the usage again', async ($, on) => {
-  const argvs = answerEngine(on, USAGE);
+  const argvs = answerEngine(on, USAGE, LOW_USAGE);
 
+  await startSession($);
   await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
   await $.tool.call({
     tool: 'Agent',
@@ -248,10 +258,48 @@ test('a Codex call reads the usage again', async ($, on) => {
 
   await settled();
   expect(argvs.length).toBe(2);
+  expect(await drawn($)).toBe(
+    atEdge('1/3 · Write the parser', 'Codex 5h 12% · week 81% (below minimum)'),
+  );
 });
 
-test('a survey holds the band and /clear ends the run', async ($, on) => {
+test('every prompt but a meta one reads the usage again and draws its answer', async ($, on) => {
+  const argvs = answerEngine(on, USAGE, LOW_USAGE);
+
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+  expect(await drawn($)).toBe(
+    atEdge('1/3 · Write the parser', 'Codex 5h 62% · week 81%'),
+  );
+
+  // The kit's typed call leaves out isMeta, which the engine passes for an idle notice or a delivery receipt.
+  await $.prompt.submit({
+    text: 'idle',
+    wait: false,
+    origin: { kind: 'composer' },
+    isMeta: true,
+  } as never);
+
+  await settled();
+  expect(argvs.length).toBe(1);
+
+  await $.prompt.submit({
+    text: 'done?',
+    wait: false,
+    origin: { kind: 'task-notification' },
+  });
+
+  await settled();
+  expect(argvs.length).toBe(2);
+  expect(await drawn($)).toBe(
+    atEdge('1/3 · Write the parser', 'Codex 5h 12% · week 81% (below minimum)'),
+  );
+});
+
+test('a survey holds the band and /clear ends the run but keeps the usage', async ($, on) => {
   answerEngine(on, USAGE);
+  await startSession($);
   await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
   await settled();
 
@@ -271,11 +319,81 @@ test('a survey holds the band and /clear ends the run', async ($, on) => {
   });
 
   await settled();
-  expect(await drawn($)).toBe('ENGINE');
+  expect(await drawn($)).toBe(atEdge('', 'Codex 5h 62% · week 81%'));
 });
 
-/** Answers as the engine beneath the plugin, the tools, the usage script with the given stdout, and the band with ENGINE, and returns the argv of every run. */
-function answerEngine(on: On, stdout: string): string[][] {
+test('the session start with no list draws the usage alone at the right edge and a prompt reads it again', async ($, on) => {
+  answerEngine(on, USAGE, LOW_USAGE);
+  await startSession($);
+  await settled();
+  expect(await drawn($)).toBe(atEdge('', 'Codex 5h 62% · week 81%'));
+
+  await $.prompt.submit({
+    text: 'next',
+    wait: false,
+    origin: { kind: 'composer' },
+  });
+
+  await settled();
+  expect(await drawn($)).toBe(
+    atEdge('', 'Codex 5h 12% · week 81% (below minimum)'),
+  );
+});
+
+test('desktop and mobile draw the usage alone as a caption at the right end of the row', async ($, on) => {
+  answerEngine(on, USAGE);
+  await startSession($);
+  await settled();
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const tree = await drawnTree($, surface);
+
+    expect({
+      row: tree.props,
+      parts: elementsOf(tree).map(part => ({
+        props: part.props,
+        cells: elementsOf(part).map(cellOf),
+      })),
+    }).toEqual({
+      row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+      },
+      parts: [
+        {
+          props: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 'xs',
+            flexShrink: 0,
+          },
+          cells: [
+            { size: 'caption', dimColor: true, text: 'Codex' },
+            { size: 'caption', tabular: true, text: '5h 62%' },
+            { size: 'caption', dimColor: true, text: '·' },
+            { size: 'caption', tabular: true, text: 'week 81%' },
+          ],
+        },
+      ],
+    });
+  }
+});
+
+test('no list and a failed read draw nothing on any surface', async ($, on) => {
+  answerEngine(on, 'not json');
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe('ENGINE');
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    expect(cellOf(await drawnTree($, surface)).text).toBe('ENGINE');
+  }
+});
+
+/** Answers as the engine beneath the plugin, the tools, the usage script with the next of the given stdouts and the last one ever after, and the band with ENGINE, and returns the argv of every run. */
+function answerEngine(on: On, ...stdouts: [string, ...string[]]): string[][] {
   const argvs: string[][] = [];
 
   on('tool.call', { tool: 'TodoWrite' }, ($, e) => ({
@@ -301,6 +419,8 @@ function answerEngine(on: On, stdout: string): string[][] {
   }));
 
   on('process.run', ($, e) => {
+    const stdout = stdouts[Math.min(argvs.length, stdouts.length - 1)];
+
     argvs.push([...e.argv]);
 
     return {
@@ -314,6 +434,7 @@ function answerEngine(on: On, stdout: string): string[][] {
     };
   });
 
+  on('session.start', ($, e) => ({ cwd: e.cwd }));
   on('prompt.submit', ($, e) => ({ text: e.text }));
   on('session.end', ($, e) => ({ sessionId: e.sessionId }));
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
@@ -323,6 +444,11 @@ function answerEngine(on: On, stdout: string): string[][] {
   });
 
   return argvs;
+}
+
+/** Starts the session on the terminal, which reads the usage once. */
+async function startSession($: Engine): Promise<void> {
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true });
 }
 
 /** Writes the line the band draws at PROPS.bodyColumns, the progress on the left and the Codex text at the right edge. */
@@ -363,17 +489,7 @@ async function graphicalBand(
   $: Engine,
   surface: (typeof GRAPHICAL_SURFACES)[number],
 ) {
-  const ui = await $.ui.mount({
-    plugin: 'forge',
-    surface,
-    component: 'AbovePrompt',
-    props: PROPS,
-  });
-
-  const tree = (await ui.drawn()) as Drawn;
-
-  await ui.unmount();
-
+  const tree = await drawnTree($, surface);
   const [progress, title, caption] = elementsOf(tree);
   const [count, track] = elementsOf(progress);
   const [fill] = elementsOf(track);
@@ -388,6 +504,25 @@ async function graphicalBand(
     caption: caption?.props ?? null,
     codex: caption === undefined ? null : elementsOf(caption).map(cellOf),
   };
+}
+
+/** Mounts the band on the surface and returns the tree it draws. */
+async function drawnTree(
+  $: Engine,
+  surface: (typeof GRAPHICAL_SURFACES)[number],
+): Promise<Drawn> {
+  const ui = await $.ui.mount({
+    plugin: 'forge',
+    surface,
+    component: 'AbovePrompt',
+    props: PROPS,
+  });
+
+  const tree = (await ui.drawn()) as Drawn;
+
+  await ui.unmount();
+
+  return tree;
 }
 
 function elementsOf(element: Drawn | undefined): Drawn[] {

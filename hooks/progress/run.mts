@@ -46,12 +46,6 @@ export type Event =
   | { readonly kind: 'cleared' }
   | { readonly kind: 'codexRead'; readonly budget: Budget | null };
 
-/** The run after one event and whether the event started a run, which is due a Codex read. */
-export type Step = {
-  readonly run: Run;
-  readonly startRead: boolean;
-};
-
 /** How a part of the line reads, plain for the progress, quiet for the Codex usage, alarm below the Codex minimum. */
 export type Tone = 'plain' | 'quiet' | 'alarm';
 
@@ -61,16 +55,20 @@ export type CodexUsage = {
   readonly tone: Exclude<Tone, 'plain'>;
 };
 
-/** What the band shows for a run on every surface, before a surface lays it out. */
-export type Band = {
+/** What the band shows of the list. */
+export type Progress = {
   /** The completed items over all items, such as `5/8`. */
   readonly count: string;
   /** The completed share of the items as a whole percentage rounded down, such as `62%`, so it reads `100%` only once every item is done. */
   readonly filled: string;
   /** The title of the item in progress or else of the first pending one on one line, null once every item is done. */
   readonly title: string | null;
-  readonly codex: CodexUsage | null;
 };
+
+/** What the band shows for a run on every surface, before a surface lays it out, the progress, the Codex usage or both. */
+export type Band =
+  | { readonly progress: Progress; readonly codex: CodexUsage | null }
+  | { readonly progress: null; readonly codex: CodexUsage };
 
 export type Segment = {
   readonly text: string;
@@ -86,7 +84,7 @@ export const INITIAL_RUN: Run = { list: null, budget: null };
 const MIN_GAP = 4;
 
 /** Applies one event to the run, the only way the run changes. */
-export function step(run: Run, event: Event): Step {
+export function step(run: Run, event: Event): Run {
   switch (event.kind) {
     case 'todosWritten':
       return settle(run, listOf('TodoWrite', event.todos));
@@ -97,50 +95,41 @@ export function step(run: Run, event: Event): Step {
     case 'taskDeleted':
       return settle(run, withoutTask(run.list, event.id));
     case 'personPrompted':
-      return { run: dismissed(run), startRead: false };
+      return dismissed(run);
     case 'cleared':
-      return { run: { ...run, list: null }, startRead: false };
+      return { ...run, list: null };
     case 'codexRead':
-      return { run: { ...run, budget: event.budget }, startRead: false };
+      return { ...run, budget: event.budget };
     default:
       return unreachable(event);
   }
 }
 
-/** Reads what the band shows for the run, null when the band shows nothing. */
+/** Reads what the band shows for the run, null when it has neither a list nor a Codex usage. */
 export function bandOf(run: Run): Band | null {
-  if (run.list === null) {
-    return null;
+  const codex = codexUsage(run.budget);
+
+  if (run.list !== null) {
+    return { progress: progressOf(run.list), codex };
   }
 
-  const { items } = run.list;
-  const done = items.filter(item => item.status === 'completed').length;
-  const current =
-    items.find(item => item.status === 'in_progress') ??
-    items.find(item => item.status === 'pending');
-
-  return {
-    count: `${done}/${items.length}`,
-    filled: `${Math.floor((done / items.length) * 100)}%`,
-    title: current === undefined ? null : singleLine(current.title),
-    codex: codexUsage(run.budget),
-  };
+  return codex === null ? null : { progress: null, codex };
 }
 
 /** Lays out the band in characters at the given width, the terminal's one line. */
 export function bandLine(band: Band, columns: number): BandLine {
-  const codex = codexText(band.codex);
-
-  if (band.title === null) {
-    return fitted(`${band.count} done`, '', codex, columns);
+  if (band.progress === null) {
+    return [atRightEdge(codexText(band.codex), 0, columns)];
   }
 
-  return fitted(
-    band.title === '' ? band.count : `${band.count} · `,
-    band.title,
-    codex,
-    columns,
-  );
+  const { count, title } = band.progress;
+  const codex = band.codex === null ? null : codexText(band.codex);
+
+  if (title === null) {
+    return fitted(`${count} done`, '', codex, columns);
+  }
+
+  return fitted(title === '' ? count : `${count} · `, title, codex, columns);
 }
 
 /** Reads the one JSON line of `codex-model.mts --usage`, null when it is no usage report. */
@@ -182,23 +171,14 @@ function isPercentOrNull(value: unknown): value is number | null {
   );
 }
 
-/** Moves the run to its next list and starts a read when a run begins. */
-function settle(run: Run, next: List | null): Step {
-  if (next === null) {
-    return { run: { ...run, list: null }, startRead: false };
-  }
-
+/** Moves the run to its next list. */
+function settle(run: Run, next: List | null): Run {
   // A finished list replaces a shown one and is dropped between runs, so a list rewritten after the person's prompt stays hidden.
-  if (!hasOpen(next)) {
-    return {
-      run: { ...run, list: run.list === null ? null : next },
-      startRead: false,
-    };
+  if (next !== null && !hasOpen(next)) {
+    return { ...run, list: run.list === null ? null : next };
   }
 
-  const wasOpen = run.list !== null && hasOpen(run.list);
-
-  return { run: { ...run, list: next }, startRead: !wasOpen };
+  return { ...run, list: next };
 }
 
 /** Wraps items into a list, null for none. */
@@ -257,6 +237,19 @@ function unreachable(event: never): never {
   throw new Error(`Unknown event ${JSON.stringify(event)}`);
 }
 
+function progressOf({ items }: List): Progress {
+  const done = items.filter(item => item.status === 'completed').length;
+  const current =
+    items.find(item => item.status === 'in_progress') ??
+    items.find(item => item.status === 'pending');
+
+  return {
+    count: `${done}/${items.length}`,
+    filled: `${Math.floor((done / items.length) * 100)}%`,
+    title: current === undefined ? null : singleLine(current.title),
+  };
+}
+
 function hasOpen(list: List): boolean {
   return list.items.some(item => item.status !== 'completed');
 }
@@ -289,14 +282,8 @@ function codexUsage(budget: Budget | null): CodexUsage | null {
   };
 }
 
-type CodexText = { text: string; tone: Tone } | null;
-
 /** Writes the usage as one text, with `(below minimum)` after it in the alarm tone. */
-function codexText(usage: CodexUsage | null): CodexText {
-  if (usage === null) {
-    return null;
-  }
-
+function codexText(usage: CodexUsage): Segment {
   const text = `Codex ${usage.windows.join(' · ')}`;
 
   return usage.tone === 'alarm'
@@ -313,7 +300,7 @@ function width(text: string): number {
 function fitted(
   head: string,
   title: string,
-  codex: CodexText,
+  codex: Segment | null,
   columns: number,
 ): BandLine {
   const roomBesideCodex =
@@ -332,10 +319,12 @@ function fitted(
     return [progress];
   }
 
-  const pad = columns - width(progress.text) - width(codex.text);
+  return [progress, atRightEdge(codex, width(progress.text), columns)];
+}
 
-  return [
-    progress,
-    { text: `${' '.repeat(pad)}${codex.text}`, tone: codex.tone },
-  ];
+/** Pads the Codex text after the columns already taken so it ends at the right edge, with no pad where it does not fit. */
+function atRightEdge(codex: Segment, taken: number, columns: number): Segment {
+  const pad = Math.max(0, columns - taken - width(codex.text));
+
+  return { text: `${' '.repeat(pad)}${codex.text}`, tone: codex.tone };
 }
