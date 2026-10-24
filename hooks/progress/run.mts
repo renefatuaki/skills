@@ -309,7 +309,7 @@ function fitted(
   const keepsCodex = codex !== null && roomBesideCodex > 0;
   const room = keepsCodex ? roomBesideCodex : columns - width(head);
   const cut =
-    width(title) <= room
+    width(title) <= Math.max(0, room)
       ? title
       : `${[...title].slice(0, Math.max(0, room - 1)).join('')}…`;
 

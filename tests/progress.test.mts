@@ -166,6 +166,12 @@ const CASES: {
     expected: 'plain:1/4 · Write the…',
   },
   {
+    name: 'done wider than the band is left for the terminal to cut',
+    events: [OPEN, DONE],
+    columns: 5,
+    expected: 'plain:2/2 done',
+  },
+  {
     name: 'the usage is cut first when the title would vanish',
     events: [OPEN, answer(USAGE)],
     columns: 30,
