@@ -41,11 +41,13 @@ type Candidate = {
   readonly subtree: number;
 };
 
-/** Asks GraphQL for the open pull requests of a repository, the oldest first. */
-export const PULL_REQUESTS_QUERY = `query($owner: String!, $name: String!) {
+/** Asks GraphQL for the open pull requests of a repository, the oldest first, each with the fields the review order needs and the extra fields. */
+export function pullRequestsQuery(extraFields = ''): string {
+  return `query($owner: String!, $name: String!) {
   repository(owner: $owner, name: $name) {
     pullRequests(states: OPEN, first: 100, orderBy: {field: CREATED_AT, direction: ASC}) {
       nodes {
+        ${extraFields}
         number
         title
         url
@@ -68,8 +70,9 @@ export const PULL_REQUESTS_QUERY = `query($owner: String!, $name: String!) {
     }
   }
 }`;
+}
 
-/** Reads the answer of `PULL_REQUESTS_QUERY`, null when it is not that answer. */
+/** Reads the answer of `pullRequestsQuery`, null when it is not that answer. */
 export function parsePullRequests(stdout: string): OpenPullRequest[] | null {
   let value: unknown;
 
@@ -297,20 +300,20 @@ function parseIssues(
   return { closes: [...closes], blockedBy: [...blockedBy] };
 }
 
-function recordOf(value: unknown): Record<string, unknown> | null {
+export function recordOf(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
 }
 
 /** Reads the `nodes` of a GraphQL connection. */
-function nodesOf(connection: unknown): unknown[] | null {
+export function nodesOf(connection: unknown): unknown[] | null {
   const nodes = recordOf(connection)?.nodes;
 
   return Array.isArray(nodes) ? nodes : null;
 }
 
-function isNumber(value: unknown): value is number {
+export function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value);
 }
 
