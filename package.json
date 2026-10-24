@@ -1,6 +1,6 @@
 {
   "name": "forge",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "private": true,
   "description": "Claude Code skills for clean code, engineering workflows and project management.",
   "license": "MIT",
