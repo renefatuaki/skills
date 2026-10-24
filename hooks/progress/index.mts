@@ -1,4 +1,4 @@
-// Turns the main session's todo calls, Codex calls and prompts into events of the run, and draws the run above the prompt.
+// Turns the main session's todo calls, Codex calls, prompts and usage measurements into events of the run, reads the Codex usage when the session starts, on each prompt and after each Codex call, reads the Claude usage when the session starts, and draws the run above the prompt.
 // https://code.claude.com/docs/en/plugins/mods/events.md
 
 import type {
@@ -8,12 +8,21 @@ import type {
   PromptOrigin,
   Register,
   RenderElement,
+  SessionRateLimit,
   TextProps,
   ToolCallResult,
 } from 'claude-code';
 
 import { bandLine, bandOf, INITIAL_RUN, parseUsage, step } from './run.mts';
-import type { Band, Budget, CodexUsage, Event, Run, Tone } from './run.mts';
+import type {
+  Band,
+  Budget,
+  CodexUsage,
+  Event,
+  Progress,
+  Run,
+  Tone,
+} from './run.mts';
 
 /** The run of the session, written only by `dispatch`. */
 let run: Run = INITIAL_RUN;
@@ -35,7 +44,7 @@ const TONES: Record<Tone, TextProps> = {
   alarm: { color: 'error' },
 };
 
-/** Colors the windows of the Codex caption, which stay in the text color unless below the minimum. */
+/** Colors the windows of a usage caption, which stay in the text color unless below the Codex minimum. */
 const WINDOW_TONES: Record<CodexUsage['tone'], TextProps> = {
   quiet: {},
   alarm: { color: 'error' },
@@ -99,12 +108,31 @@ export const register: Register = on => {
   ).catch(($, e, next) => next(e));
 
   on('prompt.submit', ($, e, next) => {
-    if (e.isMeta !== true && PERSON_ORIGINS.has(e.origin.kind)) {
+    if (e.isMeta === true) {
+      return next(e);
+    }
+
+    if (PERSON_ORIGINS.has(e.origin.kind)) {
       dispatch($, { kind: 'personPrompted' });
     }
 
+    void readUsage($);
+
     return next(e);
   }).catch(($, e, next) => next(e));
+
+  on('session.start', ($, e, next) => {
+    void readUsage($);
+    void readSessionUsage($);
+
+    return next(e);
+  });
+
+  on('session.measure', ($, e, next) => {
+    dispatch($, { kind: 'claudeMeasured', left: sessionLeft(e.rateLimits) });
+
+    return next(e);
+  });
 
   on('session.end', ($, e, next) => {
     if (e.reason === 'clear') {
@@ -128,7 +156,7 @@ export const register: Register = on => {
   });
 };
 
-/** Draws the band as one line of characters cut to the columns, the Codex usage padded to the right edge. */
+/** Draws the band as one line of characters cut to the columns, the Claude usage at the left edge and the Codex usage padded to the right edge. */
 function terminalBand(
   { Text }: Pick<ElementTable, 'Text'>,
   band: Band,
@@ -141,27 +169,68 @@ function terminalBand(
   return Text({ wrap: 'truncate-end', children });
 }
 
-/** Draws the band as a row of the count with a bar of the done share, the title the surface truncates by its own width, and the Codex usage as a caption at the right. */
+/** Draws the band as a row of the Claude usage as a caption at the left end, the progress and the Codex usage as a caption at the right end. */
 function graphicalBand(
   { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
   band: Band,
 ): RenderElement {
+  const claude =
+    band.claude === null
+      ? []
+      : [
+          usageCaption({ Box, Text }, 'Claude', {
+            windows: [band.claude.window],
+            tone: 'quiet',
+          }),
+        ];
+
+  const codex =
+    band.codex === null
+      ? []
+      : [usageCaption({ Box, Text }, 'Codex', band.codex)];
+
+  if (band.progress === null) {
+    return Box({
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: band.claude === null ? 'flex-end' : 'space-between',
+      children: [...claude, ...codex],
+    });
+  }
+
+  return Box({
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 'sm',
+    children: [
+      ...claude,
+      ...progressParts({ Box, Text }, band.progress),
+      ...codex,
+    ],
+  });
+}
+
+/** Draws the count with a bar of the done share and the title the surface truncates by its own width. */
+function progressParts(
+  { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
+  { count, filled, title }: Progress,
+): RenderElement[] {
   const progress = Box({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 'xs',
     flexShrink: 0,
     children: [
-      Text({ tabular: true, weight: 'medium', children: [band.count] }),
+      Text({ tabular: true, weight: 'medium', children: [count] }),
       Box({
         width: BAR_CELLS,
         height: 1,
         backgroundColor: 'subtle',
         children: [
           Box({
-            width: band.filled,
+            width: filled,
             height: 1,
-            backgroundColor: band.title === null ? 'success' : 'claude',
+            backgroundColor: title === null ? 'success' : 'claude',
           }),
         ],
       }),
@@ -170,30 +239,23 @@ function graphicalBand(
 
   // A flex item does not shrink below its content without a minimum width, so the title would push the Codex usage out instead of truncating.
   // https://developer.mozilla.org/en-US/docs/Web/CSS/min-width#auto
-  const title = Box({
+  const titleBox = Box({
     flexGrow: 1,
     minWidth: 0,
     children: [
-      band.title === null
+      title === null
         ? Text({ dimColor: true, children: ['done'] })
-        : Text({ wrap: 'truncate-end', children: [band.title] }),
+        : Text({ wrap: 'truncate-end', children: [title] }),
     ],
   });
 
-  const codex =
-    band.codex === null ? [] : [codexCaption({ Box, Text }, band.codex)];
-
-  return Box({
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 'sm',
-    children: [progress, title, ...codex],
-  });
+  return [progress, titleBox];
 }
 
-/** Draws `Codex` and each window as small text, the windows and `below minimum` in the error color in the alarm tone. */
-function codexCaption(
+/** Draws the label such as `Codex` and each window as small text, the windows and `below minimum` in the error color in the alarm tone. */
+function usageCaption(
   { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
+  label: string,
   { windows, tone }: CodexUsage,
 ): RenderElement {
   const separator = Text({ size: 'caption', dimColor: true, children: ['·'] });
@@ -224,28 +286,43 @@ function codexCaption(
     gap: 'xs',
     flexShrink: 0,
     children: [
-      Text({ size: 'caption', dimColor: true, children: ['Codex'] }),
+      Text({ size: 'caption', dimColor: true, children: [label] }),
       ...parts,
       ...alarm,
     ],
   });
 }
 
-/** Applies an event to the run, the one writer of the run, draws the band again and reads the usage when the step started a run. */
+/** Applies an event to the run, the one writer of the run, and draws the band again. */
 function dispatch($: EngineInterface, event: Event): void {
-  const next = step(run, event);
-
-  run = next.run;
+  run = step(run, event);
   $.ui.invalidate('ui.render');
-
-  if (next.startRead) {
-    void readUsage($);
-  }
 }
 
 /** Reads the usage outside any hook's time and applies the answer as one more event. */
 async function readUsage($: EngineInterface): Promise<void> {
   dispatch($, { kind: 'codexRead', budget: await runUsageScript($) });
+}
+
+/** Reads the Claude usage outside the session start hook's time and applies it as one more event, with no reading when the read is refused. */
+async function readSessionUsage($: EngineInterface): Promise<void> {
+  const rateLimits = await $.session.usage().then(
+    usage => usage.rateLimits,
+    () => [],
+  );
+
+  dispatch($, { kind: 'claudeMeasured', left: sessionLeft(rateLimits) });
+}
+
+/** Parses the rate-limit windows into the whole percent left of the current session's 5-hour window, rounded down and held to 0 to 100, null with no reading of it. */
+function sessionLeft(rateLimits: readonly SessionRateLimit[]): number | null {
+  const session = rateLimits.find(limit => limit.kind === 'five_hour');
+
+  if (session === undefined) {
+    return null;
+  }
+
+  return Math.min(100, Math.max(0, Math.floor(100 - session.percentUsed)));
 }
 
 /** Asks `codex-model.mts --usage` for the usage left, null when Node, the Codex CLI or the sign-in is missing or the read fails. */
