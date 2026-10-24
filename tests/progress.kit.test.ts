@@ -1,7 +1,7 @@
 // Drives the hooks module of this plugin through the engine's own events and reads the line it draws above the prompt.
 // https://code.claude.com/docs/en/plugins/mods/reference.md
 
-import type { On } from 'claude-code';
+import type { On, SessionRateLimit } from 'claude-code';
 import { expect, test } from 'claude-code/testing';
 import type { Engine } from 'claude-code/testing';
 
@@ -28,6 +28,14 @@ const TODOS = [
 const USAGE = '{"primary":62,"secondary":81,"belowMinimum":false}\n';
 
 const LOW_USAGE = '{"primary":12,"secondary":81,"belowMinimum":true}\n';
+
+const CODEX = 'Codex 5h 62% · week 81%';
+
+/** A reading of the current session with 77.5% left, which the band rounds down to 77%. */
+const SESSION = [
+  { kind: 'five_hour', percentUsed: 22.5, resetsAt: '2026-10-24T18:00:00Z' },
+  { kind: 'seven_day', percentUsed: 40 },
+];
 
 test('a TodoWrite of the main loop draws the count and the item in progress', async ($, on) => {
   answerEngine(on, USAGE);
@@ -392,6 +400,142 @@ test('no list and a failed read draw nothing on any surface', async ($, on) => {
   }
 });
 
+test('the session start with a reading and no list draws the Claude usage alone at the left edge', async ($, on) => {
+  answerSession(on, SESSION);
+  answerEngine(on, 'not json');
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe('Claude 5h 77%');
+});
+
+test('the Claude usage comes first, then the progress and the Codex usage at the right edge', async ($, on) => {
+  answerSession(on, SESSION);
+  answerEngine(on, USAGE);
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  expect(await drawn($)).toBe(
+    atEdge('Claude 5h 77% · 1/3 · Write the parser', CODEX),
+  );
+
+  const ui = await $.ui.mount({
+    plugin: 'forge',
+    surface: 'terminal',
+    component: 'AbovePrompt',
+    props: PROPS,
+  });
+
+  const claude = await ui.find({ type: 'Text', text: /^Claude 5h 77% · $/ });
+
+  expect(claude?.props.dimColor).toBe(true);
+});
+
+test('a measurement draws its new reading, 0% past the window, and hides the usage without a 5-hour window', async ($, on) => {
+  answerSession(on, SESSION);
+  answerEngine(on, 'not json');
+  await startSession($);
+  await settled();
+  expect(await drawn($)).toBe('Claude 5h 77%');
+
+  await measure($, [{ kind: 'five_hour', percentUsed: 60 }]);
+  expect(await drawn($)).toBe('Claude 5h 40%');
+
+  await measure($, [{ kind: 'five_hour', percentUsed: 104.5 }]);
+  expect(await drawn($)).toBe('Claude 5h 0%');
+
+  await measure($, [{ kind: 'seven_day', percentUsed: 40 }]);
+  expect(await drawn($)).toBe('ENGINE');
+});
+
+test('the session start with no reading draws no Claude usage', async ($, on) => {
+  answerSession(on, []);
+  answerEngine(on, USAGE);
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('1/3 · Write the parser', CODEX));
+});
+
+test('desktop and mobile draw the Claude caption first in the row', async ($, on) => {
+  answerSession(on, SESSION);
+  answerEngine(on, USAGE);
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const tree = await drawnTree($, surface);
+    const [claude, ...rest] = elementsOf(tree);
+
+    expect({
+      row: tree.props,
+      claude: claude?.props,
+      cells: elementsOf(claude).map(cellOf),
+      rest: rest.map(part => cellOf(part).text),
+    }).toEqual({
+      row: { flexDirection: 'row', alignItems: 'center', gap: 'sm' },
+      claude: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 'xs',
+        flexShrink: 0,
+      },
+      cells: [
+        { size: 'caption', dimColor: true, text: 'Claude' },
+        { size: 'caption', tabular: true, text: '5h 77%' },
+      ],
+      rest: ['1/3', 'Write the parser', 'Codex5h 62%·week 81%'],
+    });
+  }
+});
+
+test('desktop and mobile with no list draw the Claude caption at the left end and the Codex caption at the right end', async ($, on) => {
+  answerSession(on, SESSION);
+  answerEngine(on, USAGE);
+  await startSession($);
+  await settled();
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const tree = await drawnTree($, surface);
+
+    expect({
+      row: tree.props,
+      parts: elementsOf(tree).map(part => cellOf(part).text),
+    }).toEqual({
+      row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      },
+      parts: ['Claude5h 77%', 'Codex5h 62%·week 81%'],
+    });
+  }
+});
+
+/** Answers the plugin's read of the session's usage with the given rate-limit windows. */
+function answerSession(on: On, rateLimits: SessionRateLimit[]): void {
+  on('session.usage', () => ({
+    value: { startedAt: 0, context: { window: 200_000 }, rateLimits },
+  }));
+}
+
+/** Raises the measurement the engine pushes after a turn with the given rate-limit windows and lets the redraw land. */
+async function measure(
+  $: Engine,
+  rateLimits: SessionRateLimit[],
+): Promise<void> {
+  await $.session.measure({
+    context: { window: 200_000 },
+    rateLimits,
+    changed: ['rateLimits'],
+  });
+
+  await settled();
+}
+
 /** Answers as the engine beneath the plugin, the tools, the usage script with the next of the given stdouts and the last one ever after, and the band with ENGINE, and returns the argv of every run. */
 function answerEngine(on: On, ...stdouts: [string, ...string[]]): string[][] {
   const argvs: string[][] = [];
@@ -437,6 +581,7 @@ function answerEngine(on: On, ...stdouts: [string, ...string[]]): string[][] {
   on('session.start', ($, e) => ({ cwd: e.cwd }));
   on('prompt.submit', ($, e) => ({ text: e.text }));
   on('session.end', ($, e) => ({ sessionId: e.sessionId }));
+  on('session.measure', ($, e) => ({ changed: e.changed }));
   on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
     const { Text } = $.ui.resolve(e);
 
@@ -451,11 +596,11 @@ async function startSession($: Engine): Promise<void> {
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true });
 }
 
-/** Writes the line the band draws at PROPS.bodyColumns, the progress on the left and the Codex text at the right edge. */
-function atEdge(progress: string, codex: string): string {
-  const pad = PROPS.bodyColumns - [...progress].length - [...codex].length;
+/** Writes the line the band draws at PROPS.bodyColumns, the given text on the left and the Codex text at the right edge. */
+function atEdge(left: string, codex: string): string {
+  const pad = PROPS.bodyColumns - [...left].length - [...codex].length;
 
-  return `${progress}${' '.repeat(pad)}${codex}`;
+  return `${left}${' '.repeat(pad)}${codex}`;
 }
 
 /** Mounts the band on the terminal and returns the text it draws, ENGINE when the plugin passed. */

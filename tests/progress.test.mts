@@ -52,11 +52,15 @@ const DONE: Event = {
 
 const PERSON: Event = { kind: 'personPrompted' };
 
+const CLAUDE: Event = { kind: 'claudeMeasured', left: 77 };
+
+const CODEX = 'Codex 5h 62% · week 81%';
+
 const CASES: {
   name: string;
   events: Event[];
   columns?: number;
-  /** The band's line with each part's tone, such as `plain:2/4 · Parse | quiet:<spaces to the right edge>Codex 5h 62%`, null when the band shows nothing. */
+  /** The band's line with each part's tone, such as `quiet:Claude 5h 77% ·  | plain:2/4 · Parse | quiet:<spaces to the right edge>Codex 5h 62%`, null when the band shows nothing. */
   expected: string | null;
 }[] = [
   {
@@ -203,14 +207,64 @@ const CASES: {
     columns: 10,
     expected: 'quiet:Codex 5h 62% · week 81%',
   },
+  {
+    name: 'the Claude usage alone stands at the left edge',
+    events: [CLAUDE],
+    expected: 'quiet:Claude 5h 77%',
+  },
+  {
+    name: 'the Claude usage comes first, then the progress and the Codex usage at the right edge',
+    events: [CLAUDE, OPEN, answer(USAGE)],
+    expected: `quiet:Claude 5h 77% ·  | plain:1/4 · Write the parser | quiet:${atEdge('Claude 5h 77% · 1/4 · Write the parser', CODEX)}`,
+  },
+  {
+    name: 'the Claude usage stands beside done',
+    events: [CLAUDE, OPEN, DONE],
+    expected: 'quiet:Claude 5h 77% ·  | plain:2/2 done',
+  },
+  {
+    name: 'with no list the Claude usage stands at the left edge and the Codex usage at the right edge',
+    events: [CLAUDE, answer(USAGE)],
+    expected: `quiet:Claude 5h 77% | quiet:${atEdge('Claude 5h 77%', CODEX)}`,
+  },
+  {
+    name: 'a measurement with no reading hides the Claude usage',
+    events: [CLAUDE, OPEN, { kind: 'claudeMeasured', left: null }],
+    expected: 'plain:1/4 · Write the parser',
+  },
+  {
+    name: 'a narrow band cuts the title and the Codex usage before the Claude usage',
+    events: [CLAUDE, OPEN, answer(USAGE)],
+    columns: 30,
+    expected: 'quiet:Claude 5h 77% ·  | plain:1/4 · Write t…',
+  },
+  {
+    name: 'the Claude usage is cut once it and the count no longer fit',
+    events: [CLAUDE, OPEN, answer(USAGE)],
+    columns: 20,
+    expected: 'plain:1/4 · Write the par…',
+  },
+  {
+    name: 'the Claude usage keeps the left edge when the Codex usage does not fit beside it',
+    events: [CLAUDE, answer(USAGE)],
+    columns: 30,
+    expected: 'quiet:Claude 5h 77%',
+  },
+  {
+    name: 'the Claude usage alone wider than the band is left for the terminal to cut',
+    events: [CLAUDE],
+    columns: 5,
+    expected: 'quiet:Claude 5h 77%',
+  },
 ];
 
 /** What the band shows after the events, the same on every surface. */
 const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
   {
-    name: 'the band reads the count, the done share, the item in progress and each window of the usage',
-    events: [OPEN, answer(USAGE)],
+    name: 'the band reads the Claude window, the count, the done share, the item in progress and each window of the usage',
+    events: [CLAUDE, OPEN, answer(USAGE)],
     expected: {
+      claude: { window: '5h 77%' },
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
       codex: { windows: ['5h 62%', 'week 81%'], tone: 'quiet' },
     },
@@ -228,6 +282,7 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
       },
     ],
     expected: {
+      claude: null,
       progress: { count: '2/3', filled: '66%', title: 'Test the parser' },
       codex: null,
     },
@@ -236,6 +291,7 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     name: 'a finished list has no title and a full share',
     events: [OPEN, DONE],
     expected: {
+      claude: null,
       progress: { count: '2/2', filled: '100%', title: null },
       codex: null,
     },
@@ -247,6 +303,7 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
       answer('{"primary":null,"secondary":9,"belowMinimum":true}'),
     ],
     expected: {
+      claude: null,
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
       codex: { windows: ['week 9%'], tone: 'alarm' },
     },
@@ -258,6 +315,7 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
       answer('{"primary":null,"secondary":null,"belowMinimum":false}'),
     ],
     expected: {
+      claude: null,
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
       codex: null,
     },
@@ -266,13 +324,24 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     name: 'no list shows the usage alone',
     events: [answer(USAGE), OPEN, { kind: 'cleared' }],
     expected: {
+      claude: null,
       progress: null,
       codex: { windows: ['5h 62%', 'week 81%'], tone: 'quiet' },
     },
   },
   {
+    name: 'the Claude usage alone is a band',
+    events: [answer('not json'), CLAUDE],
+    expected: { claude: { window: '5h 77%' }, progress: null, codex: null },
+  },
+  {
     name: 'no list and no usage show no band',
-    events: [OPEN, { kind: 'cleared' }],
+    events: [
+      CLAUDE,
+      OPEN,
+      { kind: 'cleared' },
+      { kind: 'claudeMeasured', left: null },
+    ],
     expected: null,
   },
 ];
@@ -315,9 +384,9 @@ function fold(events: Event[], columns: number): string | null {
         .join(' | ');
 }
 
-/** Pads the Codex text so it ends at the right edge of a band COLUMNS wide, after the given progress. */
-function atEdge(progress: string, codex: string): string {
-  return `${' '.repeat(COLUMNS - [...progress].length - [...codex].length)}${codex}`;
+/** Pads the Codex text so it ends at the right edge of a band COLUMNS wide, after the given text on its left. */
+function atEdge(left: string, codex: string): string {
+  return `${' '.repeat(COLUMNS - [...left].length - [...codex].length)}${codex}`;
 }
 
 /** Folds the events through step from the initial run and returns the run alone. */

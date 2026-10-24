@@ -27,6 +27,8 @@ export type Run = {
   } | null;
   /** Holds the last read's answer, null before it and when Codex cannot be read. */
   readonly budget: Budget | null;
+  /** Holds the whole percent left of Claude Code's current session, its 5-hour window, null before a reading and off a subscription. */
+  readonly claude: number | null;
 };
 
 type List = NonNullable<Run['list']>;
@@ -44,15 +46,21 @@ export type Event =
   | { readonly kind: 'taskDeleted'; readonly id: string }
   | { readonly kind: 'personPrompted' }
   | { readonly kind: 'cleared' }
-  | { readonly kind: 'codexRead'; readonly budget: Budget | null };
+  | { readonly kind: 'codexRead'; readonly budget: Budget | null }
+  | { readonly kind: 'claudeMeasured'; readonly left: number | null };
 
-/** How a part of the line reads, plain for the progress, quiet for the Codex usage, alarm below the Codex minimum. */
+/** How a part of the line reads, plain for the progress, quiet for the Claude and the Codex usage, alarm below the Codex minimum. */
 export type Tone = 'plain' | 'quiet' | 'alarm';
 
 /** The Codex usage left as each window that reported it, such as `5h 62%`, alarm when either window is below the minimum. */
 export type CodexUsage = {
   readonly windows: readonly [string, ...string[]];
   readonly tone: Exclude<Tone, 'plain'>;
+};
+
+/** The Claude usage left of the current session as its window, such as `5h 77%`. */
+export type ClaudeUsage = {
+  readonly window: string;
 };
 
 /** What the band shows of the list. */
@@ -65,10 +73,23 @@ export type Progress = {
   readonly title: string | null;
 };
 
-/** What the band shows for a run on every surface, before a surface lays it out, the progress, the Codex usage or both. */
+/** What the band shows for a run on every surface, before a surface lays it out, any of the Claude usage, the progress and the Codex usage but never none. */
 export type Band =
-  | { readonly progress: Progress; readonly codex: CodexUsage | null }
-  | { readonly progress: null; readonly codex: CodexUsage };
+  | {
+      readonly claude: ClaudeUsage;
+      readonly progress: Progress | null;
+      readonly codex: CodexUsage | null;
+    }
+  | {
+      readonly claude: null;
+      readonly progress: Progress;
+      readonly codex: CodexUsage | null;
+    }
+  | {
+      readonly claude: null;
+      readonly progress: null;
+      readonly codex: CodexUsage;
+    };
 
 export type Segment = {
   readonly text: string;
@@ -78,7 +99,7 @@ export type Segment = {
 /** The band's one line as its parts in order, already cut to the band's width. */
 export type BandLine = readonly [Segment, ...Segment[]];
 
-export const INITIAL_RUN: Run = { list: null, budget: null };
+export const INITIAL_RUN: Run = { list: null, budget: null, claude: null };
 
 /** The fewest columns between the progress and the Codex text at the right edge. */
 const MIN_GAP = 4;
@@ -100,36 +121,49 @@ export function step(run: Run, event: Event): Run {
       return { ...run, list: null };
     case 'codexRead':
       return { ...run, budget: event.budget };
+    case 'claudeMeasured':
+      return { ...run, claude: event.left };
     default:
       return unreachable(event);
   }
 }
 
-/** Reads what the band shows for the run, null when it has neither a list nor a Codex usage. */
+/** Reads what the band shows for the run, null when it has no Claude usage, no list and no Codex usage. */
 export function bandOf(run: Run): Band | null {
+  const claude = run.claude === null ? null : { window: `5h ${run.claude}%` };
+  const progress = run.list === null ? null : progressOf(run.list);
   const codex = codexUsage(run.budget);
 
-  if (run.list !== null) {
-    return { progress: progressOf(run.list), codex };
+  if (claude !== null) {
+    return { claude, progress, codex };
   }
 
-  return codex === null ? null : { progress: null, codex };
+  if (progress !== null) {
+    return { claude: null, progress, codex };
+  }
+
+  return codex === null ? null : { claude: null, progress: null, codex };
 }
 
-/** Lays out the band in characters at the given width, the terminal's one line. */
+/** Lays out the band in characters at the given width, the terminal's one line, the Codex usage at the right edge and the Claude usage at the left edge, which gives way only once it and the head of the progress no longer fit the columns together. */
 export function bandLine(band: Band, columns: number): BandLine {
-  if (band.progress === null) {
-    return [atRightEdge(codexText(band.codex), 0, columns)];
-  }
-
-  const { count, title } = band.progress;
   const codex = band.codex === null ? null : codexText(band.codex);
 
-  if (title === null) {
-    return fitted(`${count} done`, '', codex, columns);
+  if (band.progress === null) {
+    return band.claude === null
+      ? [atRightEdge(codexText(band.codex), 0, columns)]
+      : fitted(claudeText(band.claude, ''), '', codex, columns);
   }
 
-  return fitted(title === '' ? count : `${count} · `, title, codex, columns);
+  const head = plain(headOf(band.progress));
+  const title = band.progress.title ?? '';
+  const claude = band.claude === null ? null : claudeText(band.claude, ' · ');
+
+  if (claude === null || width(claude.text) + width(head.text) > columns) {
+    return fitted(head, title, codex, columns);
+  }
+
+  return [claude, ...fitted(head, title, codex, columns - width(claude.text))];
 }
 
 /** Reads the one JSON line of `codex-model.mts --usage`, null when it is no usage report. */
@@ -291,6 +325,24 @@ function codexText(usage: CodexUsage): Segment {
     : { text, tone: 'quiet' };
 }
 
+/** Writes the Claude usage as one text with the separator from the progress after it. */
+function claudeText(usage: ClaudeUsage, separator: string): Segment {
+  return { text: `Claude ${usage.window}${separator}`, tone: 'quiet' };
+}
+
+/** Writes the part of the progress that is never cut, the count with `done` or with the dot before the title. */
+function headOf({ count, title }: Progress): string {
+  if (title === null) {
+    return `${count} done`;
+  }
+
+  return title === '' ? count : `${count} · `;
+}
+
+function plain(text: string): Segment {
+  return { text, tone: 'plain' };
+}
+
 /** Counts a character as one column, with the outer Text cutting at the cell edge for a wide glyph. */
 function width(text: string): number {
   return [...text].length;
@@ -298,22 +350,24 @@ function width(text: string): number {
 
 /** Cuts the title so head, title, gap and Codex text fit the columns, and pushes the Codex text to the right edge, leaving it out when the title would vanish. */
 function fitted(
-  head: string,
+  head: Segment,
   title: string,
   codex: Segment | null,
   columns: number,
 ): BandLine {
   const roomBesideCodex =
-    codex === null ? 0 : columns - width(head) - MIN_GAP - width(codex.text);
+    codex === null
+      ? 0
+      : columns - width(head.text) - MIN_GAP - width(codex.text);
 
   const keepsCodex = codex !== null && roomBesideCodex > 0;
-  const room = keepsCodex ? roomBesideCodex : columns - width(head);
+  const room = keepsCodex ? roomBesideCodex : columns - width(head.text);
   const cut =
     width(title) <= Math.max(0, room)
       ? title
       : `${[...title].slice(0, Math.max(0, room - 1)).join('')}…`;
 
-  const progress: Segment = { text: `${head}${cut}`, tone: 'plain' };
+  const progress: Segment = { text: `${head.text}${cut}`, tone: head.tone };
 
   if (!keepsCodex) {
     return [progress];
