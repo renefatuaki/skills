@@ -4,11 +4,7 @@
 
 import { execFileSync } from 'node:child_process';
 
-import {
-  PULL_REQUESTS_QUERY,
-  parsePullRequests,
-  queueTable,
-} from './order.mts';
+import { pullRequestsQuery, parsePullRequests, queueTable } from './order.mts';
 
 // gh fills {owner} and {repo} from the repository of the current directory.
 // https://cli.github.com/manual/gh_api
@@ -17,7 +13,7 @@ const pullRequests = parsePullRequests(
     'api',
     'graphql',
     '-f',
-    `query=${PULL_REQUESTS_QUERY}`,
+    `query=${pullRequestsQuery()}`,
     '-F',
     'owner={owner}',
     '-F',

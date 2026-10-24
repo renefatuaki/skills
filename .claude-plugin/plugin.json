@@ -29,6 +29,7 @@
     "./skills/git/tidy-history",
     "./skills/github/issue",
     "./skills/github/loop-on-ci",
+    "./skills/github/next-steps",
     "./skills/github/project",
     "./skills/github/pull-request",
     "./skills/github/pull-request-review",
