@@ -3,6 +3,7 @@ name: project
 description: project, the rules for every GitHub Project. Use whenever the user wants to create a project, bring one in line with the field set, or when another skill needs a project with Priority and Size. Use it before every `gh project create` you run, even when the user did not name the project skill.
 allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/sync-project.mts *)
 disable-model-invocation: true
+argument-hint: "[project-number | title]"
 ---
 
 Rules for every GitHub Project you create. A project carries the Status, Priority and Size fields of [assets/project.json](assets/project.json), so the `issue` skill can set priority and size on every issue, and it is linked to the repository. A project lives under the account or the organization, never in the repository, so every write below runs after confirmation.

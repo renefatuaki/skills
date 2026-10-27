@@ -3,6 +3,7 @@ name: pull-request-review
 description: pull-request-review, the rules for testing a pull request in the running application. Use whenever the user wants a pull request tested or accepted by its test plan, or asks which pull requests wait for their review. Use it before every `gh pr review` you run, even when the user did not name the pull-request-review skill.
 allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/mark-steps.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts *)
 disable-model-invocation: true
+argument-hint: "[pr-number | pr-url]"
 ---
 
 Rules for every pull request you test. This skill runs the test plan of a pull request against the running application, the steps it can drive itself and the rest through the reviewer, and posts the result in the format of [assets/review.md](assets/review.md). It judges the application, the diff belongs to a code review. The approval is the reviewer's own click on GitHub, so this skill ends at a comment or a request for changes.

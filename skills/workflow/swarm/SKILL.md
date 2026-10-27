@@ -3,6 +3,7 @@ name: swarm
 description: "Fan out N parallel workers, drain them, and return one report. Use for /swarm, 'swarm this', or parallel coverage, races, gauntlets, and exploration."
 allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *)
 disable-model-invocation: true
+argument-hint: "[task] [first pass | rank all | best-of]"
 ---
 
 # Swarm
