@@ -24,6 +24,8 @@ Run:
 
 The defaults are the same as the `large` budget. `unlimited` lifts each model one effort step, up to `max`. Opus goes to `max`. Codex tops out at `xhigh`, so it stays there. `medium` and `small` lower the reasoning and spend fewer tokens.
 
+`/setup-models` then asks which model the code roles run on. They are `feature, refactoring`, `bug-fix`, `perf-issue`, `hillclimb` and `swarm workers`. `sonnet` is the default, and `opus` or `fable` spend more for harder code. Each role keeps its effort. To pick the model for one `/engineering` task, add it to the prompt, such as `/engineering #42 model:opus`.
+
 `/setup-models` also asks for an effort mode. With `fixed`, the default, every subagent spawns with exactly the effort of its role. With `adaptive`, that effort is a starting point. The agent goes one step up for the hardest work, one step down for judgment, and two or more steps down for routine work. To make one entry adaptive, put `~` after its effort, such as `how explorer: sonnet/high~`. To make it fixed, put `=` there. In a panel, each entry takes its own mark. To set the mode for one `/engineering` task, add it to the prompt, such as `/engineering #42 effort:adaptive`. A marked entry keeps the mode of its mark.
 
 You only override what you care about. A role with no line in the rule keeps the skill's default. To restore a default, delete that role's line. A rerun of `/setup-models` keeps any role whose model differs from the default. When a default changes, a rule written before the change still pins the old default, so delete those role lines, or delete the file, then run `/setup-models` again.
