@@ -1,6 +1,7 @@
 ---
 name: pull-request
 description: pull-request, the rules for every GitHub pull request. Use whenever the user wants to open a pull request, wants a pull request template, or when a task ends with opening one. Use it before every `gh pr create` you run, even when the user did not name the pull-request skill.
+argument-hint: "[base] [#issue] [reviewer]"
 ---
 
 Rules for every GitHub pull request you create. A pull request carries a test plan, the steps a reviewer runs in the running application before approving, in the format of [pull_request_template.md](../templates/assets/pull_request_template.md) of the templates skill. This skill opens it ready for review without stopping, always as the user's GitHub App and with the user as reviewer, so the user can approve it. Then it gets the checks green, runs its own test steps and reports every decision it took as an assumption.

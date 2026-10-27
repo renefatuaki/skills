@@ -1,6 +1,7 @@
 ---
 name: tidy-history
 description: tidy-history, folds the commits of the current branch into one commit per change. Use whenever the user wants to tidy, clean up, squash or rewrite the history of a branch, fold fixups into the commits they finish, or when the pull-request skill pushes a branch.
+argument-hint: "[base]"
 ---
 
 Rebuilds the history of the branch checked out in the session's worktree, so a reviewer reads one commit per change. The tree stays the same.

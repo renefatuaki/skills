@@ -3,6 +3,7 @@ name: today-issues
 description: today-issues, the plan for today's tickets of a GitHub Project. Use whenever the user asks what to work on today, which ticket comes next, or which tickets can run in parallel.
 allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/read-board.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts *)
 disable-model-invocation: true
+argument-hint: "[project-number] [budgets | auto] [sizes]"
 ---
 
 The plan for one day of work on a GitHub Project. This skill reads the open tickets of the board, asks the user for today's three budgets and the Sizes to run, ranks the tickets, groups them into tracks that run side by side, and shows one table per track in the format of [assets/plan.md](assets/plan.md). It only reads, except for the finished epics it closes on the user's word. The board is the state, so every run plans from what the board says now. A ticket of the plan starts with `/engineering <issue-url>`, which works it through the Ticket playbook of the engineering skill. In an auto run it starts with `/engineering <issue-url> auto`, so the session asks nothing.

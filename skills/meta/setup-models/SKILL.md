@@ -17,7 +17,7 @@ Write `~/.claude/rules/models.md`, a user-level rule that sets this plugin's mod
 
 ### 2. Load current state
 
-The default role-to-model mapping is the rule shape shown in step 5 below. If `~/.claude/rules/models.md` already exists, read it and treat its `# budget` line, its role values, and its `codex minimum` line as the current choices. Otherwise start from those defaults. A line whose role is not in step 5, such as `how critics`, is from a retired role. Drop it. A legacy Cursor rule at `~/.cursor/rules/pstack-models.mdc` is not read. Mention it if it exists, since its Grok and Cursor slugs do not apply here.
+The default role-to-model mapping is the rule shape shown in step 5 below. If `~/.claude/rules/models.md` already exists, read it and treat its `# budget` line, its `effort` line, its role values with their `~` and `=` marks, and its `codex minimum` line as the current choices. Otherwise start from those defaults. A line whose role is not in step 5, such as `how critics`, is from a retired role. Drop it. A legacy Cursor rule at `~/.cursor/rules/pstack-models.mdc` is not read. Mention it if it exists, since its Grok and Cursor slugs do not apply here.
 
 ### 3. Budget, map, and confirm
 
@@ -28,26 +28,31 @@ The default role-to-model mapping is the rule shape shown in step 5 below. If `~
 - `medium — one effort step down`
 - `small — two effort steps down`
 
-**(b) Apply it.** Start from the defaults, and on a re-run keep any role the user changed by model, list, or `inherit`. The effort ladder is `max` > `xhigh` > `high` > `medium` > `low`. A budget shifts every `<model>/<effort>` entry, panel entries included, along that ladder from its default effort, and clamps at both ends. So `unlimited` turns `opus/xhigh` into `opus/max` and `sonnet/high` into `sonnet/xhigh`. `small` turns them into `opus/medium` and `sonnet/low`. A `codex:<model>/<effort>` entry shifts the same way but tops out at `xhigh`, so `unlimited` leaves `codex:astra/xhigh` unchanged and `small` makes it `codex:astra/medium`. `inherit` does not change.
+**(b) Ask for the effort mode.** Ask whether every entry spawns with exactly its effort or the agent adjusts it to the job before each spawn, per **Effort mode** in `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`. Prefer AskUserQuestion with the labels `fixed — every entry runs with its effort` and `adaptive — the agent adjusts the effort per spawn`. Offer the current mode first on a re-run, otherwise `fixed`. Say that step (d) can give a single entry the other mode with a mark.
 
-**(c) Show the roles and confirm.** Show every role with its value. Also list each line step 2 dropped. Ask whether to accept as-is or change specific roles, offering `haiku`, `sonnet`, `opus`, `fable`, `inherit`, and `codex:<model>` with a Codex model from step 1, plus an effort. A Codex entry always names its model and its effort, as in `codex:astra/xhigh`, so the run never falls back to the model and effort in `~/.codex/config.toml`. Prefer AskUserQuestion over free text. For panel roles (arena runners, architect runners, interrogate reviewers) the value is a list, and one subagent runs per entry, `inherit` and Codex entries included, so the list length sets the count. `arena cross-judge pool` is also a list, but Arena selects one value from it whose model family differs from the parent's when possible. `swarm workers` is the default model for every worker unless a race or comparison assigns another model per arm.
+**(c) Apply the budget.** Start from the defaults, and on a re-run keep any role the user changed by model, list, or `inherit`. The effort ladder is `max` > `xhigh` > `high` > `medium` > `low`. A budget shifts every `<model>/<effort>` entry, panel entries included, along that ladder from its default effort, and clamps at both ends. So `unlimited` turns `opus/xhigh` into `opus/max` and `sonnet/high` into `sonnet/xhigh`. `small` turns them into `opus/medium` and `sonnet/low`. A `codex:<model>/<effort>` entry shifts the same way but tops out at `xhigh`, so `unlimited` leaves `codex:astra/xhigh` unchanged and `small` makes it `codex:astra/medium`. `inherit` does not change. On a re-run, copy each `~` or `=` mark from the current rule onto the shifted entry. A mark alone is no change, so the budget still shifts that entry's effort.
 
-**(d) Ask for the Codex minimum.** Skip this when no role holds a Codex entry. Otherwise ask how much usage, in percent of the tighter of the 5-hour and the weekly window, a Codex slot needs left to start. Below it, the slot runs on the Claude model of the same rank. Prefer AskUserQuestion, and offer `20%` as the default, `10%`, and `30%`, or the current value first on a re-run.
+**(d) Show the roles and confirm.** Show every role with its value and the mode of each entry, such as `bug-fix: opus/high (adaptive)`. An entry has the mode of step (b) unless its mark says otherwise. Also list each line step 2 dropped. Ask whether to accept as-is or change specific roles, offering `haiku`, `sonnet`, `opus`, `fable`, `inherit`, and `codex:<model>` with a Codex model from step 1, plus an effort. Also offer a mark for an entry that should run in the other mode, `~` for adaptive and `=` for fixed. Drop a mark that repeats the mode of step (b). A Codex entry always names its model and its effort, as in `codex:astra/xhigh`, so the run never falls back to the model and effort in `~/.codex/config.toml`. Prefer AskUserQuestion over free text. For panel roles (arena runners, architect runners, interrogate reviewers) the value is a list, and one subagent runs per entry, `inherit` and Codex entries included, so the list length sets the count. `arena cross-judge pool` is also a list, but Arena selects one value from it whose model family differs from the parent's when possible. `swarm workers` is the default model for every worker unless a race or comparison assigns another model per arm.
+
+**(e) Ask for the Codex minimum.** Skip this when no role holds a Codex entry. Otherwise ask how much usage, in percent of the tighter of the 5-hour and the weekly window, a Codex slot needs left to start. Below it, the slot runs on the Claude model of the same rank. Prefer AskUserQuestion, and offer `20%` as the default, `10%`, and `30%`, or the current value first on a re-run.
 
 ### 4. Validate
 
-Every model is one of `haiku`, `sonnet`, `opus`, `fable`, `inherit`, or `codex:<model>`. Every Claude effort is on the ladder. Every Codex entry is `codex:<model>/<effort>`, with a Codex model from step 1 and an effort of `xhigh`, `high`, `medium`, `low`, `minimal`, or `none`. A Codex entry is not allowed outside panel roles and `swarm workers`. The Codex minimum is a whole percent from 0 to 100. If a value fails, stop and ask again.
+Every model is one of `haiku`, `sonnet`, `opus`, `fable`, `inherit`, or `codex:<model>`. Every Claude effort, without its mark, is on the ladder. Every Codex entry is `codex:<model>/<effort>`, with a Codex model from step 1 and an effort of `xhigh`, `high`, `medium`, `low`, `minimal`, or `none`. A Codex entry is not allowed outside panel roles and `swarm workers`. A `~` or `=` mark may follow only an effort, so `inherit~` and `opus~` fail. The effort mode is `fixed` or `adaptive`. The Codex minimum is a whole percent from 0 to 100. If a value fails, stop and ask again.
 
 ### 5. Write the rule
 
-Create `~/.claude/rules/` if needed. Write `~/.claude/rules/models.md` with no frontmatter, so it loads in every session, a `# budget` line with the chosen label, one line per role, and a `codex minimum` line when a role holds a Codex entry, using the same labels the engineering skill uses. Overwrite the whole file so re-runs stay idempotent. Shape, at the `large` budget:
+Create `~/.claude/rules/` if needed. Write `~/.claude/rules/models.md` with no frontmatter, so it loads in every session, a `# budget` line with the chosen label, an `effort` line with the chosen mode, one line per role with its marks, and a `codex minimum` line when a role holds a Codex entry, using the same labels the engineering skill uses. Overwrite the whole file so re-runs stay idempotent. Shape, at the `large` budget:
 
 ```
 # forge model configuration. Used by skills of the forge plugin when they spawn subagents with the Agent tool.
 # One line per role: `<model>/<effort>`, `inherit`, or `codex:<model>/<effort>`. Panels take a comma-separated list.
 # `codex minimum` is the usage a Codex slot needs left to start, in percent of a window.
+# `effort: fixed` spawns every entry with its effort. `effort: adaptive` lets the agent adjust it per spawn.
+# A `~` after an effort makes that entry adaptive. A `=` makes it fixed.
 # Delete a line to fall back to the skill default. Re-run /setup-models to change it.
 # budget: large
+effort: fixed
 feature, refactoring: sonnet/high
 bug-fix: sonnet/high
 perf-issue: sonnet/high
@@ -76,3 +81,7 @@ Tell the user the rule was written and that it applies to new sessions. Re-runni
 ### 7. Offer a verification skill (optional)
 
 Check whether the project has a way to drive the real app for proof (a `verify-*` skill, or an existing harness). If not, offer once: "want a project-local verification skill, so agents can drive the app the way a user does and prove changes work? I can generate one with /create-verification-skill." On yes, read `${CLAUDE_PLUGIN_ROOT}/skills/verification/create-verification-skill/SKILL.md` and follow it. On no, move on without pushing.
+
+### 8. Offer a formal verification skill (optional)
+
+Check whether the project already has a formal verification skill (a project skill that runs a model checker, a proof, or another verifier against the code). If not, offer once: "want a formal verification skill, so agents can prove a key property of your code holds in every case in scope, not only the cases tests reach? I can generate one with /create-formal-verification-skill." On yes, read `${CLAUDE_PLUGIN_ROOT}/skills/verification/create-formal-verification-skill/SKILL.md` and follow it. On no, move on without pushing.
