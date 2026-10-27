@@ -1,6 +1,7 @@
 ---
 name: issue
 description: issue, the rules for every GitHub issue. Use whenever the user wants to create an issue, report a bug, request a feature, plan a task, set up issue templates, or when another skill needs an issue for the work at hand. Use it before every `gh issue create` you run, even when the user did not name the issue skill.
+argument-hint: "[description | templates]"
 ---
 
 Rules for every GitHub issue you create. This skill ensures templates exist, interviews the user where the request leaves the requirements open, then fills the template's fields, creates the issue and asks the user to review it on GitHub.

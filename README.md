@@ -84,8 +84,8 @@ The skills of the plugin live in one folder per category.
 | --- | --- | --- |
 | [`workflow`](skills/workflow) | engineering, how, why, architect, arena, interrogate, swarm, blast-radius, figure-it-out, tdd, show-me-your-work | the frame and the tools a playbook runs |
 | [`principles`](skills/principles) | 24 principles, such as prove-it-works | the rules a playbook names for each decision |
-| [`verification`](skills/verification) | control-ui, control-cli, verify-this, create-verification-skill, maintain-verification-skill, benchmark-checklist | drive the running application and check a claim |
-| [`meta`](skills/meta) | reflect, correct, recall, automate-me, teach, bro, setup-models | learn from past sessions, explain, and configure the models |
+| [`verification`](skills/verification) | control-ui, control-cli, verify-this, create-verification-skill, maintain-verification-skill, create-formal-verification-skill, maintain-formal-verification-skill, benchmark-checklist | drive the running application and check a claim |
+| [`meta`](skills/meta) | reflect, correct, recall, automate-me, teach, bro, sharpen, in-your-own-words, setup-models | learn from past sessions, explain, sharpen a prompt, and configure the models |
 | [`docs`](skills/docs) | diagrams, project-docs, unslop, technical-writing | write documentation and prose |
 | [`clean-code`](skills/clean-code) | clean-code, code-comments, typescript-best-practices | write readable code |
 | [`git`](skills/git) | commit, tidy-history | write commits and tidy the history of a branch |

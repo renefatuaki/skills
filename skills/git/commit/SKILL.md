@@ -1,6 +1,7 @@
 ---
 name: commit
 description: commit, the rules for every git commit. Use whenever the user wants to commit, save, check in or "commit that", asks for a commit message, wants a messy stage split into clean commits, asks for Conventional Commits, or when a task ends with committing the work. Use it before every `git commit` you run, even when the user did not name the commit skill.
+argument-hint: "[#issue]"
 ---
 
 Rules for every commit you create. A commit is one topic with a message that follows Conventional Commits and references the GitHub issue when there is one, so the history stays reviewable and every change links back to its discussion. Git enforces the message through commitlint in a husky `commit-msg` hook. The message and its validation follow two upstream skills, this skill covers what they leave open, which is enforcement and the skills being present, the issue, the split, the style of the body and the plan.

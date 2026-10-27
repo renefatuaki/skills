@@ -7,7 +7,7 @@
 
 ### Reviews
 
-<!-- The tickets that are In review. They cost the user's review and no run. -->
+<!-- The tickets that are In Review. They cost the user's review and no run. -->
 
 | # | Ticket | Pull request | Review | Reason |
 |---|---|---|---|---|

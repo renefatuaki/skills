@@ -1,6 +1,7 @@
 ---
 name: pull-request
 description: pull-request, the rules for every GitHub pull request. Use whenever the user wants to open a pull request, wants a pull request template, or when a task ends with opening one. Use it before every `gh pr create` you run, even when the user did not name the pull-request skill.
+argument-hint: "[base] [#issue] [reviewer]"
 ---
 
 Rules for every GitHub pull request you create. A pull request carries a test plan, the steps a reviewer runs in the running application before approving, in the format of [pull_request_template.md](../templates/assets/pull_request_template.md) of the templates skill. This skill opens it ready for review without stopping, always as the user's GitHub App and with the user as reviewer, so the user can approve it. Then it gets the checks green, runs its own test steps and reports every decision it took as an assumption.
@@ -67,7 +68,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    EOF
    ```
 
-   **In review.** Set the Status of the issue in the Linked issue section to In review, in every project that holds the issue and has that option. A pull request without an issue skips this. The query below returns one node per project that holds the issue, with the ids the edit needs. The node's `id` is the item, `project.id` the project, `field.id` the Status field, and the option named In review gives the option id. Run the edit once per node. If the query fails for a missing `project` scope, ask the user to run `! gh auth refresh -s project`.
+   **In Review.** Set the Status of the issue in the Linked issue section to In Review, in every project that holds the issue and has that option. A pull request without an issue skips this. The query below returns one node per project that holds the issue, with the ids the edit needs. The node's `id` is the item, `project.id` the project, `field.id` the Status field, and the option named In Review gives the option id. Run the edit once per node. If the query fails for a missing `project` scope, ask the user to run `! gh auth refresh -s project`.
 
    ```sh
    gh api graphql \
@@ -181,4 +182,4 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
    End the reply by saying that the pull request waits for the user's approval.
 
-Done when the pull request exists on GitHub ready for review, opened by the app, with the user and every named reviewer requested, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the history holds one commit per change with the tree unchanged unless a person had reviewed it, the pull request is in every project of its issue, the issue is In review, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, the checks ran through loop-on-ci, the steps an agent can run are tested, every unticked step that did not fail ends with `(needs a person: <reason>)`, and the reply lists the failures and the assumptions.
+Done when the pull request exists on GitHub ready for review, opened by the app, with the user and every named reviewer requested, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the history holds one commit per change with the tree unchanged unless a person had reviewed it, the pull request is in every project of its issue, the issue is In Review, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, the checks ran through loop-on-ci, the steps an agent can run are tested, every unticked step that did not fail ends with `(needs a person: <reason>)`, and the reply lists the failures and the assumptions.

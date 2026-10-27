@@ -19,12 +19,12 @@
           "description": "This is ready to be picked up"
         },
         {
-          "name": "In progress",
+          "name": "In Progress",
           "color": "YELLOW",
           "description": "This is actively being worked on"
         },
         {
-          "name": "In review",
+          "name": "In Review",
           "color": "BLUE",
           "description": "This item is in review"
         },

@@ -17,8 +17,7 @@ import { fileURLToPath } from 'node:url';
 
 const REPOSITORY = 'cursor/plugins';
 const BRANCH = 'main';
-const TRACKED_FOLDERS = ['pstack/', 'cursor-team-kit/'];
-const PORT_PREFIX = 'port:';
+const TRACKED_FOLDERS = ['harness/pstack/claude-code/', 'cursor-team-kit/'];
 
 /** A folder of cursor/plugins that UPSTREAM.md copies from, with the commit the copies are based on. */
 type Source = {
@@ -38,7 +37,7 @@ type Commit = {
   commit: { message: string };
 };
 
-type Outcome = 'changed' | 'unchanged' | 'port-only' | 'untracked';
+type Outcome = 'changed' | 'unchanged' | 'untracked';
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..');
 const upstreamPath = process.argv[2] ?? join(repo, 'UPSTREAM.md');
@@ -58,7 +57,6 @@ function main(): void {
   const counts: Record<Outcome, number> = {
     changed: 0,
     unchanged: 0,
-    'port-only': 0,
     untracked: 0,
   };
 
@@ -67,7 +65,7 @@ function main(): void {
   }
 
   console.log(
-    `\nChecked against ${REPOSITORY}@${BRANCH}: ${counts.changed} changed, ${counts.unchanged} unchanged, ${counts['port-only']} port-only skipped, ${counts.untracked} untracked skipped.`,
+    `\nChecked against ${REPOSITORY}@${BRANCH}: ${counts.changed} changed, ${counts.unchanged} unchanged, ${counts.untracked} untracked skipped.`,
   );
 }
 
@@ -89,12 +87,6 @@ function requireGitHubLogin(): void {
 /** Prints what changed upstream for one copied file and returns its outcome. */
 function checkFile(file: CopiedFile, sources: Source[]): Outcome {
   console.log(`\n== ${file.upstream} -> ${file.here}`);
-
-  if (file.upstream.startsWith(PORT_PREFIX)) {
-    console.log('port-only, skipped');
-
-    return 'port-only';
-  }
 
   const source = sources.find(candidate =>
     file.upstream.startsWith(candidate.folder),

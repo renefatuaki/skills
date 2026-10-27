@@ -11,7 +11,7 @@ how explorer: sonnet/high
 interrogate reviewers: opus/xhigh, codex:astra/xhigh
 ```
 
-The line `codex minimum: <percent>%`, such as `codex minimum: 20%`, is no role. It sets how much usage a Codex slot needs left, and **Codex slots** reads it.
+The line `codex minimum: <percent>%`, such as `codex minimum: 20%`, is no role. It sets how much usage a Codex slot needs left, and **Codex slots** reads it. The line `effort: fixed` or `effort: adaptive` is no role either. **Effort mode** reads it.
 
 A missing file or a missing line means the role uses the default the skill names. Lines for roles no skill names are retired. Ignore them.
 
@@ -19,14 +19,28 @@ A missing file or a missing line means the role uses the default the skill names
 
 | Value | `Agent` parameters |
 |---|---|
-| `<model>/<effort>`, such as `opus/xhigh` | `model: "<model>"`, `effort: "<effort>"` |
+| `<model>/<effort>`, such as `opus/xhigh` | `model: "<model>"`, `effort: "<effort>"`, adjusted per **Effort mode** when the entry is adaptive |
 | `<model>` alone | `model: "<model>"`, no `effort` |
 | `inherit` | omit `model` and `effort`. This plugin's agents and `general-purpose` carry no model default, so the subagent runs on the parent session's model. |
-| `codex:<model>/<effort>`, such as `codex:astra/xhigh` | a Codex slot. Follow **Codex slots** below. |
+| `codex:<model>/<effort>`, such as `codex:astra/xhigh` | a Codex slot. Follow **Codex slots** below, with the effort adjusted per **Effort mode** when the entry is adaptive. |
 
 Models are `haiku`, `sonnet`, `opus`, and `fable`. Codex models are `luna`, `sol`, and `astra`. Efforts, strongest first, are `max`, `xhigh`, `high`, `medium`, `low`. A Codex slot takes `xhigh`, `high`, `medium`, `low`, `minimal`, or `none`, so a Codex `max` runs as `xhigh`. A Codex entry always names its model and its effort. The Codex CLI gives each model a full name with its version, such as `gpt-6-astra`, and **Codex slots** resolves it. If the `Agent` tool rejects an effort for a model, use the strongest effort it accepts and say so. If it rejects a model, use the skill's default and say so.
 
 A panel role (arena runners, arena cross-judge pool, architect runners, interrogate reviewers) holds a comma-separated list. One subagent runs per entry, `inherit` and Codex entries included, so the list length sets the panel size.
+
+## Effort mode
+
+The line `effort: fixed` or `effort: adaptive` sets the mode of every entry. Without the line the mode is `fixed`. An entry whose effort ends in `~`, such as `sonnet/high~`, is adaptive. An entry whose effort ends in `=`, such as `opus/xhigh=`, is fixed. In a panel each entry carries its own mark. Strip the mark before the effort reaches the `Agent` tool or the `--effort` flag of a Codex slot.
+
+A task of the engineering skill whose prompt holds `effort:adaptive` or `effort:fixed` uses that mode in place of the line, as step 5 of that skill's `SKILL.md` says. Name that mode in every delegate's brief, so the delegate's own spawns use it. A mark beats the task's mode, and the task's mode beats the line.
+
+A fixed entry spawns with exactly its effort.
+
+**Match the model to the job.** This applies to an adaptive entry. Before each spawn, start from the role's line or default and pick the effort the job needs. The `/setup-models` budget sets each role's starting effort. Raise it one step, up to `max`, for the hardest or subtlest work. Lower it one step for judgment and two or more steps for routine work, down to `low`. Verification is the exception and stays on the `swarm workers` model and effort. Change only the effort, and keep the model the role names, so a diverse panel stays diverse. A Codex entry uses the Codex efforts from `xhigh` down to `low`, and its fallback keeps the adjusted effort. An entry without an effort and an `inherit` entry get no effort in either mode. If the `Agent` tool rejects the adjusted effort, do not try another adjusted effort. Use the role's line or default and say so.
+
+## Code model
+
+The code roles are `feature, refactoring`, `bug-fix`, `perf-issue`, `hillclimb`, and `swarm workers`. `/setup-models` sets their model with one question. A task of the engineering skill whose prompt holds `model:sonnet`, `model:opus`, or `model:fable` runs every code role on that model in place of the model of its line or default, as step 5 of that skill's `SKILL.md` says. The effort stays that of the line or default, its mark included. An `inherit` entry, a Codex entry, and a swarm arm that names its own model keep their value. Name that model in every delegate's brief, so the delegate's own spawns use it. Every other role, `hardest tasks` included, keeps its model.
 
 ## Model families
 

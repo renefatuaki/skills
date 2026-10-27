@@ -3,6 +3,7 @@ name: today-issues
 description: today-issues, the plan for today's tickets of a GitHub Project. Use whenever the user asks what to work on today, which ticket comes next, or which tickets can run in parallel.
 allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/read-board.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts *)
 disable-model-invocation: true
+argument-hint: "[project-number] [budgets | auto] [sizes]"
 ---
 
 The plan for one day of work on a GitHub Project. This skill reads the open tickets of the board, asks the user for today's three budgets and the Sizes to run, ranks the tickets, groups them into tracks that run side by side, and shows one table per track in the format of [assets/plan.md](assets/plan.md). It only reads, except for the finished epics it closes on the user's word. The board is the state, so every run plans from what the board says now. A ticket of the plan starts with `/engineering <issue-url>`, which works it through the Ticket playbook of the engineering skill. In an auto run it starts with `/engineering <issue-url> auto`, so the session asks nothing.
@@ -23,15 +24,15 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    - **Review.** How long the user reviews pull requests, as a duration.
    - **Sizes.** Which Sizes run today. All Sizes is the first option, XS and S another. Any answer but all Sizes is a size filter.
 4. **Pick the candidates.** Every issue without sub-issues is a ticket, and its Status decides whether it is a candidate.
-   - A ticket In review, In progress or Ready is a candidate.
+   - A ticket In Review, In Progress or Ready is a candidate.
    - A Backlog ticket is a candidate when no ticket on the whole board is Ready, or when a size filter holds and its Size passes it. A ticket without a Status counts as Backlog.
    - A Blocked ticket is never a candidate.
-   - A size filter keeps only the candidates whose Size it names, and every ticket In review or In progress. A ticket without a Size passes no size filter.
+   - A size filter keeps only the candidates whose Size it names, and every ticket In Review or In Progress. A ticket without a Size passes no size filter.
 
    A candidate with more than one `repo: <name>` label goes to Not today, to be split into one issue per repository with the `issue` skill. A candidate leaves the plan for the Not today list when one of its open blockers is no candidate. The blockers of a ticket are the issues in `blockedBy`, whatever its body says.
 
    An issue with sub-issues is an **epic**, whatever its label, and its sub-issues are the issues whose `parent.url` is its URL. An epic is never planned itself. Its sub-issues are, each by its own Status like any other ticket, and they decide what happens to the epic.
-   - An epic with a candidate sub-issue is planned through its candidates. It has **begun** when one of its sub-issues is closed, which `subIssues.completed` counts, or is In progress or In review.
+   - An epic with a candidate sub-issue is planned through its candidates. It has **begun** when one of its sub-issues is closed, which `subIssues.completed` counts, or is In Progress or In Review.
    - An epic with open sub-issues and no candidate among them waits, and the plan leaves it out.
    - An epic whose sub-issues are all closed, where `subIssues.completed` equals `subIssues.total`, is **finished**. The plan names it under Gaps as ready to be closed.
 5. **Estimate every candidate.** Its Size gives three values.
@@ -51,15 +52,15 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
 
    Two kinds of ticket get their values another way.
    - A ticket without a Size gets all three values from its body.
-   - A ticket In review costs review and nothing else. That is the review of its open pull request, when it has one, and everything its body leaves for the user to do.
+   - A ticket In Review costs review and nothing else. That is the review of its open pull request, when it has one, and everything its body leaves for the user to do.
 
-   An auto run asks the user nothing, so its tickets cost no questions. A candidate with an open decision or with work only the user can do goes to Not today with its cause, and so does every candidate it blocks. A ticket In review stays.
+   An auto run asks the user nothing, so its tickets cost no questions. A candidate with an open decision or with work only the user can do goes to Not today with its cause, and so does every candidate it blocks. A ticket In Review stays.
    - **Open decision.** A label such as `question`. A section such as Open questions or To decide that still holds an entry without an answer. An unchecked task item that asks to decide, choose or confirm. A criterion that can be read two ways, two criteria that contradict each other, or several approaches that lead to a result the user would see differently.
    - **Work only the user can do.** A step the run cannot finish without that needs a credential, a secret or an account the agent lacks, a payment, a physical device, a store listing, access to production such as a deploy or its data, or another person. A check the body leaves to the review does not count.
 6. **Rank.** The ranking orders units. A candidate that belongs to no epic is a unit of its own. An epic with its candidate sub-issues is one unit, so they stay together. The rules apply in order, and a rule decides only between units that every rule before it ranks the same.
-   1. In review, because a review releases finished work.
+   1. In Review, because a review releases finished work.
    2. Priority Critical.
-   3. In progress.
+   3. In Progress.
    4. An epic that has begun.
    5. The order an application is built in. A blocker comes before what it blocks. Then the layer, read from the title, the labels and the body. Foundation and setup, data model, backend, API, user interface, polish. Work on no layer, such as tooling or research, comes last.
    6. Priority, the highest first. A ticket without a Priority counts as Medium.
@@ -72,7 +73,7 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    - Two tickets collide when they land in a common repository, unless both carry `app: <name>` labels and name no common application.
    - Tickets that collide share a track, in rank order. A ticket that collides with tickets of several tracks joins those tracks into one. A ticket and its blocker share a track too. The ticket starts once the pull request of its blocker is merged, and its Reason says so.
    - An epic is a track of its own that holds its sub-issues and nothing else, and it runs alone. It starts when every ticket ranked before it has ended, and no ticket ranked after it starts before its last candidate sub-issue has ended.
-   - Tickets In review form no track. They are the Reviews table, and nothing waits for them.
+   - Tickets In Review form no track. They are the Reviews table, and nothing waits for them.
 8. **Fill the budgets.** Walk the units in rank order and place each ticket that keeps all three sums within their budgets. A sum that meets its budget exactly is within it. A ticket joins its track when it is placed, so a ticket that goes to Not today joins no tracks.
    - Total bounds the run of every track, the tracks it waits for included.
    - Questions bounds the sum over every placed ticket.

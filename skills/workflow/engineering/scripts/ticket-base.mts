@@ -58,7 +58,7 @@ type BoardPage = {
 const USAGE = 'usage: ticket-base.mts <issue-url>';
 
 /** The statuses of a ticket whose session runs or whose pull request is not merged yet. */
-const ACTIVE_STATUSES = new Set(['In progress', 'In review']);
+const ACTIVE_STATUSES = new Set(['In Progress', 'In Review']);
 
 const APP_LABEL = 'app: ';
 
@@ -251,7 +251,7 @@ function readTicket(
 }
 
 /**
- * Reads the tickets of a project that are In progress or In review, link a branch in this repository, and share an app with the ticket unless one of them names none.
+ * Reads the tickets of a project that are In Progress or In Review, link a branch in this repository, and share an app with the ticket unless one of them names none.
  * @see {@link https://docs.github.com/en/graphql/reference/objects.md#projectv2item | ProjectV2Item}
  */
 function readCollidingTickets(
