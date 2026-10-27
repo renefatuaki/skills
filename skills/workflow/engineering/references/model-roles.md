@@ -38,6 +38,10 @@ A fixed entry spawns with exactly its effort.
 
 **Match the model to the job.** This applies to an adaptive entry. Before each spawn, start from the role's line or default and pick the effort the job needs. The `/setup-models` budget sets each role's starting effort. Raise it one step, up to `max`, for the hardest or subtlest work. Lower it one step for judgment and two or more steps for routine work, down to `low`. Verification is the exception and stays on the `swarm workers` model and effort. Change only the effort, and keep the model the role names, so a diverse panel stays diverse. A Codex entry uses the Codex efforts from `xhigh` down to `low`, and its fallback keeps the adjusted effort. An entry without an effort and an `inherit` entry get no effort in either mode. If the `Agent` tool rejects the adjusted effort, do not try another adjusted effort. Use the role's line or default and say so.
 
+## Code model
+
+The code roles are `feature, refactoring`, `bug-fix`, `perf-issue`, `hillclimb`, and `swarm workers`. `/setup-models` sets their model with one question. A task of the engineering skill whose prompt holds `model:sonnet`, `model:opus`, or `model:fable` runs every code role on that model in place of the model of its line or default, as step 5 of that skill's `SKILL.md` says. The effort stays that of the line or default, its mark included. An `inherit` entry, a Codex entry, and a swarm arm that names its own model keep their value. Name that model in every delegate's brief, so the delegate's own spawns use it. Every other role, `hardest tasks` included, keeps its model.
+
 ## Model families
 
 Panels and cross-judges reason about families. `haiku`, `sonnet`, `opus`, `fable`, and `inherit` are the `claude` family. Every Codex entry is the `codex` family. A panel gets its diversity from mixing families. Two Claude models at different efforts still count as one family.
