@@ -1,5 +1,15 @@
 # forge
 
+## 1.10.0
+
+### Minor Changes
+
+- d82ce50: Every skill that reads the text after its slash command shows a hint after `/<name> `, such as `[pr-number | pr-url]` for `/pull-request-review` and `[base]` for `/tidy-history`. A skill that ignores that text shows none.
+- 863f25e: `/setup-models` asks right after the budget which model the code roles run on, `sonnet`, `opus` or `fable`. The code roles are `feature, refactoring`, `bug-fix`, `perf-issue`, `hillclimb` and `swarm workers`, and each keeps its effort. `/engineering <task> model:opus` runs the code roles of one task on that model, and `model:sonnet` or `model:fable` work the same way. After `/engineering `, Claude Code shows the hint `[model:sonnet | model:opus | model:fable]`, and a misspelled model such as `model:opsu` gets a question instead of being ignored.
+- 3e8d3b2: `/setup-models` asks for an effort mode right after the budget. With `fixed`, the default, every subagent spawns with the effort of its line in `~/.claude/rules/models.md`. With `adaptive`, the agent raises or lowers that effort to fit each job. A `~` or `=` after an entry's effort makes that one entry adaptive or fixed. `/engineering <task> effort:adaptive` or `/engineering <task> effort:fixed` sets the mode for one task. After `/engineering `, Claude Code shows the hint `[task | #issue] [auto] [effort:adaptive | effort:fixed]`, and a misspelled mode such as `effort:adaptiv` gets a question instead of being ignored.
+- 72f4794: The Status options In Progress and In Review are written in title case like every other option. The `project` skill creates them under these names, and the Ticket playbook, `pull-request` and `today-issues` set and read them under these names.
+- 338c9c0: The skills copied from pstack follow upstream `cursor/plugins` at `9580c23`. Four skills are new. `sharpen` rewrites a prompt so it asks for a deeper version of the task, and `in-your-own-words` restates the goal and the problem before any work. `create-formal-verification-skill` writes a project skill that proves one key property of the code with a model checker or another verifier, and `maintain-formal-verification-skill` brings that check back in line after the code changed. After its offer of a verification skill, `/setup-models` offers once to generate a formal verification skill. The `engineer` agent is a delegate of the session that runs `/engineering`, never the runner of a playbook. When several copies of the plugin are installed, it reads the newest. `reflect` never edits a skill in the plugin cache. It changes a skill of this plugin on a branch of the plugin's repository, with its own pull request. The principles fix-root-causes, test-behavior-not-implementation, attack-the-premise and make-operations-idempotent explain the idea instead of naming mechanisms, and seven skills lose sections that did not change what an agent does. `worktree-audit.sh` takes `-b <ref>` for the branch that pull requests merge into, and reads file times with GNU and BSD `stat`.
+
 ## 1.9.0
 
 ### Minor Changes
