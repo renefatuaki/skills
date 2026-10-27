@@ -70,15 +70,15 @@ const CASES: {
     expected: ok({ start: 'trunk', base: 'main' }),
   },
   {
-    name: 'a ticket In progress in the same repository without a pull request holds the ticket back',
-    board: board({ items: [item('In progress', issue(11, [branch(null)]))] }),
+    name: 'a ticket In Progress in the same repository without a pull request holds the ticket back',
+    board: board({ items: [item('In Progress', issue(11, [branch(null)]))] }),
     expected: ok({ start: 'wait', issues: [issueUrl(11)] }),
   },
   {
-    name: 'a ticket In review with an open pull request is stacked on',
+    name: 'a ticket In Review with an open pull request is stacked on',
     board: board({
       items: [
-        item('In review', issue(11, [branch(pr(21, 'fix/11-a', 'dev'))])),
+        item('In Review', issue(11, [branch(pr(21, 'fix/11-a', 'dev'))])),
       ],
     }),
     expected: ok({
@@ -92,10 +92,10 @@ const CASES: {
     board: board({
       items: [
         item(
-          'In progress',
+          'In Progress',
           issue(12, [branch(pr(22, 'fix/12-b', 'fix/11-a'))]),
         ),
-        item('In review', issue(11, [branch(pr(21, 'fix/11-a', 'dev'))])),
+        item('In Review', issue(11, [branch(pr(21, 'fix/11-a', 'dev'))])),
       ],
     }),
     expected: ok({
@@ -111,8 +111,8 @@ const CASES: {
     name: 'two open pull requests off dev are two stacks',
     board: board({
       items: [
-        item('In review', issue(11, [branch(pr(21, 'fix/11-a', 'dev'))])),
-        item('In review', issue(12, [branch(pr(22, 'fix/12-b', 'dev'))])),
+        item('In Review', issue(11, [branch(pr(21, 'fix/11-a', 'dev'))])),
+        item('In Review', issue(12, [branch(pr(22, 'fix/12-b', 'dev'))])),
       ],
     }),
     expected: ok({
@@ -128,7 +128,7 @@ const CASES: {
     board: board({
       items: [
         item(
-          'In review',
+          'In Review',
           issue(11, [branch(pr(21, 'fix/11-a', 'dev', 'MERGED'))]),
         ),
       ],
@@ -140,7 +140,7 @@ const CASES: {
     board: board({
       items: [
         item(
-          'In progress',
+          'In Progress',
           issue(11, [branch(pr(21, 'fix/11-a', 'dev', 'CLOSED'))]),
         ),
       ],
@@ -150,7 +150,7 @@ const CASES: {
   {
     name: 'a ticket whose branch lives in another repository does not collide',
     board: board({
-      items: [item('In progress', issue(11, [branch(null, 'acme/other')]))],
+      items: [item('In Progress', issue(11, [branch(null, 'acme/other')]))],
     }),
     expected: ok({ start: 'trunk', base: 'dev' }),
   },
@@ -169,7 +169,7 @@ const CASES: {
     name: 'two tickets of different apps do not collide',
     board: board({
       labels: ['app: web'],
-      items: [item('In progress', issue(11, [branch(null)], ['app: admin']))],
+      items: [item('In Progress', issue(11, [branch(null)], ['app: admin']))],
     }),
     expected: ok({ start: 'trunk', base: 'dev' }),
   },
@@ -177,7 +177,7 @@ const CASES: {
     name: 'two tickets of a common app collide',
     board: board({
       labels: ['app: web', 'app: admin'],
-      items: [item('In progress', issue(11, [branch(null)], ['app: admin']))],
+      items: [item('In Progress', issue(11, [branch(null)], ['app: admin']))],
     }),
     expected: ok({ start: 'wait', issues: [issueUrl(11)] }),
   },
@@ -185,13 +185,13 @@ const CASES: {
     name: 'a ticket without an app collides with every app',
     board: board({
       labels: ['app: web'],
-      items: [item('In progress', issue(11, [branch(null)]))],
+      items: [item('In Progress', issue(11, [branch(null)]))],
     }),
     expected: ok({ start: 'wait', issues: [issueUrl(11)] }),
   },
   {
     name: 'the ticket itself on the board does not collide',
-    board: board({ items: [item('In progress', issue(10, [branch(null)]))] }),
+    board: board({ items: [item('In Progress', issue(10, [branch(null)]))] }),
     expected: ok({ start: 'trunk', base: 'dev' }),
   },
   {
@@ -199,7 +199,7 @@ const CASES: {
     board: board({
       pages: [
         [item('Done', issue(11, []))],
-        [item('In progress', issue(12, [branch(null)]))],
+        [item('In Progress', issue(12, [branch(null)]))],
       ],
     }),
     expected: ok({ start: 'wait', issues: [issueUrl(12)] }),
@@ -240,10 +240,10 @@ const CASES: {
     expected: ok({ start: 'trunk', base: 'dev' }),
   },
   {
-    name: 'a blocker that is also In review is one layer',
+    name: 'a blocker that is also In Review is one layer',
     board: board({
       blockers: [blocker('OPEN', issue(5, [branch(pr(15, 'fix/5-x', 'dev'))]))],
-      items: [item('In review', issue(5, [branch(pr(15, 'fix/5-x', 'dev'))]))],
+      items: [item('In Review', issue(5, [branch(pr(15, 'fix/5-x', 'dev'))]))],
     }),
     expected: ok({
       start: 'stacked',

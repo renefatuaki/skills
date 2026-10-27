@@ -51,7 +51,7 @@ Rules for every GitHub Project you create. A project carries the Status, Priorit
    | Priority board | Board | Priority, Status as columns | | |
    | Team items | Table | Status | | |
    | Roadmap | Roadmap | | | |
-   | In review | Table | | | `status:"In review"` |
+   | In Review | Table | | | `status:"In Review"` |
    | My items | Table | | | `assignee:@me` |
 
 Done when the project exists under the owner with Status, Priority and Size carrying every option of the asset, is linked to the repository, the reply names its number, and the user holds the list of settings that stay manual.
