@@ -15,8 +15,8 @@ The frame for every task of a session. Once invoked, engineering stays on for th
    | --- | --- |
    | `workflow` | engineering, how, why, architect, arena, interrogate, swarm, blast-radius, figure-it-out, tdd, show-me-your-work |
    | `principles` | every principle, in a folder without the `principle-` prefix, such as `principles/prove-it-works/` for principle-prove-it-works |
-   | `verification` | control-ui, control-cli, create-verification-skill, maintain-verification-skill, benchmark-checklist |
-   | `meta` | reflect, correct, recall, automate-me, teach, bro, setup-models |
+   | `verification` | control-ui, control-cli, create-verification-skill, maintain-verification-skill, create-formal-verification-skill, maintain-formal-verification-skill, benchmark-checklist |
+   | `meta` | reflect, correct, recall, automate-me, teach, bro, sharpen, in-your-own-words, setup-models |
    | `docs` | diagrams, project-docs, unslop, technical-writing |
    | `clean-code` | clean-code, code-comments, typescript-best-practices |
    | `git` | commit, tidy-history |
