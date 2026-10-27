@@ -1,5 +1,32 @@
 # forge
 
+## 1.9.0
+
+### Minor Changes
+
+- a3c569f: The band above the prompt now also shows how much of Claude Code's current session is left, the 5-hour window of the Claude subscription. The terminal line reads `Claude 5h 77% · 1/3 · Write the parser` with the Codex usage at the right edge, and the desktop and mobile row opens with a Claude caption. The share is read when the session starts and taken from each measurement Claude Code reports after a turn. Off a subscription and before the first response there is no reading, so the Claude part stays hidden. A narrow terminal line leaves out the Claude part last, once it and the count no longer fit.
+- d481e2a: The band above the prompt now shows the Codex usage left at all times, also with no todo list open. Without a list the terminal line holds `Codex 5h 62% · week 81%` alone at the right edge, and the desktop and mobile row holds the Codex caption alone at its right end. The usage is read when the session starts, on every prompt that is not a meta prompt and after each Codex call, in place of the read when a list got open items. A failed read still hides the usage, so with no list and no usage the band draws nothing. `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` is now needed only for the todo progress.
+
+## 1.8.0
+
+### Minor Changes
+
+- 5a436a8: The new `next-steps` skill lists what is still open in the order to do it, one short line per point. Every open pull request of the repository comes with its next action from GitHub as it is now, such as resolving conflicts, fixing checks, reviewing with the open test steps or merging, in the order of the `review-queue` skill. The open points of the session that GitHub does not show join the list.
+
+## 1.7.0
+
+### Minor Changes
+
+- 09299c3: The new `tidy-history` skill folds the commits of the current branch into one commit per change, for the worktree the session runs in. It rebuilds the branch with the `commit` skill, proves the tree unchanged and pushes a branch that is on the remote with `--force-with-lease`. It stops when a person has reviewed the pull request, unless the user asks for the tidy anyway, when the remote holds commits the branch lacks, or when layers of a stack build on the branch. The `pull-request` skill now runs it before every push.
+
+## 1.6.0
+
+### Minor Changes
+
+- ec75ac3: The `pull-request` skill opens every pull request ready for review, never as a draft. The user's GitHub App always opens it, with the user requested as reviewer, so the user can approve it. Without a configured app the skill stops and names what is missing. The issue moves to In review when the pull request opens. Checks and the agent's own test steps still run afterwards, and the reply names what failed. The history is tidied before every push until a person has reviewed the pull request.
+- 7f2ad57: Finished criteria are now ticked in the issue. The Ticket playbook ticks a criterion once its test is green and verified, and a resumed ticket catches up on the ticks it missed. A criterion no test can prove becomes a test step marked `(criterion <n>)`, and `pull-request-review` ticks it once that step passes. `today-issues` asks whether to tick the success criteria of finished epics and close them. The `issue` skill writes every criterion as a checkbox, a Given/When/Then inside its item. The new `tick-criteria.mts` script of the `issue` skill does the ticking and never clears a tick.
+- e5a7f8c: The `pull-request` skill tidies the history of a draft before every push. A reviewer now reads one commit per change, and a fix from a review or a check, a revert, a format pass or work in progress folds into the commit it finishes. The skill rebuilds the branch with the `commit` skill, proves the tree unchanged, and pushes a draft that is already on the remote with `--force-with-lease`. A pull request that is ready for review keeps its history.
+
 ## 1.5.1
 
 ### Patch Changes

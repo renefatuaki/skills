@@ -1,6 +1,6 @@
 {
   "name": "forge",
-  "version": "1.5.1",
+  "version": "1.9.0",
   "private": true,
   "description": "Claude Code skills for clean code, engineering workflows and project management.",
   "license": "MIT",
@@ -25,12 +25,12 @@
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@stylistic/eslint-plugin": "^5.10.0",
-    "@types/node": "^24.19.1",
+    "@types/node": "^26.6.5",
     "husky": "^9.1.7",
     "markdownlint": "^0.41.1",
     "mermaid": "11.15.0",
-    "oxfmt": "^0.72.0",
-    "oxlint": "^1.87.0",
+    "oxfmt": "^0.73.0",
+    "oxlint": "^1.88.0",
     "typescript": "^7.0.2"
   },
   "engines": {
