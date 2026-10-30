@@ -1,42 +1,116 @@
 #!/usr/bin/env node
 
-// Stands in for `agy`. `agy models` lists model-list.txt, and `agy -p` answers in the JSON line of --output-format json as the case FAKE_AGY_CASE names.
+// Stands in for `agy`. `agy models` lists model-list.txt, `agy -p /usage` answers as FAKE_AGY_USAGE names, and `agy -p` with a brief answers in the JSON line of --output-format json as FAKE_AGY_CASE names. FAKE_AGY_LOG names a file that gets one line per call.
 
-const { readFileSync } = require('node:fs');
+const { appendFileSync, readFileSync, writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 
 const args = process.argv.slice(2);
 const kind = process.env.FAKE_AGY_CASE;
+const usageKind = process.env.FAKE_AGY_USAGE;
+
+const listText = readFileSync(join(__dirname, '..', 'model-list.txt'), 'utf8');
+
+function log(call) {
+  if (process.env.FAKE_AGY_LOG !== undefined) {
+    appendFileSync(process.env.FAKE_AGY_LOG, `${call}\n`);
+  }
+}
 
 if (args[0] === 'models') {
+  log('models');
+
   if (kind === 'signed-out') {
     console.error('error: not signed in, run agy to sign in');
     process.exit(1);
   }
 
-  console.log('Fetching available models...');
-  process.stdout.write(readFileSync(join(__dirname, '..', 'model-list.txt'), 'utf8'));
+  console.error('Fetching available models...');
+  process.stdout.write(listText);
   process.exit(0);
 }
 
-// The script passes these flags in this order, each followed by its value, and --effort last. Any other flag fails.
+const bucket = (window, fraction) => ({
+  id: `${window}-limit`,
+  name: 'Limit Remaining',
+  window,
+  remaining_fraction: fraction,
+  reset_time: '2026-11-06T15:01:23Z',
+});
+
+const group = (name, models, buckets) => ({
+  name,
+  description: models === '' ? 'Shared by all models.' : `Models within this group: ${models}`,
+  buckets,
+});
+
+// The group of Claude and GPT models is always tight, so a case shows that it never gates a Gemini run.
+const otherGroup = group('Claude and GPT models', 'Claude Opus, Claude Sonnet, GPT-OSS', [bucket('weekly', 0.05)]);
+
+const geminiGroup = fraction => group('Gemini Models', 'Gemini Flash, Gemini Pro', [bucket('weekly', fraction)]);
+
+const usageGroups = {
+  enough: [geminiGroup(0.92), otherGroup],
+  below: [geminiGroup(0.15), otherGroup],
+  exactly: [geminiGroup(0.2), otherGroup],
+  'argon-group': [geminiGroup(0.92), group('Gemini Argon', 'Gemini Argon', [bucket('weekly', 0.1)]), otherGroup],
+  plain: [group('Gemini Models', '', [bucket('weekly', 0.1)]), otherGroup],
+  buckets: [group('Gemini Models', 'Gemini Flash, Gemini Pro', [bucket('daily', 0.9), bucket('weekly', 0.1)]), otherGroup],
+  'no-gemini': [otherGroup],
+}[usageKind ?? 'enough'];
+
+if (args[0] === '-p' && args[1] === '/usage') {
+  log('usage');
+
+  if (usageKind === 'fails') {
+    console.error('error: quota service unreachable');
+    console.log(JSON.stringify({ status: 'ERROR', response: '', error: 'quota service unreachable' }));
+    process.exit(1);
+  }
+
+  if (usageKind === 'garbage') {
+    console.log('not json');
+    process.exit(0);
+  }
+
+  const data = { description: 'Within each group, models share a weekly limit.', groups: usageGroups };
+
+  console.log(JSON.stringify({ conversation_id: '', status: 'SUCCESS', response: 'tsv text\n', command: { name: 'usage', data } }));
+  process.exit(0);
+}
+
+// The script passes these flags in this order, each followed by its value. Any other flag fails, --effort included.
 const flags = args.filter((_, index) => index % 2 === 0).join(' ');
 
-if (!/^-p --output-format --model --print-timeout( --effort)?$/.test(flags)) {
+if (flags !== '-p --output-format --model --print-timeout') {
   console.error(`error: unexpected arguments ${flags}`);
   process.exit(2);
 }
 
-const [, brief, , , , model, , timeout, , effort] = args;
+log('run');
 
-// An id that ends in an effort fails on any --effort, as the real CLI does.
-if (effort !== undefined && /-(high|medium|low)$/.test(model)) {
-  console.error(`error: --model ${model} conflicts with --effort=${effort}`);
+const [, brief, , , , model, , timeout] = args;
+
+// Headless mode never falls back on a model it does not list.
+if (!listText.split('\n').some(line => line.trim().split(/\s+/)[0] === model)) {
+  console.error(`error: invalid model selection (--model "${model}")`);
+  console.log(JSON.stringify({ conversation_id: '', status: 'ERROR', response: '', error: `model ${model} is not recognized as a known model` }));
   process.exit(1);
+}
+
+if (kind === 'writes') {
+  writeFileSync('written.txt', 'written by agy\n');
+}
+
+if (kind === 'rewrites') {
+  appendFileSync('tracked.txt', 'rewritten by agy\n');
 }
 
 const outcome = {
   error: { status: 'ERROR', error: 'quota exceeded', finished_reason: 'error', exit: 1 },
+  'agent-failure': { status: 'ERROR', response: '', exit: 3 },
+  canceled: { status: 'CANCELED', response: '', exit: 0 },
+  waiting: { status: 'WAITING', response: 'Which file?\n', exit: 0 },
   timeout: { status: 'SUCCESS', response: 'Half an answer.\n', finished_reason: 'print_timeout', exit: 0 },
   denied: { status: 'SUCCESS', response: '', denied_actions: [{ action: 'write_file' }], exit: 0 },
   'denied-with-answer': {
@@ -45,12 +119,20 @@ const outcome = {
     denied_actions: [{ action: 'write_file' }, { action: 'write_file' }],
     exit: 0,
   },
-}[kind] ?? { status: 'SUCCESS', response: `answer from ${model}${effort === undefined ? '' : ` with effort ${effort}`} in ${timeout}: ${brief}\n`, exit: 0 };
+}[kind] ?? { status: 'SUCCESS', response: `answer from ${model} in ${timeout}: ${brief}\n`, exit: 0 };
 
 if (kind === 'noise') {
   console.error('panic: agy lost its connection');
   console.log('not json');
   process.exit(1);
+}
+
+if (kind === 'agent-failure' || kind === 'agent-failure-without-json') {
+  console.error('AGY_ERROR: {"code":"model_api","message":"upstream 503"}');
+}
+
+if (kind === 'agent-failure-without-json') {
+  process.exit(3);
 }
 
 if (kind === 'denied') {
