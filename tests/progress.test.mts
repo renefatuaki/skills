@@ -13,7 +13,14 @@ import {
   parseUsage,
   step,
 } from '../hooks/progress/run.mts';
-import type { Band, Event, Item, Run } from '../hooks/progress/run.mts';
+import type {
+  Band,
+  Event,
+  Item,
+  Provider,
+  Run,
+  Tone,
+} from '../hooks/progress/run.mts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const script = join(
@@ -25,12 +32,30 @@ const script = join(
   'codex-model.mts',
 );
 
+const antigravityScript = join(
+  root,
+  'skills',
+  'workflow',
+  'engineering',
+  'scripts',
+  'antigravity.mts',
+);
+
 const fakeCodex = join(root, 'tests', 'fixtures', 'codex', 'bin');
+
+const fakeAgy = join(root, 'tests', 'fixtures', 'antigravity', 'bin');
 
 /** The band's width for every case that names none. */
 const COLUMNS = 200;
 
 const USAGE = '{"primary":62,"secondary":81,"belowMinimum":false}';
+
+const AGY_USAGE = '{"groups":{"Gemini Models":91},"belowMinimum":false}';
+
+const AGY_LOW_USAGE = '{"groups":{"Gemini Models":12},"belowMinimum":true}';
+
+const AGY_GROUPS_USAGE =
+  '{"groups":{"Gemini Models":91,"Gemini 4 Argon":40},"belowMinimum":false}';
 
 const OPEN: Event = {
   kind: 'todosWritten',
@@ -55,6 +80,14 @@ const PERSON: Event = { kind: 'personPrompted' };
 const CLAUDE: Event = { kind: 'claudeMeasured', left: 77 };
 
 const CODEX = 'Codex 5h 62% · week 81%';
+
+const AGY = 'Antigravity week 91%';
+
+const AGY_LOW = 'Antigravity week 12% (below minimum)';
+
+const AGY_GROUPS = 'Antigravity Gemini 91% · Argon 40%';
+
+const LEFT = '1/4 · Write the parser';
 
 const CASES: {
   name: string;
@@ -150,7 +183,7 @@ const CASES: {
   },
   {
     name: 'a read that failed hides the usage',
-    events: [OPEN, answer(USAGE), { kind: 'codexRead', budget: null }],
+    events: [OPEN, answer(USAGE), failedRead('codex')],
     expected: 'plain:1/4 · Write the parser',
   },
   {
@@ -198,7 +231,7 @@ const CASES: {
   },
   {
     name: 'a read that failed with no list shows nothing',
-    events: [answer(USAGE), { kind: 'codexRead', budget: null }],
+    events: [answer(USAGE), failedRead('codex')],
     expected: null,
   },
   {
@@ -256,6 +289,103 @@ const CASES: {
     columns: 5,
     expected: 'quiet:Claude 5h 77%',
   },
+  {
+    name: 'the Codex usage comes first and the Antigravity usage follows at the right edge, whatever the order of the reads',
+    events: [OPEN, answerAntigravity(AGY_USAGE), answer(USAGE)],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', CODEX], ['quiet', AGY])}`,
+  },
+  {
+    name: 'the Antigravity usage alone stands beside the list',
+    events: [OPEN, answerAntigravity(AGY_USAGE)],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', AGY])}`,
+  },
+  {
+    name: 'with no list the Antigravity usage stands alone at the right edge',
+    events: [answerAntigravity(AGY_USAGE)],
+    expected: atEdgeOf('', COLUMNS, ['quiet', AGY]),
+  },
+  {
+    name: 'with no list both usages stand at the right edge',
+    events: [answer(USAGE), answerAntigravity(AGY_USAGE)],
+    expected: atEdgeOf('', COLUMNS, ['quiet', CODEX], ['quiet', AGY]),
+  },
+  {
+    name: 'a limit below the minimum turns the Antigravity usage red and leaves the Codex usage',
+    events: [OPEN, answer(USAGE), answerAntigravity(AGY_LOW_USAGE)],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', CODEX], ['alarm', AGY_LOW])}`,
+  },
+  {
+    name: 'several groups are named by a short name taken from the group',
+    events: [OPEN, answerAntigravity(AGY_GROUPS_USAGE)],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', AGY_GROUPS])}`,
+  },
+  {
+    name: 'a read of the Antigravity usage that failed leaves the Codex usage',
+    events: [
+      OPEN,
+      answer(USAGE),
+      answerAntigravity(AGY_USAGE),
+      failedRead('antigravity'),
+    ],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', CODEX])}`,
+  },
+  {
+    name: 'a read of the Codex usage that failed leaves the Antigravity usage',
+    events: [
+      OPEN,
+      answer(USAGE),
+      answerAntigravity(AGY_USAGE),
+      failedRead('codex'),
+    ],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', AGY])}`,
+  },
+  {
+    name: 'a report of the other provider shows no usage',
+    events: [answer(AGY_USAGE), answerAntigravity(USAGE)],
+    expected: null,
+  },
+  {
+    name: 'a narrow band cuts the title before it leaves out the Antigravity usage',
+    events: [OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 57,
+    expected: `plain:1/4 · … | ${atEdgeOf('1/4 · …', 57, ['quiet', CODEX], ['quiet', AGY])}`,
+  },
+  {
+    name: 'the Antigravity usage is the first to go once the title would vanish',
+    events: [OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 56,
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, 56, ['quiet', CODEX])}`,
+  },
+  {
+    name: 'the Codex usage goes next, once the title would vanish again',
+    events: [OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 33,
+    expected: 'plain:1/4 · Write the parser',
+  },
+  {
+    name: 'a narrow band leaves out the Antigravity usage and the Codex usage before the Claude usage',
+    events: [CLAUDE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 30,
+    expected: 'quiet:Claude 5h 77% ·  | plain:1/4 · Write t…',
+  },
+  {
+    name: 'the Claude usage keeps the left edge while the Antigravity usage goes first',
+    events: [CLAUDE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 70,
+    expected: `quiet:Claude 5h 77% ·  | plain:${LEFT} | ${atEdgeOf(`Claude 5h 77% · ${LEFT}`, 70, ['quiet', CODEX])}`,
+  },
+  {
+    name: 'with no list the Antigravity usage goes before the Codex usage',
+    events: [answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 40,
+    expected: atEdgeOf('', 40, ['quiet', CODEX]),
+  },
+  {
+    name: 'with no list the Codex usage alone wider than the band starts at the left edge for the terminal to cut',
+    events: [answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 10,
+    expected: 'quiet:Codex 5h 62% · week 81%',
+  },
 ];
 
 /** What the band shows after the events, the same on every surface. */
@@ -266,7 +396,9 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     expected: {
       claude: { window: '5h 77%' },
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
-      codex: { windows: ['5h 62%', 'week 81%'], tone: 'quiet' },
+      usages: [
+        { label: 'Codex', readings: ['5h 62%', 'week 81%'], tone: 'quiet' },
+      ],
     },
   },
   {
@@ -284,7 +416,7 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     expected: {
       claude: null,
       progress: { count: '2/3', filled: '66%', title: 'Test the parser' },
-      codex: null,
+      usages: [],
     },
   },
   {
@@ -293,7 +425,7 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     expected: {
       claude: null,
       progress: { count: '2/2', filled: '100%', title: null },
-      codex: null,
+      usages: [],
     },
   },
   {
@@ -305,7 +437,7 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     expected: {
       claude: null,
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
-      codex: { windows: ['week 9%'], tone: 'alarm' },
+      usages: [{ label: 'Codex', readings: ['week 9%'], tone: 'alarm' }],
     },
   },
   {
@@ -317,7 +449,7 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     expected: {
       claude: null,
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
-      codex: null,
+      usages: [],
     },
   },
   {
@@ -326,13 +458,105 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     expected: {
       claude: null,
       progress: null,
-      codex: { windows: ['5h 62%', 'week 81%'], tone: 'quiet' },
+      usages: [
+        { label: 'Codex', readings: ['5h 62%', 'week 81%'], tone: 'quiet' },
+      ],
     },
   },
   {
     name: 'the Claude usage alone is a band',
     events: [answer('not json'), CLAUDE],
-    expected: { claude: { window: '5h 77%' }, progress: null, codex: null },
+    expected: { claude: { window: '5h 77%' }, progress: null, usages: [] },
+  },
+  {
+    name: 'the usages follow the order of the providers, not the order of the reads',
+    events: [answerAntigravity(AGY_USAGE), answer(USAGE)],
+    expected: {
+      claude: null,
+      progress: null,
+      usages: [
+        { label: 'Codex', readings: ['5h 62%', 'week 81%'], tone: 'quiet' },
+        { label: 'Antigravity', readings: ['week 91%'], tone: 'quiet' },
+      ],
+    },
+  },
+  {
+    name: 'a limit below the minimum is the alarm tone of the Antigravity usage alone',
+    events: [answer(USAGE), answerAntigravity(AGY_LOW_USAGE)],
+    expected: {
+      claude: null,
+      progress: null,
+      usages: [
+        { label: 'Codex', readings: ['5h 62%', 'week 81%'], tone: 'quiet' },
+        { label: 'Antigravity', readings: ['week 12%'], tone: 'alarm' },
+      ],
+    },
+  },
+  {
+    name: 'several groups read by the short name of the group, Gemini for the shared group',
+    events: [answerAntigravity(AGY_GROUPS_USAGE)],
+    expected: {
+      claude: null,
+      progress: null,
+      usages: [
+        {
+          label: 'Antigravity',
+          readings: ['Gemini 91%', 'Argon 40%'],
+          tone: 'quiet',
+        },
+      ],
+    },
+  },
+  {
+    name: 'a group name without a version or the word Models is its own short name',
+    events: [
+      answerAntigravity(
+        '{"groups":{"Gemini Models":91,"Gemini Argon":40,"Premium Models":55},"belowMinimum":false}',
+      ),
+    ],
+    expected: {
+      claude: null,
+      progress: null,
+      usages: [
+        {
+          label: 'Antigravity',
+          readings: ['Gemini 91%', 'Argon 40%', 'Premium 55%'],
+          tone: 'quiet',
+        },
+      ],
+    },
+  },
+  {
+    name: 'an Antigravity report without a group shows no usage',
+    events: [OPEN, answerAntigravity('{"groups":{},"belowMinimum":false}')],
+    expected: {
+      claude: null,
+      progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
+      usages: [],
+    },
+  },
+  {
+    name: 'an Antigravity report with a percent that is no whole number shows no usage',
+    events: [
+      OPEN,
+      answerAntigravity(
+        '{"groups":{"Gemini Models":91.5},"belowMinimum":false}',
+      ),
+    ],
+    expected: {
+      claude: null,
+      progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
+      usages: [],
+    },
+  },
+  {
+    name: 'an Antigravity report with groups as a list shows no usage',
+    events: [OPEN, answerAntigravity('{"groups":[91],"belowMinimum":false}')],
+    expected: {
+      claude: null,
+      progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
+      usages: [],
+    },
   },
   {
     name: 'no list and no usage show no band',
@@ -346,12 +570,26 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
   },
 ];
 
-/** Runs the usage script against the stand-in app-server and folds its answer in, so the script and the band agree on the report. */
-const SCRIPT_CASE = {
-  name: 'the script reports a reached limit that credits pay for, red all the same',
-  usage: 'credits',
-  expected: `plain:1/4 · Write the parser | alarm:${atEdge('1/4 · Write the parser', 'Codex 5h 100% · week 0% (below minimum)')}`,
-};
+/** Runs the usage script of a provider against its stand-in CLI and folds its answer in, so the script and the band agree on the report. */
+const SCRIPT_CASES: {
+  name: string;
+  provider: Provider;
+  usage: string;
+  expected: string;
+}[] = [
+  {
+    name: 'the Codex script reports a reached limit that credits pay for, red all the same',
+    provider: 'codex',
+    usage: 'credits',
+    expected: `plain:${LEFT} | alarm:${atEdge(LEFT, 'Codex 5h 100% · week 0% (below minimum)')}`,
+  },
+  {
+    name: 'the Antigravity script reports the groups of its own, red once one is below the minimum',
+    provider: 'antigravity',
+    usage: 'argon-group',
+    expected: `plain:${LEFT} | alarm:${atEdge(LEFT, 'Antigravity Gemini 92% · Argon 10% (below minimum)')}`,
+  },
+];
 
 let failures = 0;
 
@@ -363,11 +601,13 @@ for (const { name, events, expected } of BAND_CASES) {
   failures += report(name, bandOf(runOf(events)), expected);
 }
 
-failures += report(
-  SCRIPT_CASE.name,
-  fold([OPEN, answer(runScript(SCRIPT_CASE.usage))], COLUMNS),
-  SCRIPT_CASE.expected,
-);
+for (const { name, provider, usage, expected } of SCRIPT_CASES) {
+  failures += report(
+    name,
+    fold([OPEN, answerRead(provider, runScript(provider, usage))], COLUMNS),
+    expected,
+  );
+}
 
 console.log(failures === 0 ? 'All cases pass.' : `${failures} case(s) failed.`);
 
@@ -389,6 +629,24 @@ function atEdge(left: string, codex: string): string {
   return `${' '.repeat(COLUMNS - [...left].length - [...codex].length)}${codex}`;
 }
 
+/** Writes the segments of the usages at the right edge of a band the given columns wide, after the given text on its left, the first padded to the edge and each next one after the gap of three columns. */
+function atEdgeOf(
+  left: string,
+  columns: number,
+  ...usages: [Exclude<Tone, 'plain'>, string][]
+): string {
+  const gaps = 3 * (usages.length - 1);
+  const used = usages.reduce((total, [, text]) => total + [...text].length, 0);
+  const pad = Math.max(0, columns - [...left].length - used - gaps);
+
+  return usages
+    .map(
+      ([tone, text], index) =>
+        `${tone}:${' '.repeat(index === 0 ? pad : 3)}${text}`,
+    )
+    .join(' | ');
+}
+
 /** Folds the events through step from the initial run and returns the run alone. */
 function runOf(events: Event[]): Run {
   return events.reduce(step, INITIAL_RUN);
@@ -408,17 +666,34 @@ function report<T>(name: string, actual: T, expected: T): number {
   return ok ? 0 : 1;
 }
 
-/** Starts `codex-model.mts --usage` with the stand-in app-server first on PATH and a home without a rule file. */
-function runScript(usage: string): string {
-  const result = spawnSync(process.execPath, [script, '--usage'], {
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      PATH: `${fakeCodex}:${process.env.PATH}`,
-      HOME: join(root, 'tests', 'fixtures', 'codex'),
-      FAKE_CODEX_USAGE: usage,
+/** Starts the `--usage` script of the provider with its stand-in CLI first on PATH and a home without a rule file. */
+function runScript(provider: Provider, usage: string): string {
+  const stand: Record<Provider, { script: string; env: NodeJS.ProcessEnv }> = {
+    codex: {
+      script,
+      env: {
+        PATH: `${fakeCodex}:${process.env.PATH}`,
+        FAKE_CODEX_USAGE: usage,
+      },
     },
-  });
+    antigravity: {
+      script: antigravityScript,
+      env: { PATH: `${fakeAgy}:${process.env.PATH}`, FAKE_AGY_USAGE: usage },
+    },
+  };
+
+  const result = spawnSync(
+    process.execPath,
+    [stand[provider].script, '--usage'],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        HOME: join(root, 'tests', 'fixtures', 'codex'),
+        ...stand[provider].env,
+      },
+    },
+  );
 
   return result.stdout;
 }
@@ -435,6 +710,21 @@ function edit(id: string, status: 'in_progress' | 'completed'): Event {
   return { kind: 'taskEdited', id, title: undefined, status };
 }
 
+/** The read of the Codex script that printed the given stdout. */
 function answer(stdout: string): Event {
-  return { kind: 'codexRead', budget: parseUsage(stdout) };
+  return answerRead('codex', stdout);
+}
+
+/** The read of the Antigravity script that printed the given stdout. */
+function answerAntigravity(stdout: string): Event {
+  return answerRead('antigravity', stdout);
+}
+
+function answerRead(provider: Provider, stdout: string): Event {
+  return { kind: 'usageRead', provider, budget: parseUsage(provider, stdout) };
+}
+
+/** The read of a script that failed, which leaves nothing to show. */
+function failedRead(provider: Provider): Event {
+  return { kind: 'usageRead', provider, budget: null };
 }

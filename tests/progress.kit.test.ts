@@ -29,7 +29,16 @@ const USAGE = '{"primary":62,"secondary":81,"belowMinimum":false}\n';
 
 const LOW_USAGE = '{"primary":12,"secondary":81,"belowMinimum":true}\n';
 
+const AGY_USAGE = '{"groups":{"Gemini Models":91},"belowMinimum":false}\n';
+
+const AGY_LOW_USAGE = '{"groups":{"Gemini Models":12},"belowMinimum":true}\n';
+
+const AGY_GROUPS_USAGE =
+  '{"groups":{"Gemini Models":91,"Gemini 4 Argon":40},"belowMinimum":false}\n';
+
 const CODEX = 'Codex 5h 62% · week 81%';
+
+const AGY = 'Antigravity week 91%';
 
 /** A reading of the current session with 77.5% left, which the band rounds down to 77%. */
 const SESSION = [
@@ -195,7 +204,11 @@ test('a meta prompt keeps done on the band', async ($, on) => {
 });
 
 test('the session start reads the usage through the script and a failed read hides it', async ($, on) => {
-  const argvs = answerEngine(on, 'not json');
+  const { codex: argvs, antigravity: antigravityArgvs } = answerProviders(
+    on,
+    ['not json'],
+    ['not json'],
+  );
 
   await startSession($);
   await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
@@ -206,6 +219,16 @@ test('the session start reads the usage through the script and a failed read hid
       'node',
       expect.stringMatching(
         /\/skills\/workflow\/engineering\/scripts\/codex-model\.mts$/,
+      ),
+      '--usage',
+    ],
+  ]);
+
+  expect(antigravityArgvs).toEqual([
+    [
+      'node',
+      expect.stringMatching(
+        /\/skills\/workflow\/engineering\/scripts\/antigravity\.mts$/,
       ),
       '--usage',
     ],
@@ -367,6 +390,7 @@ test('desktop and mobile draw the usage alone as a caption at the right end of t
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-end',
+        gap: 'sm',
       },
       parts: [
         {
@@ -508,12 +532,262 @@ test('desktop and mobile with no list draw the Claude caption at the left end an
       row: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
+        gap: 'sm',
       },
       parts: ['Claude5h 77%', 'Codex5h 62%·week 81%'],
     });
   }
 });
+
+test('both usages stand at the right edge, the Antigravity usage after the Codex usage', async ($, on) => {
+  answerProviders(on, [USAGE], [AGY_USAGE]);
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('1/3 · Write the parser', CODEX, AGY));
+});
+
+test('the Antigravity usage alone stands at the right edge', async ($, on) => {
+  answerProviders(on, ['not json'], [AGY_USAGE]);
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('', AGY));
+});
+
+test('several groups of the Antigravity usage are named by a short name', async ($, on) => {
+  answerProviders(on, ['not json'], [AGY_GROUPS_USAGE]);
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('', 'Antigravity Gemini 91% · Argon 40%'));
+});
+
+test('a failed Antigravity read leaves the Codex usage as it is', async ($, on) => {
+  answerProviders(on, [USAGE], [null]);
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('1/3 · Write the parser', CODEX));
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const tree = await drawnTree($, surface);
+    const [, , codex, antigravity] = elementsOf(tree);
+
+    expect({
+      codex: cellOf(codex).text,
+      antigravity: antigravity === undefined ? null : cellOf(antigravity).text,
+    }).toEqual({ codex: 'Codex5h 62%·week 81%', antigravity: null });
+  }
+});
+
+test('a failed Codex read leaves the Antigravity usage as it is', async ($, on) => {
+  answerProviders(on, ['not json'], [AGY_USAGE]);
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('1/3 · Write the parser', AGY));
+});
+
+test('a limit below the minimum draws the Antigravity usage in the error color and leaves the Codex usage', async ($, on) => {
+  answerProviders(on, [USAGE], [AGY_LOW_USAGE]);
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  const ui = await $.ui.mount({
+    plugin: 'forge',
+    surface: 'terminal',
+    component: 'AbovePrompt',
+    props: PROPS,
+  });
+
+  const codex = await ui.find({ type: 'Text', text: /^ +Codex/ });
+  const antigravity = await ui.find({ type: 'Text', text: /^ +Antigravity/ });
+
+  expect(antigravity?.text.trimStart()).toBe(
+    'Antigravity week 12% (below minimum)',
+  );
+
+  expect(antigravity?.props.color).toBe('error');
+  expect(codex?.props.color).toBeUndefined();
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const [, , , caption] = elementsOf(await drawnTree($, surface));
+
+    expect(elementsOf(caption).map(cellOf)).toEqual([
+      { size: 'caption', dimColor: true, text: 'Antigravity' },
+      { size: 'caption', tabular: true, color: 'error', text: 'week 12%' },
+      { size: 'caption', color: 'error', text: 'below minimum' },
+    ]);
+  }
+});
+
+test('an Antigravity call reads the Antigravity usage again and leaves the Codex read alone', async ($, on) => {
+  const { codex: argvs, antigravity: antigravityArgvs } = answerProviders(
+    on,
+    [USAGE],
+    [AGY_USAGE, AGY_LOW_USAGE],
+  );
+
+  await startSession($);
+  await $.tool.call({
+    tool: 'Agent',
+    description: 'review',
+    prompt: '--model pro --effort high review the diff',
+    subagent_type: 'forge:antigravity',
+  });
+
+  await settled();
+  expect(antigravityArgvs.length).toBe(2);
+  expect(argvs.length).toBe(1);
+  expect(await drawn($)).toBe(
+    atEdge('', CODEX, 'Antigravity week 12% (below minimum)'),
+  );
+});
+
+test('a Codex call reads the Codex usage again and leaves the Antigravity read alone', async ($, on) => {
+  const { codex: argvs, antigravity: antigravityArgvs } = answerProviders(
+    on,
+    [USAGE, LOW_USAGE],
+    [AGY_USAGE],
+  );
+
+  await startSession($);
+  await $.tool.call({
+    tool: 'Agent',
+    description: 'review',
+    prompt: '--wait',
+    subagent_type: 'codex:codex-rescue',
+  });
+
+  await settled();
+  expect(argvs.length).toBe(2);
+  expect(antigravityArgvs.length).toBe(1);
+});
+
+test('every prompt but a meta one reads the usage of both providers again', async ($, on) => {
+  const { codex: argvs, antigravity: antigravityArgvs } = answerProviders(
+    on,
+    [USAGE, LOW_USAGE],
+    [AGY_USAGE, AGY_LOW_USAGE],
+  );
+
+  await startSession($);
+  await settled();
+  expect(await drawn($)).toBe(atEdge('', CODEX, AGY));
+
+  await $.prompt.submit({
+    text: 'next',
+    wait: false,
+    origin: { kind: 'composer' },
+  });
+
+  await settled();
+  expect(argvs.length).toBe(2);
+  expect(antigravityArgvs.length).toBe(2);
+  expect(await drawn($)).toBe(
+    atEdge(
+      '',
+      'Codex 5h 12% · week 81% (below minimum)',
+      'Antigravity week 12% (below minimum)',
+    ),
+  );
+});
+
+test('a slow Antigravity read never delays the Codex usage', async ($, on) => {
+  answerProviders(on, [USAGE], [HANG]);
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('', CODEX));
+});
+
+test('a slow Codex read never delays the Antigravity usage', async ($, on) => {
+  answerProviders(on, [HANG], [AGY_USAGE]);
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('', AGY));
+});
+
+test('desktop and mobile draw the Antigravity caption next to the Codex caption, built the same way', async ($, on) => {
+  answerProviders(on, [USAGE], [AGY_USAGE]);
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const tree = await drawnTree($, surface);
+    const [, , codex, antigravity] = elementsOf(tree);
+
+    expect({
+      row: tree.props,
+      codex: { props: codex?.props, cells: elementsOf(codex).map(cellOf) },
+      antigravity: {
+        props: antigravity?.props,
+        cells: elementsOf(antigravity).map(cellOf),
+      },
+    }).toEqual({
+      row: { flexDirection: 'row', alignItems: 'center', gap: 'sm' },
+      codex: {
+        props: CAPTION,
+        cells: [
+          { size: 'caption', dimColor: true, text: 'Codex' },
+          { size: 'caption', tabular: true, text: '5h 62%' },
+          { size: 'caption', dimColor: true, text: '·' },
+          { size: 'caption', tabular: true, text: 'week 81%' },
+        ],
+      },
+      antigravity: {
+        props: CAPTION,
+        cells: [
+          { size: 'caption', dimColor: true, text: 'Antigravity' },
+          { size: 'caption', tabular: true, text: 'week 91%' },
+        ],
+      },
+    });
+  }
+});
+
+test('desktop and mobile with no list draw the Claude caption at the left end and both captions at the right end', async ($, on) => {
+  answerSession(on, SESSION);
+  answerProviders(on, [USAGE], [AGY_USAGE]);
+  await startSession($);
+  await settled();
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const tree = await drawnTree($, surface);
+    const [claude, ...captions] = elementsOf(tree);
+
+    expect({
+      row: tree.props,
+      claude: claude?.props,
+      captions: captions.map(part => cellOf(part).text),
+    }).toEqual({
+      row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: 'sm',
+      },
+      claude: { flexGrow: 1, minWidth: 0 },
+      captions: ['Codex5h 62%·week 81%', 'Antigravityweek 91%'],
+    });
+  }
+});
+
+/** The props of a usage caption, a row of the label and the readings that never shrinks. */
+const CAPTION = {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 'xs',
+  flexShrink: 0,
+};
 
 /** Answers the plugin's read of the session's usage with the given rate-limit windows. */
 function answerSession(on: On, rateLimits: SessionRateLimit[]): void {
@@ -536,9 +810,26 @@ async function measure(
   await settled();
 }
 
-/** Answers as the engine beneath the plugin, the tools, the usage script with the next of the given stdouts and the last one ever after, and the band with ENGINE, and returns the argv of every run. */
+/** The next stdout a usage script prints, null for a script that fails and HANG for one that never ends. */
+type Read = string | null | typeof HANG;
+
+const HANG = Symbol('a read that never ends');
+
+/** Answers as the engine beneath the plugin, the tools, the Codex usage script with the next of the given stdouts and the last one ever after, the Antigravity usage script with a failure, and the band with ENGINE, and returns the argv of every Codex run. */
 function answerEngine(on: On, ...stdouts: [string, ...string[]]): string[][] {
-  const argvs: string[][] = [];
+  return answerProviders(on, stdouts, [null]).codex;
+}
+
+/** Answers as answerEngine does, with the next of the given reads for the Antigravity usage script too, and returns the argv of every run of each script. */
+function answerProviders(
+  on: On,
+  codex: [Read, ...Read[]],
+  antigravity: [Read, ...Read[]],
+): { codex: string[][]; antigravity: string[][] } {
+  const argvs: { codex: string[][]; antigravity: string[][] } = {
+    codex: [],
+    antigravity: [],
+  };
 
   on('tool.call', { tool: 'TodoWrite' }, ($, e) => ({
     result: { oldTodos: [], newTodos: e.todos },
@@ -563,19 +854,13 @@ function answerEngine(on: On, ...stdouts: [string, ...string[]]): string[][] {
   }));
 
   on('process.run', ($, e) => {
-    const stdout = stdouts[Math.min(argvs.length, stdouts.length - 1)];
+    const provider = isAntigravityRead(e.argv) ? 'antigravity' : 'codex';
+    const reads = provider === 'codex' ? codex : antigravity;
+    const read = reads[Math.min(argvs[provider].length, reads.length - 1)];
 
-    argvs.push([...e.argv]);
+    argvs[provider].push([...e.argv]);
 
-    return {
-      value: {
-        exitCode: 0,
-        stdout,
-        stderr: '',
-        isStdoutTruncated: false,
-        isStderrTruncated: false,
-      },
-    };
+    return read === HANG ? new Promise<never>(() => {}) : finished(read);
   });
 
   on('session.start', ($, e) => ({ cwd: e.cwd }));
@@ -591,16 +876,35 @@ function answerEngine(on: On, ...stdouts: [string, ...string[]]): string[][] {
   return argvs;
 }
 
-/** Starts the session on the terminal, which reads the usage once. */
+/** Tells the run of the Antigravity usage script from any other process. */
+function isAntigravityRead(argv: readonly string[]): boolean {
+  return argv[1]?.endsWith('/antigravity.mts') === true;
+}
+
+/** Answers a process run that ended, with the stdout of a script that succeeded, or with the failure of a script when the stdout is null. */
+function finished(stdout: string | null) {
+  return {
+    value: {
+      exitCode: stdout === null ? 1 : 0,
+      stdout: stdout ?? '',
+      stderr: '',
+      isStdoutTruncated: false,
+      isStderrTruncated: false,
+    },
+  };
+}
+
+/** Starts the session on the terminal, which reads the usage of each provider once. */
 async function startSession($: Engine): Promise<void> {
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true });
 }
 
-/** Writes the line the band draws at PROPS.bodyColumns, the given text on the left and the Codex text at the right edge. */
-function atEdge(left: string, codex: string): string {
-  const pad = PROPS.bodyColumns - [...left].length - [...codex].length;
+/** Writes the line the band draws at PROPS.bodyColumns, the given text on the left and the usages at the right edge with three columns between them. */
+function atEdge(left: string, ...usages: string[]): string {
+  const text = usages.join('   ');
+  const pad = PROPS.bodyColumns - [...left].length - [...text].length;
 
-  return `${left}${' '.repeat(pad)}${codex}`;
+  return `${left}${' '.repeat(pad)}${text}`;
 }
 
 /** Mounts the band on the terminal and returns the text it draws, ENGINE when the plugin passed. */

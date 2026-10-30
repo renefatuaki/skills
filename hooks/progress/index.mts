@@ -1,4 +1,4 @@
-// Turns the main session's todo calls, Codex calls, prompts and usage measurements into events of the run, reads the Codex usage when the session starts, on each prompt and after each Codex call, reads the Claude usage when the session starts, and draws the run above the prompt.
+// Turns the main session's todo calls, provider calls, prompts and usage measurements into events of the run, reads the usage of each provider when the session starts, on each prompt and after each call of its subagent, reads the Claude usage when the session starts, and draws the run above the prompt.
 // https://code.claude.com/docs/en/plugins/mods/events.md
 
 import type {
@@ -13,13 +13,21 @@ import type {
   ToolCallResult,
 } from 'claude-code';
 
-import { bandLine, bandOf, INITIAL_RUN, parseUsage, step } from './run.mts';
+import {
+  bandLine,
+  bandOf,
+  INITIAL_RUN,
+  parseUsage,
+  PROVIDERS,
+  step,
+} from './run.mts';
 import type {
   Band,
   Budget,
-  CodexUsage,
   Event,
   Progress,
+  Provider,
+  ProviderUsage,
   Run,
   Tone,
 } from './run.mts';
@@ -29,6 +37,12 @@ let run: Run = INITIAL_RUN;
 
 /** Outlasts the usage script's own 30 s timeout, so the script reports its failure before the call is cut. */
 const READ_TIMEOUT_MS = 40_000;
+
+/** The script of the engineering skill that reports the usage of a provider with `--usage`. */
+const SCRIPTS: Record<Provider, string> = {
+  codex: 'codex-model.mts',
+  antigravity: 'antigravity.mts',
+};
 
 /** Names the origins of a prompt the person sent, so a task notification never dismisses a finished list. */
 const PERSON_ORIGINS: ReadonlySet<PromptOrigin['kind']> = new Set([
@@ -44,8 +58,8 @@ const TONES: Record<Tone, TextProps> = {
   alarm: { color: 'error' },
 };
 
-/** Colors the windows of a usage caption, which stay in the text color unless below the Codex minimum. */
-const WINDOW_TONES: Record<CodexUsage['tone'], TextProps> = {
+/** Colors the readings of a usage caption, which stay in the text color unless below the minimum of the provider. */
+const READING_TONES: Record<ProviderUsage['tone'], TextProps> = {
   quiet: {},
   alarm: { color: 'error' },
 };
@@ -96,15 +110,13 @@ export const register: Register = on => {
   on(
     'tool.call',
     { tool: 'Agent', subagent_type: 'codex:codex-rescue' },
-    async ($, e, next) => {
-      const ran = await next(e);
+    async ($, e, next) => readAfter($, 'codex', await next(e)),
+  ).catch(($, e, next) => next(e));
 
-      if (succeeded(ran)) {
-        void readUsage($);
-      }
-
-      return ran;
-    },
+  on(
+    'tool.call',
+    { tool: 'Agent', subagent_type: 'forge:antigravity' },
+    async ($, e, next) => readAfter($, 'antigravity', await next(e)),
   ).catch(($, e, next) => next(e));
 
   on('prompt.submit', ($, e, next) => {
@@ -116,13 +128,13 @@ export const register: Register = on => {
       dispatch($, { kind: 'personPrompted' });
     }
 
-    void readUsage($);
+    readUsages($);
 
     return next(e);
   }).catch(($, e, next) => next(e));
 
   on('session.start', ($, e, next) => {
-    void readUsage($);
+    readUsages($);
     void readSessionUsage($);
 
     return next(e);
@@ -156,7 +168,7 @@ export const register: Register = on => {
   });
 };
 
-/** Draws the band as one line of characters cut to the columns, the Claude usage at the left edge and the Codex usage padded to the right edge. */
+/** Draws the band as one line of characters cut to the columns, the Claude usage at the left edge and the usages of the providers padded to the right edge. */
 function terminalBand(
   { Text }: Pick<ElementTable, 'Text'>,
   band: Band,
@@ -169,7 +181,7 @@ function terminalBand(
   return Text({ wrap: 'truncate-end', children });
 }
 
-/** Draws the band as a row of the Claude usage as a caption at the left end, the progress and the Codex usage as a caption at the right end. */
+/** Draws the band as a row of the Claude usage as a caption at the left end, the progress and a caption for the usage of each provider at the right end. */
 function graphicalBand(
   { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
   band: Band,
@@ -178,23 +190,31 @@ function graphicalBand(
     band.claude === null
       ? []
       : [
-          usageCaption({ Box, Text }, 'Claude', {
-            windows: [band.claude.window],
-            tone: 'quiet',
-          }),
+          usageCaption(
+            { Box, Text },
+            {
+              label: 'Claude',
+              readings: [band.claude.window],
+              tone: 'quiet',
+            },
+          ),
         ];
 
-  const codex =
-    band.codex === null
-      ? []
-      : [usageCaption({ Box, Text }, 'Codex', band.codex)];
+  const usages = band.usages.map(usage => usageCaption({ Box, Text }, usage));
 
   if (band.progress === null) {
+    // The Claude caption takes the free width, which pushes the captions of the providers to the right end.
     return Box({
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: band.claude === null ? 'flex-end' : 'space-between',
-      children: [...claude, ...codex],
+      justifyContent: 'flex-end',
+      gap: 'sm',
+      children: [
+        ...claude.map(caption =>
+          Box({ flexGrow: 1, minWidth: 0, children: [caption] }),
+        ),
+        ...usages,
+      ],
     });
   }
 
@@ -205,7 +225,7 @@ function graphicalBand(
     children: [
       ...claude,
       ...progressParts({ Box, Text }, band.progress),
-      ...codex,
+      ...usages,
     ],
   });
 }
@@ -237,7 +257,7 @@ function progressParts(
     ],
   });
 
-  // A flex item does not shrink below its content without a minimum width, so the title would push the Codex usage out instead of truncating.
+  // A flex item does not shrink below its content without a minimum width, so the title would push the usages out instead of truncating.
   // https://developer.mozilla.org/en-US/docs/Web/CSS/min-width#auto
   const titleBox = Box({
     flexGrow: 1,
@@ -252,20 +272,19 @@ function progressParts(
   return [progress, titleBox];
 }
 
-/** Draws the label such as `Codex` and each window as small text, the windows and `below minimum` in the error color in the alarm tone. */
+/** Draws the label such as `Codex` and each reading as small text, the readings and `below minimum` in the error color in the alarm tone. */
 function usageCaption(
   { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
-  label: string,
-  { windows, tone }: CodexUsage,
+  { label, readings, tone }: ProviderUsage,
 ): RenderElement {
   const separator = Text({ size: 'caption', dimColor: true, children: ['·'] });
-  const parts = windows.flatMap((window, index) => [
+  const parts = readings.flatMap((reading, index) => [
     ...(index === 0 ? [] : [separator]),
     Text({
       size: 'caption',
       tabular: true,
-      ...WINDOW_TONES[tone],
-      children: [window],
+      ...READING_TONES[tone],
+      children: [reading],
     }),
   ]);
 
@@ -274,7 +293,7 @@ function usageCaption(
       ? [
           Text({
             size: 'caption',
-            ...WINDOW_TONES.alarm,
+            ...READING_TONES.alarm,
             children: ['below minimum'],
           }),
         ]
@@ -299,9 +318,36 @@ function dispatch($: EngineInterface, event: Event): void {
   $.ui.invalidate('ui.render');
 }
 
-/** Reads the usage outside any hook's time and applies the answer as one more event. */
-async function readUsage($: EngineInterface): Promise<void> {
-  dispatch($, { kind: 'codexRead', budget: await runUsageScript($) });
+/** Starts the read of every provider at once, so a slow provider never delays the answer of another. */
+function readUsages($: EngineInterface): void {
+  for (const provider of PROVIDERS) {
+    void readUsage($, provider);
+  }
+}
+
+/** Reads the usage of the provider again once a call of its subagent succeeded, and hands back the result of the call. */
+function readAfter<T extends string>(
+  $: EngineInterface,
+  provider: Provider,
+  ran: ToolCallResult<T>,
+): ToolCallResult<T> {
+  if (succeeded(ran)) {
+    void readUsage($, provider);
+  }
+
+  return ran;
+}
+
+/** Reads the usage of the provider outside any hook's time and applies the answer as one more event. */
+async function readUsage(
+  $: EngineInterface,
+  provider: Provider,
+): Promise<void> {
+  dispatch($, {
+    kind: 'usageRead',
+    provider,
+    budget: await runUsageScript($, provider),
+  });
 }
 
 /** Reads the Claude usage outside the session start hook's time and applies it as one more event, with no reading when the read is refused. */
@@ -325,9 +371,12 @@ function sessionLeft(rateLimits: readonly SessionRateLimit[]): number | null {
   return Math.min(100, Math.max(0, Math.floor(100 - session.percentUsed)));
 }
 
-/** Asks `codex-model.mts --usage` for the usage left, null when Node, the Codex CLI or the sign-in is missing or the read fails. */
-async function runUsageScript($: EngineInterface): Promise<Budget | null> {
-  const script = `${$.plugin.root}/skills/workflow/engineering/scripts/codex-model.mts`;
+/** Asks the script of the provider for its usage left with `--usage`, null when Node, the CLI of the provider or the sign-in is missing or the read fails. */
+async function runUsageScript(
+  $: EngineInterface,
+  provider: Provider,
+): Promise<Budget | null> {
+  const script = `${$.plugin.root}/skills/workflow/engineering/scripts/${SCRIPTS[provider]}`;
 
   try {
     const { exitCode, stdout } = await $.process.run(
@@ -335,7 +384,7 @@ async function runUsageScript($: EngineInterface): Promise<Budget | null> {
       { timeoutMs: READ_TIMEOUT_MS },
     );
 
-    return exitCode === 0 ? parseUsage(stdout) : null;
+    return exitCode === 0 ? parseUsage(provider, stdout) : null;
   } catch {
     return null;
   }
