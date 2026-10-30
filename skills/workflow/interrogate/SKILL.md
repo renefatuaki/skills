@@ -37,6 +37,8 @@ Each Claude reviewer gets `subagent_type: "general-purpose"`, and `model` and `e
 
 A Codex reviewer runs as a Codex slot: `subagent_type: "codex:codex-rescue"`, a prompt that starts with `--wait` plus the entry's `--effort` and its resolved `--model` flags, a read-only first sentence, and the full filled template below. If the slot falls back to its Claude model, say so in the Reviewers list and note that the panel ran single-family, so agreement carries less weight. Do not block the review on a fallback.
 
+An Antigravity reviewer, such as `antigravity:pro/high`, runs as a read-only Antigravity slot per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`: `subagent_type: "forge:antigravity"`, a prompt that starts with the entry's `--model` and `--effort` flags, a read-only first sentence, and the full filled template below. A fallback is reported like one of a Codex reviewer.
+
 Read `references/reviewer-prompt.md` and fill in the same template for every reviewer with the stated intent, the diff or file contents, the rubric from `references/rubric.md`, and the code-quality lens from `references/code-quality-review.md`.
 
 ## Step 4, Synthesize
@@ -58,7 +60,7 @@ You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator
 > [The stated intent paragraph from Step 2]
 
 ### Reviewers
-- Reviewer [label]: [model and effort, such as `opus/xhigh` or `codex:astra/xhigh`, or `opus/xhigh (codex fallback: <reason>)`], [N findings] (one bullet per reviewer)
+- Reviewer [label]: [model and effort, such as `opus/xhigh`, `codex:astra/xhigh` or `antigravity:pro/high`, or `opus/xhigh (codex fallback: <reason>)`], [N findings] (one bullet per reviewer)
 
 ### Act On
 [Each: description, which models raised it, why it matters.]

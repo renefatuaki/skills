@@ -11,7 +11,7 @@ how explorer: sonnet/high
 interrogate reviewers: opus/xhigh, codex:astra/xhigh
 ```
 
-The line `codex minimum: <percent>%`, such as `codex minimum: 20%`, is no role. It sets how much usage a Codex slot needs left, and **Codex slots** reads it. The line `effort: fixed` or `effort: adaptive` is no role either. **Effort mode** reads it.
+The line `codex minimum: <percent>%`, such as `codex minimum: 20%`, is no role. It sets how much usage a Codex slot needs left, and **Codex slots** reads it. An Antigravity slot has no such line, because its CLI reports no usage. The line `effort: fixed` or `effort: adaptive` is no role either. **Effort mode** reads it.
 
 A missing file or a missing line means the role uses the default the skill names. Lines for roles no skill names are retired. Ignore them.
 
@@ -23,28 +23,29 @@ A missing file or a missing line means the role uses the default the skill names
 | `<model>` alone | `model: "<model>"`, no `effort` |
 | `inherit` | omit `model` and `effort`. This plugin's agents and `general-purpose` carry no model default, so the subagent runs on the parent session's model. |
 | `codex:<model>/<effort>`, such as `codex:astra/xhigh` | a Codex slot. Follow **Codex slots** below, with the effort adjusted per **Effort mode** when the entry is adaptive. |
+| `antigravity:<model>/<effort>`, such as `antigravity:pro/high` | a read-only Antigravity slot. Follow **Antigravity slots** below, with the effort adjusted per **Effort mode** when the entry is adaptive. |
 
-Models are `haiku`, `sonnet`, `opus`, and `fable`. Codex models are `luna`, `sol`, and `astra`. Efforts, strongest first, are `max`, `xhigh`, `high`, `medium`, `low`. A Codex slot takes `xhigh`, `high`, `medium`, `low`, `minimal`, or `none`, so a Codex `max` runs as `xhigh`. A Codex entry always names its model and its effort. The Codex CLI gives each model a full name with its version, such as `gpt-6-astra`, and **Codex slots** resolves it. If the `Agent` tool rejects an effort for a model, use the strongest effort it accepts and say so. If it rejects a model, use the skill's default and say so.
+Models are `haiku`, `sonnet`, `opus`, and `fable`. Codex models are `luna`, `sol`, and `astra`. Efforts, strongest first, are `max`, `xhigh`, `high`, `medium`, `low`. A Codex slot takes `xhigh`, `high`, `medium`, `low`, `minimal`, or `none`, so a Codex `max` runs as `xhigh`. A Codex entry always names its model and its effort. The Codex CLI gives each model a full name with its version, such as `gpt-6-astra`, and **Codex slots** resolves it. Antigravity models are `flash`, `pro`, `argon`, and `carbon`, ascending by strength. An Antigravity slot takes `high`, `medium`, or `low`, so an Antigravity `max` or `xhigh` runs as `high`. An Antigravity entry always names its model and its effort. The Antigravity CLI gives each Gemini model an id with its version, such as `gemini-3.8-flash-high` or `gemini-4-argon`, and **Antigravity slots** resolves it. If the `Agent` tool rejects an effort for a model, use the strongest effort it accepts and say so. If it rejects a model, use the skill's default and say so.
 
-A panel role (arena runners, arena cross-judge pool, architect runners, interrogate reviewers) holds a comma-separated list. One subagent runs per entry, `inherit` and Codex entries included, so the list length sets the panel size.
+A panel role (arena runners, arena cross-judge pool, architect runners, interrogate reviewers) holds a comma-separated list. One subagent runs per entry, `inherit`, Codex and Antigravity entries included, so the list length sets the panel size.
 
 ## Effort mode
 
-The line `effort: fixed` or `effort: adaptive` sets the mode of every entry. Without the line the mode is `fixed`. An entry whose effort ends in `~`, such as `sonnet/high~`, is adaptive. An entry whose effort ends in `=`, such as `opus/xhigh=`, is fixed. In a panel each entry carries its own mark. Strip the mark before the effort reaches the `Agent` tool or the `--effort` flag of a Codex slot.
+The line `effort: fixed` or `effort: adaptive` sets the mode of every entry. Without the line the mode is `fixed`. An entry whose effort ends in `~`, such as `sonnet/high~`, is adaptive. An entry whose effort ends in `=`, such as `opus/xhigh=`, is fixed. In a panel each entry carries its own mark. Strip the mark before the effort reaches the `Agent` tool or the `--effort` flag of a Codex or an Antigravity slot.
 
 A task of the engineering skill whose prompt holds `effort:adaptive` or `effort:fixed` uses that mode in place of the line, as step 5 of that skill's `SKILL.md` says. Name that mode in every delegate's brief, so the delegate's own spawns use it. A mark beats the task's mode, and the task's mode beats the line.
 
 A fixed entry spawns with exactly its effort.
 
-**Match the model to the job.** This applies to an adaptive entry. Before each spawn, start from the role's line or default and pick the effort the job needs. The `/setup-models` budget sets each role's starting effort. Raise it one step, up to `max`, for the hardest or subtlest work. Lower it one step for judgment and two or more steps for routine work, down to `low`. Verification is the exception and stays on the `swarm workers` model and effort. Change only the effort, and keep the model the role names, so a diverse panel stays diverse. A Codex entry uses the Codex efforts from `xhigh` down to `low`, and its fallback keeps the adjusted effort. An entry without an effort and an `inherit` entry get no effort in either mode. If the `Agent` tool rejects the adjusted effort, do not try another adjusted effort. Use the role's line or default and say so.
+**Match the model to the job.** This applies to an adaptive entry. Before each spawn, start from the role's line or default and pick the effort the job needs. The `/setup-models` budget sets each role's starting effort. Raise it one step, up to `max`, for the hardest or subtlest work. Lower it one step for judgment and two or more steps for routine work, down to `low`. Verification is the exception and stays on the `swarm workers` model and effort. Change only the effort, and keep the model the role names, so a diverse panel stays diverse. A Codex entry uses the Codex efforts from `xhigh` down to `low`, and its fallback keeps the adjusted effort. An Antigravity entry uses `high`, `medium`, and `low`, so a raise stops at `high`, and its fallback keeps the adjusted effort. An entry without an effort and an `inherit` entry get no effort in either mode. If the `Agent` tool rejects the adjusted effort, do not try another adjusted effort. Use the role's line or default and say so.
 
 ## Code model
 
-The code roles are `feature, refactoring`, `bug-fix`, `perf-issue`, `hillclimb`, and `swarm workers`. `/setup-models` sets their model with one question. A task of the engineering skill whose prompt holds `model:sonnet`, `model:opus`, or `model:fable` runs every code role on that model in place of the model of its line or default, as step 5 of that skill's `SKILL.md` says. The effort stays that of the line or default, its mark included. An `inherit` entry, a Codex entry, and a swarm arm that names its own model keep their value. Name that model in every delegate's brief, so the delegate's own spawns use it. Every other role, `hardest tasks` included, keeps its model.
+The code roles are `feature, refactoring`, `bug-fix`, `perf-issue`, `hillclimb`, and `swarm workers`. `/setup-models` sets their model with one question. A task of the engineering skill whose prompt holds `model:sonnet`, `model:opus`, or `model:fable` runs every code role on that model in place of the model of its line or default, as step 5 of that skill's `SKILL.md` says. The effort stays that of the line or default, its mark included. An `inherit` entry, a Codex entry, an Antigravity entry, and a swarm arm that names its own model keep their value. Name that model in every delegate's brief, so the delegate's own spawns use it. Every other role, `hardest tasks` included, keeps its model.
 
 ## Model families
 
-Panels and cross-judges reason about families. `haiku`, `sonnet`, `opus`, `fable`, and `inherit` are the `claude` family. Every Codex entry is the `codex` family. A panel gets its diversity from mixing families. Two Claude models at different efforts still count as one family.
+Panels and cross-judges reason about families. `haiku`, `sonnet`, `opus`, `fable`, and `inherit` are the `claude` family. Every Codex entry is the `codex` family. Every Antigravity entry is the `antigravity` family. A panel gets its diversity from mixing families. Two Claude models at different efforts still count as one family.
 
 ## Codex slots
 
@@ -65,6 +66,20 @@ A Codex entry runs the slot through OpenAI Codex using the `codex` plugin's forw
    - Once one slot hit the usage limit, the other Codex slots of the same run skip Codex and go straight to their Claude model, because their runs would fail the same way.
 
 The fallback keeps the panel the same size and each slot's rank. It does not keep it diverse, so say that the panel ran single-family.
+
+## Antigravity slots
+
+An Antigravity entry runs the slot through Google Antigravity using the `forge:antigravity` forwarding agent of this plugin. Antigravity never writes code, so a slot is read-only. It is allowed only in `arena cross-judge pool`, `interrogate reviewers`, and `swarm workers`. It is not allowed in `arena runners` or `architect runners`, because runners write. A swarm worker that writes runs on the Claude model of the same rank instead. A task the user hands to Antigravity runs as such a slot, with the model and the effort the user names. Without them it uses the strongest model the CLI lists at `high`, checked from `carbon` down to `flash`.
+
+1. Spawn `Agent` with `subagent_type: "forge:antigravity"`. Leave the `Agent` `model` and `effort` unset. They would only steer the forwarder, not Antigravity.
+2. Start the prompt with the entry's `--model <model> --effort <effort>`, for example `--model flash --effort high`, and follow it with the brief. The forwarder passes the brief unchanged on stdin to `node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/antigravity.mts --run <model> <effort>`, with Node 24 or newer, which runs TypeScript directly. The script resolves the newest id the Antigravity CLI lists for the pair. An id that ends in the effort, such as `gemini-3.8-flash-high`, selects it. An id without one, such as `gemini-4-argon`, gets the effort as `--effort`. The script runs `agy` in the current directory and ends the run after 8 minutes unless it gets `--timeout <minutes>`.
+3. Say in the first sentence of the brief that the run is read-only and that Antigravity must not modify files. The print mode of `agy` denies a write anyway, so a slot never asks for a write-capable run and never passes `--dangerously-skip-permissions`.
+4. Give Antigravity the full brief. It does not see this conversation. Include file pointers, the base SHA or branch, and the exact output format the skill expects.
+5. **Fallback.** When Antigravity cannot do the work, the slot runs on the Claude model of the same rank instead, `sonnet` for `flash` and `opus` for `pro`, `argon`, and `carbon`. It keeps the entry's effort. Say in the skill's report that the slot fell back and why. Fall back in these two cases.
+   - **The forwarder reports a failure.** Its result starts with `ANTIGRAVITY FAILED:`. The script fails when the CLI lists no such model (the account may lack its tier), `agy` is missing or not signed in, `agy` exits with a code other than 0, the status is not `SUCCESS`, the run ends with any `finished_reason` such as `print_timeout`, or the response is empty. An empty response after a denied write is among them.
+   - **Antigravity stops early.** The result is not the output the brief asked for, such as a status line or a single sentence like "I'll look at the tests first".
+
+A slot that only reads leaves nothing to undo before the fallback. Antigravity has no usage command, so no check runs before a slot and no usage line applies. The fallback keeps the panel the same size and each slot's rank. It does not keep it diverse, so say that the panel ran single-family.
 
 ## Isolation
 

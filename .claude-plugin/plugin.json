@@ -91,6 +91,7 @@
     "./skills/workflow/why"
   ],
   "agents": [
+    "./agents/antigravity.md",
     "./agents/ci-watcher.md",
     "./agents/engineer.md"
   ]

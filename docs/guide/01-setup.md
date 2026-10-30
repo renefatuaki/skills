@@ -22,7 +22,7 @@ Run:
 
 [`/setup-models`](../../skills/meta/setup-models/SKILL.md) shows the models you can pick, asks for a reasoning budget, shows you each role (code delegates, judgment, the review panels), and asks what you want. Answer the questions. It writes `~/.claude/rules/models.md`, a small rule every skill of this plugin reads.
 
-The defaults are the same as the `large` budget. `unlimited` lifts each model one effort step, up to `max`. Opus goes to `max`. Codex tops out at `xhigh`, so it stays there. `medium` and `small` lower the reasoning and spend fewer tokens.
+The defaults are the same as the `large` budget. `unlimited` lifts each model one effort step, up to `max`. Opus goes to `max`. Codex tops out at `xhigh`, so it stays there. Antigravity tops out at `high`. `medium` and `small` lower the reasoning and spend fewer tokens.
 
 `/setup-models` then asks which model the code roles run on. They are `feature, refactoring`, `bug-fix`, `perf-issue`, `hillclimb` and `swarm workers`. `sonnet` is the default, and `opus` or `fable` spend more for harder code. Each role keeps its effort. To pick the model for one `/engineering` task, add it to the prompt, such as `/engineering #42 model:opus`.
 
@@ -31,6 +31,8 @@ The defaults are the same as the `large` budget. `unlimited` lifts each model on
 You only override what you care about. A role with no line in the rule keeps the skill's default. To restore a default, delete that role's line. A rerun of `/setup-models` keeps any role whose model differs from the default. When a default changes, a rule written before the change still pins the old default, so delete those role lines, or delete the file, then run `/setup-models` again.
 
 Set a role to `inherit` and the subagent runs on your session's own model. For a panel role the value is a list, and one subagent runs per entry, so the list length sets the panel size. Setup also configures `swarm workers`, the default model for every `/swarm` worker unless a race names a model for each arm.
+
+Antigravity is an opt-in third family next to Claude and Codex. Set a role to `antigravity:<model>/<effort>`, such as `antigravity:pro/high`, or pick it in `/setup-models`. The models are `flash`, `pro`, `argon`, and `carbon`, ascending by strength. The efforts are `high`, `medium`, and `low`. Antigravity never writes code, so an entry is allowed only in `interrogate reviewers`, `arena cross-judge pool`, and `swarm workers`. It needs the `agy` CLI signed in. A model your account does not list, such as one that needs a higher tier, runs on the Claude model of the same rank instead. To hand a task to Antigravity for one session, ask for it in your prompt.
 
 ## Accept the verification offers, or don't
 

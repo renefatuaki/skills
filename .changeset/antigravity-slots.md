@@ -1,0 +1,5 @@
+---
+"forge": minor
+---
+
+Google Antigravity is a third model family next to Claude and Codex, for read-only work. A role in `~/.claude/rules/models.md` takes `antigravity:<model>/<effort>`, such as `antigravity:pro/high`. The models are `flash`, `pro`, `argon`, and `carbon`, ascending by strength, and the efforts are `high`, `medium`, and `low`. Antigravity never writes code, so an entry is allowed only in `interrogate reviewers`, `arena cross-judge pool`, and `swarm workers`, never in `arena runners` or `architect runners`. The skill defaults stay unchanged. `/setup-models` offers the entries and shows the Gemini id each model runs today, or that the `agy` CLI does not list it on your account. A slot runs through the new `forge:antigravity` agent and the `antigravity.mts` script of the engineering skill. When Antigravity fails, the slot runs on the Claude model of the same rank, `sonnet` for `flash` and `opus` for the others. A task you hand to Antigravity in your prompt runs as a read-only slot too.

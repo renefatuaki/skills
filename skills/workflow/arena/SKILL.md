@@ -16,7 +16,7 @@ Every candidate gets the same prompt, so the prompt is the contract.
 
 1. State the artifact each candidate is producing.
 2. Derive the rubric, 3-6 concrete gradeable criteria for what success looks like on *this* task. It is the picker's tool in Phase D. Candidates only see the task.
-3. Pick the runners. Use the `arena runners` line in `~/.claude/rules/models.md`. Resolve each entry per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`. If the rule or that line is missing, default to one each on `opus/xhigh` and `codex:astra/xhigh`. Spawn more runners when the arena covers multiple design directions. Use the same model N times when the work is generation-bound rather than judgment-sensitive.
+3. Pick the runners. Use the `arena runners` line in `~/.claude/rules/models.md`. Resolve each entry per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`. If the rule or that line is missing, default to one each on `opus/xhigh` and `codex:astra/xhigh`. Spawn more runners when the arena covers multiple design directions. Use the same model N times when the work is generation-bound rather than judgment-sensitive. An Antigravity entry is not allowed here, because runners write.
 4. Give each candidate its own output location, per the **separate-before-serializing-shared-state** principle skill. A Claude seat that edits the repository gets `isolation: "worktree"` and a brief naming the base SHA to check out. A Codex seat runs in the parent's checkout, so create its worktree yourself (`git worktree add -b arena-<slug>-<n> <path> <base-sha>`) and name that path in its brief as the only place it may write. Artifacts outside the repository go to `/tmp/arena-<slug>/candidate-<n>/`.
 
 ## Phase B: Fan out
@@ -27,7 +27,7 @@ If a candidate produces no output, proceed with N-1 and note the dropout.
 
 ## Phase C: Cross-judge
 
-After all Phase B candidates complete, choose one model from the `arena cross-judge pool` line in `~/.claude/rules/models.md`. If the rule or that line is missing, choose from `opus/xhigh` and `codex:astra/xhigh`. Prefer a different model family from the parent's. Spawn one read-only judge on that model, resolved per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`: a `general-purpose` subagent whose prompt forbids edits, or a read-only Codex slot. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with your reading in Phase D. Don't spawn it while candidates are still writing.
+After all Phase B candidates complete, choose one model from the `arena cross-judge pool` line in `~/.claude/rules/models.md`. If the rule or that line is missing, choose from `opus/xhigh` and `codex:astra/xhigh`. Prefer a different model family from the parent's. Spawn one read-only judge on that model, resolved per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`: a `general-purpose` subagent whose prompt forbids edits, a read-only Codex slot, or a read-only Antigravity slot. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with your reading in Phase D. Don't spawn it while candidates are still writing.
 
 ## Phase D: Pick a base
 
