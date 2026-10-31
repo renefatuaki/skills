@@ -1,7 +1,7 @@
 ---
 name: engineering
 description: engineering, the frame for working every development task through the playbook that matches it, from a question about the code to a GitHub issue worked to a pull request ready for review. Use when the user starts a task with `/engineering`, names an issue with `/engineering #42`, or a today-issues session starts a ticket.
-allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/github-issue-status.mts *), Bash(node ${CLAUDE_SKILL_DIR}/scripts/codex-model.mts *), Bash(git apply:*), Bash(git fetch:*), Bash(git worktree:*), Bash(git push:*), Bash(gh repo view:*), Bash(gh api user:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr list:*), Bash(gh pr view:*)
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/github-issue-status.mts *), Bash(node ${CLAUDE_SKILL_DIR}/scripts/codex-model.mts *), Bash(node ${CLAUDE_SKILL_DIR}/scripts/antigravity-model.mts *), Bash(git apply:*), Bash(git fetch:*), Bash(git worktree:*), Bash(git push:*), Bash(gh repo view:*), Bash(gh api user:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr list:*), Bash(gh pr view:*)
 disable-model-invocation: true
 argument-hint: "[task | #issue | issue-url] [auto] [effort:adaptive | effort:fixed] [model:sonnet | model:opus | model:fable]"
 ---

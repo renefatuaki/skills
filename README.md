@@ -1,13 +1,14 @@
 # skills
 
-Claude Code skills for clean code, engineering workflows and project management, packaged as a plugin.
+Claude Code skills for clean code, engineering workflows and project management, packaged as the plugin forge. A second plugin, [antigravity](plugins/antigravity/README.md), runs Google Antigravity from Claude Code the way the Codex plugin runs Codex.
 
 ## Install
 
-Install the plugin from this repository's marketplace, in one step on Claude Code 2.1.275 or later.
+Install the plugins from this repository's marketplace, in one step each on Claude Code 2.1.275 or later. The antigravity plugin is optional.
 
 ```text
 /plugin install forge --marketplace renefatuaki/skills
+/plugin install antigravity --marketplace renefatuaki/skills
 ```
 
 ## Requirements
@@ -30,7 +31,7 @@ pnpm install
 | `pnpm run lint` | runs oxlint |
 | `pnpm run lint:fix` | runs oxlint and applies its fixes |
 | `pnpm run typecheck` | checks the `.mts` files with tsc |
-| `pnpm test` | runs the tests of the comment rules, the documentation rules, the diagram rules, the session hook, the Codex model script, the turn hook and the app token script |
+| `pnpm test` | runs the tests of the comment rules, the documentation rules, the diagram rules, the session hook, the Codex model script, the Antigravity model script, the turn hook, the app token script and the companion, jobs and hooks of the antigravity plugin |
 | `pnpm run check-upstream` | lists what changed upstream since the base commit of every file in [UPSTREAM.md](UPSTREAM.md), with `gh` logged in |
 
 - The pre-commit hook judges the staged files with oxfmt and oxlint.

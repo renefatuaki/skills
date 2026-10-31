@@ -1,7 +1,7 @@
 ---
 name: architect
 description: "Sketch types, signatures, and module structure before code, then stay in the loop while implementation fills in. Use for /architect, 'architect this', 'design this', or non-trivial work where jumping to code would lock in the wrong shape."
-allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *)
+allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *), Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/antigravity-model.mts *)
 disable-model-invocation: true
 argument-hint: "[task] [with checkpoint]"
 ---

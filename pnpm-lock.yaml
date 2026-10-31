@@ -200,6 +200,8 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  plugins/antigravity: {}
+
 packages:
 
   '@antfu/install-pkg@2.1.0':
