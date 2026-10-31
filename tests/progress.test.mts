@@ -38,7 +38,7 @@ const antigravityScript = join(
   'workflow',
   'engineering',
   'scripts',
-  'antigravity.mts',
+  'antigravity-model.mts',
 );
 
 const fakeCodex = join(root, 'tests', 'fixtures', 'codex', 'bin');

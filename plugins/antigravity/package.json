@@ -1,0 +1,15 @@
+{
+  "name": "antigravity",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Use Google's Antigravity CLI from Claude Code to review code or delegate tasks.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/renefatuaki/skills",
+    "directory": "plugins/antigravity"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -228,7 +228,7 @@ test('the session start reads the usage through the script and a failed read hid
     [
       'node',
       expect.stringMatching(
-        /\/skills\/workflow\/engineering\/scripts\/antigravity\.mts$/,
+        /\/skills\/workflow\/engineering\/scripts\/antigravity-model\.mts$/,
       ),
       '--usage',
     ],
@@ -638,8 +638,8 @@ test('an Antigravity call reads the Antigravity usage again and leaves the Codex
   await $.tool.call({
     tool: 'Agent',
     description: 'review',
-    prompt: '--model pro --effort high review the diff',
-    subagent_type: 'forge:antigravity',
+    prompt: '--wait --model gemini-3.1-pro-high review the diff',
+    subagent_type: 'antigravity:antigravity-rescue',
   });
 
   await settled();
@@ -878,7 +878,7 @@ function answerProviders(
 
 /** Tells the run of the Antigravity usage script from any other process. */
 function isAntigravityRead(argv: readonly string[]): boolean {
-  return argv[1]?.endsWith('/antigravity.mts') === true;
+  return argv[1]?.endsWith('/antigravity-model.mts') === true;
 }
 
 /** Answers a process run that ended, with the stdout of a script that succeeded, or with the failure of a script when the stdout is null. */

@@ -1,7 +1,7 @@
 ---
 name: architect
 description: "Sketch types, signatures, and module structure before code, then stay in the loop while implementation fills in. Use for /architect, 'architect this', 'design this', or non-trivial work where jumping to code would lock in the wrong shape."
-allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *)
+allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *), Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/antigravity-model.mts *)
 disable-model-invocation: true
 argument-hint: "[task] [with checkpoint]"
 ---
@@ -30,7 +30,7 @@ Skip Phase A only when the work is genuinely greenfield with no surrounding syst
 
 Run the **arena** skill with the design-sketch task and the Phase A grounding artifacts. Pass `references/runner-prompt.md` as each runner's prompt.
 
-Take the runners from the `architect runners` line in `~/.claude/rules/models.md`, in place of the `arena runners` line. If the rule or that line is missing, use `opus/xhigh` and `codex:astra/xhigh`. Entries and output locations follow the runner rules in the **arena** skill's Phase A. An Antigravity entry is not allowed here, because runners write.
+Take the runners from the `architect runners` line in `~/.claude/rules/models.md`, in place of the `arena runners` line. If the rule or that line is missing, use `opus/xhigh` and `codex:astra/xhigh`. Entries and output locations follow the runner rules in the **arena** skill's Phase A.
 
 Design it twice. Require at least two structurally distinct candidates before synthesis, even when the first looks sufficient. This is the **exhaust-the-design-space** principle skill made concrete. Whole-shape alternatives, not point fixes inside one shape.
 

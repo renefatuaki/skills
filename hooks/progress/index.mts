@@ -41,7 +41,7 @@ const READ_TIMEOUT_MS = 40_000;
 /** The script of the engineering skill that reports the usage of a provider with `--usage`. */
 const SCRIPTS: Record<Provider, string> = {
   codex: 'codex-model.mts',
-  antigravity: 'antigravity.mts',
+  antigravity: 'antigravity-model.mts',
 };
 
 /** Names the origins of a prompt the person sent, so a task notification never dismisses a finished list. */
@@ -115,7 +115,7 @@ export const register: Register = on => {
 
   on(
     'tool.call',
-    { tool: 'Agent', subagent_type: 'forge:antigravity' },
+    { tool: 'Agent', subagent_type: 'antigravity:antigravity-rescue' },
     async ($, e, next) => readAfter($, 'antigravity', await next(e)),
   ).catch(($, e, next) => next(e));
 

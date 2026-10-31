@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-// Stands in for `agy`. `agy models` lists model-list.txt, `agy -p /usage` answers as FAKE_AGY_USAGE names, and `agy -p` with a brief answers in the JSON line of --output-format json as FAKE_AGY_CASE names. FAKE_AGY_LOG names a file that gets one line per call.
+// Stands in for `agy`. `agy models` lists model-list.txt, and `agy -p /usage` answers as FAKE_AGY_USAGE names.
 
-const { appendFileSync, readFileSync, writeFileSync } = require('node:fs');
+const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 
 const args = process.argv.slice(2);
@@ -11,15 +11,7 @@ const usageKind = process.env.FAKE_AGY_USAGE;
 
 const listText = readFileSync(join(__dirname, '..', 'model-list.txt'), 'utf8');
 
-function log(call) {
-  if (process.env.FAKE_AGY_LOG !== undefined) {
-    appendFileSync(process.env.FAKE_AGY_LOG, `${call}\n`);
-  }
-}
-
 if (args[0] === 'models') {
-  log('models');
-
   if (kind === 'signed-out') {
     console.error('error: not signed in, run agy to sign in');
     process.exit(1);
@@ -60,8 +52,6 @@ const usageGroups = {
 }[usageKind ?? 'enough'];
 
 if (args[0] === '-p' && args[1] === '/usage') {
-  log('usage');
-
   if (usageKind === 'fails') {
     console.error('error: quota service unreachable');
     console.log(JSON.stringify({ status: 'ERROR', response: '', error: 'quota service unreachable' }));
@@ -79,67 +69,5 @@ if (args[0] === '-p' && args[1] === '/usage') {
   process.exit(0);
 }
 
-// The script passes these flags in this order, each followed by its value. Any other flag fails, --effort included.
-const flags = args.filter((_, index) => index % 2 === 0).join(' ');
-
-if (flags !== '-p --output-format --model --print-timeout') {
-  console.error(`error: unexpected arguments ${flags}`);
-  process.exit(2);
-}
-
-log('run');
-
-const [, brief, , , , model, , timeout] = args;
-
-// Headless mode never falls back on a model it does not list.
-if (!listText.split('\n').some(line => line.trim().split(/\s+/)[0] === model)) {
-  console.error(`error: invalid model selection (--model "${model}")`);
-  console.log(JSON.stringify({ conversation_id: '', status: 'ERROR', response: '', error: `model ${model} is not recognized as a known model` }));
-  process.exit(1);
-}
-
-if (kind === 'writes') {
-  writeFileSync('written.txt', 'written by agy\n');
-}
-
-if (kind === 'rewrites') {
-  appendFileSync('tracked.txt', 'rewritten by agy\n');
-}
-
-const outcome = {
-  error: { status: 'ERROR', error: 'quota exceeded', finished_reason: 'error', exit: 1 },
-  'agent-failure': { status: 'ERROR', response: '', exit: 3 },
-  canceled: { status: 'CANCELED', response: '', exit: 0 },
-  waiting: { status: 'WAITING', response: 'Which file?\n', exit: 0 },
-  timeout: { status: 'SUCCESS', response: 'Half an answer.\n', finished_reason: 'print_timeout', exit: 0 },
-  denied: { status: 'SUCCESS', response: '', denied_actions: [{ action: 'write_file' }], exit: 0 },
-  'denied-with-answer': {
-    status: 'SUCCESS',
-    response: 'Found two issues.\n',
-    denied_actions: [{ action: 'write_file' }, { action: 'write_file' }],
-    exit: 0,
-  },
-}[kind] ?? { status: 'SUCCESS', response: `answer from ${model} in ${timeout}: ${brief}\n`, exit: 0 };
-
-if (kind === 'noise') {
-  console.error('panic: agy lost its connection');
-  console.log('not json');
-  process.exit(1);
-}
-
-if (kind === 'agent-failure' || kind === 'agent-failure-without-json') {
-  console.error('AGY_ERROR: {"code":"model_api","message":"upstream 503"}');
-}
-
-if (kind === 'agent-failure-without-json') {
-  process.exit(3);
-}
-
-if (kind === 'denied') {
-  console.error('jetski: no output produced, a tool required the "write_file" permission');
-}
-
-const { exit, ...answer } = outcome;
-
-console.log(JSON.stringify({ conversation_id: 'fake', ...answer, num_turns: 1 }));
-process.exit(exit);
+console.error(`error: unexpected arguments ${args.join(' ')}`);
+process.exit(2);

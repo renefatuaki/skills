@@ -44,7 +44,7 @@ flowchart TD
 | `progress` | [`progress/index.mts`](progress/index.mts) |
 | `run` | [`progress/run.mts`](progress/run.mts) |
 | `codexModel` | [`../skills/workflow/engineering/scripts/codex-model.mts`](../skills/workflow/engineering/scripts/codex-model.mts) |
-| `antigravity` | [`../skills/workflow/engineering/scripts/antigravity.mts`](../skills/workflow/engineering/scripts/antigravity.mts) |
+| `antigravity` | [`../skills/workflow/engineering/scripts/antigravity-model.mts`](../skills/workflow/engineering/scripts/antigravity-model.mts) |
 
 The session hook informs. `loadCommentRules` denies the edit of a source file once, until the transcript of the agent holds the comment rules and the guide of the language, and stays silent when it cannot read the transcript. The turn hook blocks the end of a turn once when a file the turn changed breaks a rule, and stays silent on the stop after it. A hook that has nothing to report prints nothing.
 
@@ -62,7 +62,7 @@ On the terminal the band is one line.
 | --- | --- | --- |
 | Claude usage | The share left of the current session, the 5-hour window of the Claude subscription, rounded down | When the session starts, and on each measurement Claude Code reports after a turn |
 | Codex usage | The share left of the 5-hour and the weekly Codex window, as `codexModel` reports it | When the session starts, on every prompt that is not a meta prompt and after each Codex call |
-| Antigravity usage | The share left of each Gemini group, the tightest limit of the group, as `antigravity` reports it | When the session starts, on every prompt that is not a meta prompt and after each `forge:antigravity` call |
+| Antigravity usage | The share left of each Gemini group, the tightest limit of the group, as `antigravity` reports it | When the session starts, on every prompt that is not a meta prompt and after each `antigravity:antigravity-rescue` call |
 
 Off a subscription and before the first response Claude Code has no reading, so the Claude usage stays hidden.
 

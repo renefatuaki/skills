@@ -1,7 +1,7 @@
 ---
 name: interrogate
 description: "Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\". Multiple LLM reviewers challenge changes from independent angles."
-allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *)
+allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *), Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/antigravity-model.mts *)
 disable-model-invocation: true
 argument-hint: "[files | diff | branch]"
 ---
@@ -37,7 +37,7 @@ Each Claude reviewer gets `subagent_type: "general-purpose"`, and `model` and `e
 
 A Codex reviewer runs as a Codex slot: `subagent_type: "codex:codex-rescue"`, a prompt that starts with `--wait` plus the entry's `--effort` and its resolved `--model` flags, a read-only first sentence, and the full filled template below. If the slot falls back to its Claude model, say so in the Reviewers list and note that the panel ran single-family, so agreement carries less weight. Do not block the review on a fallback.
 
-An Antigravity reviewer, such as `antigravity:pro/high`, runs as a read-only Antigravity slot per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`: `subagent_type: "forge:antigravity"`, a prompt that starts with the entry's `--model` and `--effort` flags, a read-only first sentence, and the full filled template below. A fallback is reported like one of a Codex reviewer.
+An Antigravity reviewer runs as an Antigravity slot: `subagent_type: "antigravity:antigravity-rescue"`, a prompt that starts with `--wait` plus the resolved `--model` slug, a read-only first sentence, and the full filled template below. A fallback is reported like one of a Codex reviewer.
 
 Read `references/reviewer-prompt.md` and fill in the same template for every reviewer with the stated intent, the diff or file contents, the rubric from `references/rubric.md`, and the code-quality lens from `references/code-quality-review.md`.
 

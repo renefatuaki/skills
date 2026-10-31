@@ -1,0 +1,17 @@
+{
+  "name": "antigravity",
+  "description": "Use Google's Antigravity CLI from Claude Code to review code or delegate tasks.",
+  "version": "0.1.0",
+  "author": {
+    "name": "René El Fatuaki"
+  },
+  "repository": "https://github.com/renefatuaki/skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "antigravity",
+    "agy",
+    "gemini",
+    "code-review",
+    "delegation"
+  ]
+}

@@ -1,21 +1,18 @@
 #!/usr/bin/env node
 
-// Prints the slug the Antigravity CLI lists for a model name and an effort, or with --run sends the brief on stdin to that model once the account has enough usage left, or with --usage prints the usage left as one JSON line.
+// Prints the slug the Antigravity CLI lists for a model name and an effort once the account has enough usage left, or with --usage the usage left as one JSON line.
 // https://antigravity.google/docs/cli/headless.md
 
-import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import { lstatSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
-/** The line `agy --output-format json` prints for a run or for a slash command, the fields this script reads. */
+/** The line `agy -p /usage --output-format json` prints, the fields this script reads. */
 type Answer = {
   status?: string;
-  response?: string;
   error?: string;
-  finished_reason?: string;
-  denied_actions?: { action: string }[];
   command?: { data?: { groups?: UsageGroup[] } };
 };
 
@@ -58,25 +55,13 @@ type Candidate = {
   effort: string;
 };
 
-/** The paths `git status` lists, each with its status code and the size and modification time on disk. */
-type TreeState = {
-  root: string;
-  files: Map<string, string>;
-};
-
 const NAMES = ['flash', 'pro', 'argon', 'carbon'];
 
 /** The efforts a slug ends in, from the lightest to the heaviest. */
 const LADDER = ['low', 'medium', 'high', 'xhigh', 'max'];
 
-const USAGE = `usage: antigravity.mts [--run [--timeout <minutes>] [--min-remaining <percent>]] <${NAMES.join('|')}> <${[...LADDER].reverse().join('|')}>
-       antigravity.mts --usage [--min-remaining <percent>]`;
-
-/** Ends before the 10-minute cap of a foreground Bash call of Claude Code, with the grace below. */
-const DEFAULT_TIMEOUT_MINUTES = 8;
-
-/** The time the CLI gets to end a run on its own print timeout before this script kills it. */
-const GRACE_MS = 60_000;
+const USAGE = `usage: antigravity-model.mts [--min-remaining <percent>] <${NAMES.join('|')}> <${[...LADDER].reverse().join('|')}>
+       antigravity-model.mts --usage [--min-remaining <percent>]`;
 
 /** The time `/usage` gets, because it asks the backend. */
 const USAGE_TIMEOUT_MS = 30_000;
@@ -89,35 +74,24 @@ const MINIMUM_LINE = /^antigravity minimum:\s*(\d+)\s*%\s*$/m;
 
 const NOT_INSTALLED = 'The Antigravity CLI `agy` is not installed.';
 
-// 1. Read the mode, the model name, the effort, the timeout and the usage a run needs left from the command line, the minimum from the rule file when the line names none.
+// 1. Read the mode, the model name, the effort and the usage a run needs left from the command line, the minimum from the rule file when the line names none.
 // https://nodejs.org/api/util.md#utilparseargsconfig
 const { values, positionals } = readArgs();
 
 const [name, effort] = positionals;
 
-const isRun = values.run === true;
-
 const isUsage = values.usage === true;
 
 if (
-  (isRun && isUsage) ||
   (isUsage
     ? positionals.length !== 0
     : positionals.length !== 2 ||
       !NAMES.includes(name) ||
       !LADDER.includes(effort)) ||
-  !isMinutes(values.timeout) ||
-  !isPercent(values['min-remaining']) ||
-  (!isRun && values.timeout !== undefined) ||
-  (!isRun && !isUsage && values['min-remaining'] !== undefined)
+  !isPercent(values['min-remaining'])
 ) {
   fail(USAGE);
 }
-
-const minutes =
-  values.timeout === undefined
-    ? DEFAULT_TIMEOUT_MINUTES
-    : Number(values.timeout);
 
 const minRemaining =
   values['min-remaining'] === undefined
@@ -130,27 +104,12 @@ if (isUsage) {
   process.exit(0);
 }
 
-// 3. Resolve the slug the CLI lists for the name and the effort.
+// 3. Resolve the slug the CLI lists for the name and the effort, and print it once the usage allows a run.
 const slug = resolveSlug(listModels(), name, effort);
-
-if (!isRun) {
-  console.log(slug);
-  process.exit(0);
-}
-
-// 4. Send the brief once the usage allows it, and fail when the run changed a file.
-const brief = readBrief();
 
 checkUsage(name);
 
-const before = snapshotWorkTree();
-
-const result = runAgy(slug, brief, minutes);
-
-failOnChangedFiles(before);
-
-// 5. Print the answer of the run.
-console.log(responseOf(result));
+console.log(slug);
 
 /** Parses the command line, and fails with the usage line on an unknown option. */
 function readArgs() {
@@ -158,20 +117,13 @@ function readArgs() {
     return parseArgs({
       allowPositionals: true,
       options: {
-        run: { type: 'boolean' },
         usage: { type: 'boolean' },
-        timeout: { type: 'string' },
         'min-remaining': { type: 'string' },
       },
     });
   } catch {
     fail(USAGE);
   }
-}
-
-/** Accepts a missing option or a whole number of minutes above 0. */
-function isMinutes(value: string | undefined): boolean {
-  return value === undefined || /^[1-9]\d*$/.test(value);
 }
 
 /** Accepts a missing option or a whole number of at most 100. */
@@ -295,16 +247,6 @@ function compareVersions(a: number[], b: number[]): number {
   return 0;
 }
 
-function readBrief(): string {
-  const text = readFileSync(0, 'utf8');
-
-  if (text.trim() === '') {
-    fail('The brief on stdin is empty.');
-  }
-
-  return text;
-}
-
 /**
  * Asks `agy` for the usage groups of the account, which works in print mode.
  * @see {@link https://antigravity.google/docs/cli/commands/usage.md | Model quotas}
@@ -378,7 +320,7 @@ function limitsOf(groups: UsageGroup[]): Limit[] {
     .sort((a, b) => a.percent - b.percent);
 }
 
-/** Fails a run when the tightest limit of the model has less than the minimum left, and notes on stderr that the run starts unchecked when `/usage` reports nothing for it. */
+/** Fails when the tightest limit of the model has less than the minimum left, and notes on stderr that the slug is printed unchecked when `/usage` reports nothing for it. */
 function checkUsage(modelName: string): void {
   const usage = readUsage();
 
@@ -435,170 +377,6 @@ function usageReport(): UsageReport {
   };
 }
 
-/** Records the status, size and modification time of every path `git status` lists in the current work tree, or nothing outside a work tree. */
-function snapshotWorkTree(): TreeState | undefined {
-  const root = git(process.cwd(), ['rev-parse', '--show-toplevel'])?.trim();
-
-  if (root === undefined) {
-    return undefined;
-  }
-
-  const status = git(root, [
-    'status',
-    '--porcelain=v1',
-    '-z',
-    '--untracked-files=all',
-  ]);
-
-  if (status === undefined) {
-    return undefined;
-  }
-
-  return {
-    root,
-    files: new Map(
-      listChanges(status).map(({ code, path }) => [
-        path,
-        `${code} ${fingerprint(join(root, path))}`,
-      ]),
-    ),
-  };
-}
-
-/** Runs git in the folder, and returns nothing when git is missing or exits with a code other than 0. */
-function git(folder: string, args: string[]): string | undefined {
-  const result = spawnSync('git', args, {
-    cwd: folder,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-  });
-
-  return result.error === undefined && result.status === 0
-    ? result.stdout
-    : undefined;
-}
-
-/**
- * Splits the NUL-separated output of `git status --porcelain=v1 -z` into status codes and paths.
- * @see {@link https://git-scm.com/docs/git-status#_porcelain_format_version_1 | Porcelain format version 1}
- */
-function listChanges(status: string): { code: string; path: string }[] {
-  const entries = status.split('\0').filter(entry => entry !== '');
-  const changes: { code: string; path: string }[] = [];
-
-  for (let index = 0; index < entries.length; index++) {
-    const code = entries[index].slice(0, 2);
-
-    changes.push({ code, path: entries[index].slice(3) });
-
-    // A rename or a copy names its origin in the next entry.
-    if (/[RC]/.test(code)) {
-      index++;
-    }
-  }
-
-  return changes;
-}
-
-/** Reads the size and the modification time of a path, or `gone` for a path that is deleted. */
-function fingerprint(path: string): string {
-  try {
-    const stats = lstatSync(path);
-
-    return `${stats.size}:${stats.mtimeMs}`;
-  } catch {
-    return 'gone';
-  }
-}
-
-/** Fails with the paths of the work tree that differ from the state before the run, which catches a write that the permission mode allowed. */
-function failOnChangedFiles(before: TreeState | undefined): void {
-  if (before === undefined) {
-    return;
-  }
-
-  const after = snapshotWorkTree();
-
-  if (after === undefined) {
-    return;
-  }
-
-  const paths = [...new Set([...before.files.keys(), ...after.files.keys()])]
-    .filter(path => before.files.get(path) !== after.files.get(path))
-    .sort();
-
-  if (paths.length > 0) {
-    fail(`Antigravity changed files: ${paths.join(', ')}`);
-  }
-}
-
-/**
- * Runs the brief through `agy` in the current directory. The permission mode in the settings of the user decides what a write does.
- * @see {@link https://antigravity.google/docs/cli/headless.md | Headless mode}
- */
-function runAgy(
-  modelSlug: string,
-  text: string,
-  limit: number,
-): SpawnSyncReturns<string> {
-  return spawnSync(
-    'agy',
-    [
-      '-p',
-      text,
-      '--output-format',
-      'json',
-      '--model',
-      modelSlug,
-      '--print-timeout',
-      `${limit}m`,
-    ],
-    {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: limit * 60_000 + GRACE_MS,
-    },
-  );
-}
-
-/** Returns the response of a run that ended in SUCCESS with an answer, and fails on every other end. */
-function responseOf(run: SpawnSyncReturns<string>): string {
-  if (run.error !== undefined) {
-    fail(isMissing(run.error) ? NOT_INSTALLED : run.error.message);
-  }
-
-  const answer = readAnswer(run.stdout);
-
-  if (answer === undefined) {
-    fail(
-      `Antigravity exited with code ${run.status} and printed no JSON answer.${detail(failureOf(undefined, run.stderr))}`,
-    );
-  }
-
-  if (answer.status !== 'SUCCESS' || run.status !== 0) {
-    fail(
-      `Antigravity failed with status ${answer.status ?? 'none'} and exit code ${run.status}.${detail(failureOf(answer, run.stderr))}`,
-    );
-  }
-
-  if (answer.finished_reason !== undefined) {
-    fail(`Antigravity stopped early with ${answer.finished_reason}.`);
-  }
-
-  const response = (answer.response ?? '').trimEnd();
-  const note = deniedNote(answer);
-
-  if (response === '') {
-    fail(`Antigravity answered nothing.${detail(note)}`);
-  }
-
-  if (note !== '') {
-    console.error(note);
-  }
-
-  return response;
-}
-
 /** Reads the last line of stdout as the answer, undefined when it is no JSON object. */
 function readAnswer(stdout: string): Answer | undefined {
   const lines = stdout.split('\n').filter(line => line.trim() !== '');
@@ -612,24 +390,6 @@ function readAnswer(stdout: string): Answer | undefined {
   } catch {
     return undefined;
   }
-}
-
-/** Picks the reason of a failed run, the `error` field of the answer, else the `AGY_ERROR` line on stderr, else all of stderr. */
-function failureOf(answer: Answer | undefined, stderr: string): string {
-  const line = stderr
-    .split('\n')
-    .find(candidate => candidate.startsWith('AGY_ERROR:'));
-
-  return answer?.error ?? line ?? stderr;
-}
-
-/** Names each action print mode denied, such as `write_file`, or returns nothing when it denied none. */
-function deniedNote(answer: Answer): string {
-  const actions = new Set((answer.denied_actions ?? []).map(d => d.action));
-
-  return actions.size === 0
-    ? ''
-    : `Antigravity tried ${[...actions].join(', ')}, which the read-only run denies.`;
 }
 
 function isMissing(error: Error): boolean {

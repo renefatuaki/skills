@@ -1,7 +1,7 @@
 ---
 name: arena
 description: "Spawn N parallel candidates at the same task, pick a base, graft the strongest parts of the losers into it. Use for /arena, 'arena this', 'throw it in the arena', or when one attempt at a non-trivial artifact would lock in the wrong shape."
-allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *)
+allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/codex-model.mts *), Bash(node ${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/scripts/antigravity-model.mts *)
 disable-model-invocation: true
 argument-hint: "[task] [<n> candidates]"
 ---
@@ -16,8 +16,8 @@ Every candidate gets the same prompt, so the prompt is the contract.
 
 1. State the artifact each candidate is producing.
 2. Derive the rubric, 3-6 concrete gradeable criteria for what success looks like on *this* task. It is the picker's tool in Phase D. Candidates only see the task.
-3. Pick the runners. Use the `arena runners` line in `~/.claude/rules/models.md`. Resolve each entry per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`. If the rule or that line is missing, default to one each on `opus/xhigh` and `codex:astra/xhigh`. Spawn more runners when the arena covers multiple design directions. Use the same model N times when the work is generation-bound rather than judgment-sensitive. An Antigravity entry is not allowed here, because runners write.
-4. Give each candidate its own output location, per the **separate-before-serializing-shared-state** principle skill. A Claude seat that edits the repository gets `isolation: "worktree"` and a brief naming the base SHA to check out. A Codex seat runs in the parent's checkout, so create its worktree yourself (`git worktree add -b arena-<slug>-<n> <path> <base-sha>`) and name that path in its brief as the only place it may write. Artifacts outside the repository go to `/tmp/arena-<slug>/candidate-<n>/`.
+3. Pick the runners. Use the `arena runners` line in `~/.claude/rules/models.md`. Resolve each entry per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`. If the rule or that line is missing, default to one each on `opus/xhigh` and `codex:astra/xhigh`. Spawn more runners when the arena covers multiple design directions. Use the same model N times when the work is generation-bound rather than judgment-sensitive.
+4. Give each candidate its own output location, per the **separate-before-serializing-shared-state** principle skill. A Claude seat that edits the repository gets `isolation: "worktree"` and a brief naming the base SHA to check out. A Codex or Antigravity seat runs in the parent's checkout, so create its worktree yourself (`git worktree add -b arena-<slug>-<n> <path> <base-sha>`) and name that path in its brief as the only place it may write. Artifacts outside the repository go to `/tmp/arena-<slug>/candidate-<n>/`.
 
 ## Phase B: Fan out
 
