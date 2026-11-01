@@ -14,10 +14,10 @@ import {
 import type { BinaryStatus, ProgressReporter } from './types.mts';
 
 /** The model names the companion resolves to a slug of `agy models`. */
-export const MODEL_NAMES = ['flash', 'pro', 'argon', 'carbon'];
+const MODEL_NAMES = ['flash', 'pro', 'argon', 'carbon'];
 
 /** The efforts a slug ends in and `--effort` takes, from the lightest to the heaviest. */
-export const EFFORT_LADDER = ['low', 'medium', 'high', 'xhigh', 'max'];
+const EFFORT_LADDER = ['low', 'medium', 'high', 'xhigh', 'max'];
 
 /** The effort a model name resolves with when the request names none. */
 const DEFAULT_EFFORT = 'high';
@@ -77,7 +77,7 @@ export type UsageBucket = {
 };
 
 /** The models the signed-in account lists, or the reason `agy models` gave none. */
-export type ModelList =
+type ModelList =
   | { ok: true; slugs: string[] }
   | { ok: false; detail: string; missing: boolean };
 
@@ -97,7 +97,7 @@ export type UsageStatus = {
 };
 
 /** The flags that pick the model, and the notes about a choice the companion changed. */
-export type ModelSelection = {
+type ModelSelection = {
   args: string[];
   notes: string[];
   slug: string | null;
@@ -136,7 +136,7 @@ export type AgyRun = {
 };
 
 /** The paths `git status` lists, each with its status code and the size and modification time on disk. */
-export type TreeState = {
+type TreeState = {
   root: string;
   files: Map<string, string>;
 };
@@ -165,7 +165,7 @@ export function getAgyAvailability(cwd: string): BinaryStatus {
 }
 
 /** Lists the slugs, the first word of each line of `agy models`. A line that is no slug never matches. */
-export function listModelSlugs(cwd: string): ModelList {
+function listModelSlugs(cwd: string): ModelList {
   const result = runCommand('agy', ['models'], {
     cwd,
     timeout: QUERY_TIMEOUT_MS,
@@ -411,7 +411,7 @@ function resolveSlug(
 }
 
 /** Turns --model and --effort into the flags of `agy`. A slug carries its effort, so --effort never travels with one. */
-export function resolveModelSelection(
+function resolveModelSelection(
   cwd: string,
   model: string | null,
   effort: string | null,
@@ -455,7 +455,7 @@ export function resolveModelSelection(
 }
 
 /** Builds the arguments of one `agy` run, read-only unless the request asks to write. */
-export function buildAgyArgs(
+function buildAgyArgs(
   options: AgyRunOptions,
   selection: ModelSelection,
 ): string[] {
@@ -483,7 +483,7 @@ export function buildAgyArgs(
 }
 
 /** Records the status, size and modification time of every path `git status` lists in the work tree of the folder, or nothing outside a work tree. */
-export function snapshotWorkTree(cwd: string): TreeState | undefined {
+function snapshotWorkTree(cwd: string): TreeState | undefined {
   const top = runCommand('git', ['rev-parse', '--show-toplevel'], {
     cwd,
     shell: false,
@@ -559,7 +559,7 @@ function realPath(folder: string | undefined): string | undefined {
 }
 
 /** Lists the paths of the work tree that differ from the state before the run, which catches a write that the permission mode allowed. */
-export function changedPaths(
+function changedPaths(
   before: TreeState,
   after: TreeState,
   ignoreDir?: string,
@@ -633,7 +633,7 @@ function deniedNotes(answer: AgyAnswer | null): string[] {
 }
 
 /** Judges what the child left: a failure reason for every way a run can end badly, else the response. */
-export function analyzeRun(
+function analyzeRun(
   raw: RawRun,
   expectStructured: boolean,
 ): Omit<AgyRun, 'changedFiles' | 'command'> {
