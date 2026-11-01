@@ -21,6 +21,18 @@
         "issues",
         "pull-requests"
       ]
+    },
+    {
+      "name": "antigravity",
+      "source": "./plugins/antigravity",
+      "description": "Use Google's Antigravity CLI from Claude Code to review code or delegate tasks.",
+      "category": "engineering",
+      "keywords": [
+        "antigravity",
+        "gemini",
+        "code-review",
+        "delegation"
+      ]
     }
   ]
 }

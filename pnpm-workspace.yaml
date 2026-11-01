@@ -1,0 +1,6 @@
+# The packages Changesets versions, forge at the root and every plugin under plugins/.
+# The root needs its own entry, or Changesets leaves it out once another package exists.
+# https://pnpm.io/pnpm-workspace_yaml
+packages:
+  - '.'
+  - 'plugins/*'

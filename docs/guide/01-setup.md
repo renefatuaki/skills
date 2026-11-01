@@ -32,6 +32,31 @@ You only override what you care about. A role with no line in the rule keeps the
 
 Set a role to `inherit` and the subagent runs on your session's own model. For a panel role the value is a list, and one subagent runs per entry, so the list length sets the panel size. Setup also configures `swarm workers`, the default model for every `/swarm` worker unless a race names a model for each arm.
 
+Antigravity is an opt-in third family next to Claude and Codex. It runs through the `antigravity` plugin of the same marketplace, the way Codex runs through the `codex` plugin. Install it and check the `agy` CLI.
+
+```text
+/plugin install antigravity --marketplace renefatuaki/skills
+/antigravity:setup
+```
+
+With the Claude Code sandbox on, take the companion of the plugin out of the sandbox, as the plugin's [README](../../plugins/antigravity/README.md#sandbox) shows. The sandbox denies writes under `~/.claude`, where the companion keeps its jobs, so without the entry every Antigravity slot falls back to Claude.
+
+Then set a role to `antigravity:<model>/<effort>`, such as `antigravity:pro/high`, or pick it in `/setup-models`. The models are `flash`, `pro`, `argon`, and `carbon`, ascending by strength. `flash`, `pro`, and `argon` run as Gemini Flash, Gemini Pro, and Gemini Argon. No official list names `carbon` yet, so most accounts list no such model. The efforts are the same as for Claude. A Gemini model offers only some of them, so a slot runs the nearest effort its model offers and says so. `argon` at `low` runs `medium`. An Antigravity entry is allowed wherever a Codex entry is, the runners of `/arena` and `/architect` included. To hand one task to Antigravity yourself, run `/antigravity:rescue`, and its README lists the other commands.
+
+Your Google plan decides which models the `agy` CLI lists for you, as [Antigravity models](https://antigravity.google/docs/models.md) says. A model your plan does not include runs on the Claude model of the same rank instead.
+
+| Model | Free and Google AI Plus | Google AI Pro | Google AI Ultra | Enterprise |
+| --- | --- | --- | --- | --- |
+| `flash` (Gemini 3.8 Flash) | yes | yes | yes | yes |
+| `argon` (Gemini 4 Argon) | no | yes, paid or on trial with an eligible premium device | yes | yes |
+| `pro` (Gemini 3.1 Pro) | no | no | no | yes |
+
+Before a run, a slot reads your quota with `/usage` of `agy`. When less than the minimum is left, the slot runs on the Claude model instead. `/setup-models` asks for the minimum and writes it as `antigravity minimum: <percent>%`. Without the line the minimum is 20%. Your AI credits can pay for a run past the quota, and `/usage` does not report them, so set `0%` if you want the slot to run anyway.
+
+A review or judging slot runs read-only. `agy` then keeps its default permission mode, which denies writes and shell commands. If your Antigravity settings allow edits anyway, the run fails inside a git work tree and names the files that changed, so the slot falls back and the report lists them. A runner of `/arena` or `/architect` runs write-capable in its own worktree. It edits files and runs shell commands in the terminal sandbox of `agy`.
+
+Sources are [Headless mode](https://antigravity.google/docs/cli/headless.md), [Modes](https://antigravity.google/docs/cli/modes.md), [Model quotas](https://antigravity.google/docs/cli/commands/usage.md), and [Effort](https://antigravity.google/docs/cli/commands/effort.md).
+
 ## Accept the verification offers, or don't
 
 At the end of setup, `/setup-models` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/create-verification-skill`](../../skills/verification/create-verification-skill/SKILL.md).
