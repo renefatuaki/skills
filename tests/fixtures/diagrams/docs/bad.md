@@ -3,6 +3,7 @@
 Which findings does the diagram hook report?
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   %% the question
   accTitle: Which steps run?

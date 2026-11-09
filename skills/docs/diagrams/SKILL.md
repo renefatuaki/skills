@@ -51,7 +51,8 @@ The same question takes the same type inside the code, around it and in the doma
 - Declare the elements in reading order, so the edges cross as little as possible.
 - A comment is `%%` on a line of its own.
 - Meaning stands in the text. A colour or a shape alone never carries it.
-- Only the syntax of the Mermaid version that [Mermaid](#mermaid) names. No `click`, no icon, no `%%{init}%%`, no `config` in the front matter and no ELK layout. Every renderer applies its own theme and layout, so nothing depends on where an element lands.
+- A `flowchart`, a `stateDiagram-v2` and a `classDiagram` carry the line `%%{init: {"htmlLabels": false}}%%` right before the keyword, after the front matter when there is one. Without it Mermaid draws each label as HTML in a box it measured at 100 % zoom, and Safari and Chrome cut the text off at any other zoom. With it every label is SVG text that wraps inside its shape. The other types draw SVG text on their own.
+- Only the syntax of the Mermaid version that [Mermaid](#mermaid) names. No `click`, no icon, no other `%%{init}%%`, no `config` in the front matter and no ELK layout. Every renderer applies its own theme and layout, so nothing depends on where an element lands.
 
 ## Sources
 
@@ -59,6 +60,7 @@ The table stands right under the diagram, with only a blank line between them. I
 
 ````markdown
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   accTitle: How does an order get from the cart to the warehouse?
   checkOrder["Check the order"] --> chargePayment{"Charge the payment"}
@@ -93,6 +95,7 @@ A planned state is a sketch of something that is not built yet, or the effect of
 
 ````markdown
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   accTitle: How does an order run once the fraud check exists?
   checkOrder["Check the order"] --> chargePayment{"Charge the payment"}
@@ -142,4 +145,4 @@ pnpm add -D --save-exact mermaid@11.15.0
 
 ## Hook feedback
 
-When a turn ends, a Stop hook parses every `mermaid` block of a Markdown file the turn changed with the Mermaid of the project. When it reports `path:line syntax` with the message of the parser, fix each reported line, then end the turn. A project without Mermaid gets no syntax check. For any file the turn changed, however it changed, the hook reports `path:line linked` and the changed files for each diagram whose table links one of them. A diagram whose own file the turn changed is not named. Run [Update](#update) on each of them. In a project that has Mermaid, silence means every diagram parses. The rules above still apply.
+When a turn ends, a Stop hook parses every `mermaid` block of a Markdown file the turn changed with the Mermaid of the project. When it reports `path:line syntax` with the message of the parser, fix each reported line, then end the turn. A project without Mermaid gets no syntax check. The hook also reports `path:line html-labels` for a `flowchart`, a `stateDiagram-v2` or a `classDiagram` without the init line of [Form](#form), with or without Mermaid in the project. Add the line, then end the turn. For any file the turn changed, however it changed, the hook reports `path:line linked` and the changed files for each diagram whose table links one of them. A diagram whose own file the turn changed is not named. Run [Update](#update) on each of them. In a project that has Mermaid, silence means every diagram parses. The rules above still apply.
