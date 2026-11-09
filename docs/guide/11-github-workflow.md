@@ -5,6 +5,7 @@ How does a GitHub issue become a PR ready for review, and how do you plan a day 
 The pages before this one start work from a prompt. This page starts it from an issue on a GitHub Project. Each step is a skill or a playbook of this plugin. `/engineering #<issue>` works an existing issue to a PR ready for review, and you review and approve it.
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart LR
   accTitle: How does a GitHub issue become a PR ready for review?
   issue["Write the ticket"] --> ticket["Work the ticket in its own worktree"]

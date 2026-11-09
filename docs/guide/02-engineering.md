@@ -5,6 +5,7 @@
 ## What happens to your prompt
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
     A[Your prompt] --> B[engineering]
     B --> C[Read the principles index]

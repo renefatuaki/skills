@@ -38,6 +38,7 @@ Because you'll review this work after stepping away, `/engineering` routes it th
 ## What the loop does all night
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
     A[Check the finish condition] --> B[Make the smallest justified change]
     B --> C[Verify against the real artifact]
