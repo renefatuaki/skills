@@ -3,6 +3,7 @@
 What happens when a session starts, while a turn runs, and while Claude works through a todo list?
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   accTitle: What happens when a session starts, while a turn runs, and while Claude works through a todo list?
   hooksJson["Start every hook of the event"]
@@ -13,7 +14,7 @@ flowchart TD
   checkTurn -->|"when a turn or a subagent stops"| changes["Find the files the turn changed in every checkout it worked in"]
   checkTurn -->|"when a turn or a subagent stops"| comments["Check the comments of a source file"]
   checkTurn -->|"when a turn or a subagent stops"| docs["Check the prose and the links of a documentation file"]
-  checkTurn -->|"when a turn or a subagent stops"| diagrams["Parse the diagrams of a Markdown file and name the diagrams that link a changed file"]
+  checkTurn -->|"when a turn or a subagent stops"| diagrams["Parse the diagrams of a Markdown file, check that each one draws SVG labels and name the diagrams that link a changed file"]
   docs -->|"when the project has it"| markdownlint["Lint the Markdown syntax"]
   diagrams -->|"when the project has it"| mermaid["Parse one diagram"]
   docs --> markdown["Find the code fences and resolve the links"]

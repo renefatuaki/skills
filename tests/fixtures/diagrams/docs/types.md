@@ -39,6 +39,7 @@ sequenceDiagram
 | `api` | [`checkOrder`](../src/orders/checkout.ts) |
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 stateDiagram-v2
   accTitle: Which states does an order pass through?
   [*] --> Open

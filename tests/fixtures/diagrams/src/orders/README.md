@@ -3,6 +3,7 @@
 How does an order get from the cart to the warehouse?
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   accTitle: How does an order get from the cart to the warehouse?
   checkOrder["Check the order"] --> chargePayment{"Charge the payment"}

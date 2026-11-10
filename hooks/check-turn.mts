@@ -11,7 +11,7 @@ import {
   turnChanges,
 } from './lib/changes.mts';
 import { comments } from './lib/comments.mts';
-import { diagramSyntax, linkedDiagrams } from './lib/diagrams.mts';
+import { diagramSyntax, linkedDiagrams, svgLabels } from './lib/diagrams.mts';
 import { docs } from './lib/docs.mts';
 import {
   blockStop,
@@ -40,7 +40,13 @@ type Report = {
 };
 
 /** Every rule set in the order its section stands in the reason. The one list a new rule set joins. */
-const RULE_SETS: RuleSet[] = [comments, docs, diagramSyntax, linkedDiagrams];
+const RULE_SETS: RuleSet[] = [
+  comments,
+  docs,
+  diagramSyntax,
+  svgLabels,
+  linkedDiagrams,
+];
 
 /** Opens the reason, which Claude reads as its instruction for the rest of the turn. */
 const INTRO =
