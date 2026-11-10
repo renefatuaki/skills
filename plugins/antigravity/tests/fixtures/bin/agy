@@ -1,0 +1,187 @@
+#!/usr/bin/env node
+
+// Stands in for `agy`. FAKE_AGY_LOG names a file that gets one JSON line per call with its arguments and folder. FAKE_AGY_CASE picks how a run ends, FAKE_AGY_USAGE how /usage answers, and FAKE_AGY_PIDFILE a file the sleeping case writes its pids to.
+
+const { appendFileSync, readFileSync, writeFileSync } = require('node:fs');
+const { spawn } = require('node:child_process');
+const { join } = require('node:path');
+
+const args = process.argv.slice(2);
+const kind = process.env.FAKE_AGY_CASE;
+const usageKind = process.env.FAKE_AGY_USAGE;
+
+const listText = readFileSync(join(__dirname, '..', 'model-list.txt'), 'utf8');
+
+if (process.env.FAKE_AGY_LOG !== undefined) {
+  appendFileSync(
+    process.env.FAKE_AGY_LOG,
+    `${JSON.stringify({ args, cwd: process.cwd() })}\n`,
+  );
+}
+
+if (args[0] === '--version') {
+  console.log('1.4.99');
+  process.exit(0);
+}
+
+if (args[0] === 'models') {
+  if (kind === 'signed-out') {
+    console.error('error: not signed in, run agy to sign in');
+    process.exit(1);
+  }
+
+  console.error('Fetching available models...');
+  process.stdout.write(listText);
+  process.exit(0);
+}
+
+const bucket = (window, fraction) => ({
+  id: `${window}-limit`,
+  name: 'Limit Remaining',
+  window,
+  remaining_fraction: fraction,
+  reset_time: '2026-11-06T15:01:23Z',
+});
+
+if (args[0] === '-p' && args[1] === '/usage') {
+  if (usageKind === 'fails') {
+    console.error('error: quota service unreachable');
+    console.log(JSON.stringify({ status: 'ERROR', response: '', error: 'quota service unreachable' }));
+    process.exit(1);
+  }
+
+  const groups = [
+    {
+      name: 'Gemini Models',
+      description: 'Models within this group: Gemini Flash, Gemini Pro',
+      buckets: [bucket('weekly', 0.92)],
+    },
+    {
+      name: 'Claude and GPT models',
+      description: 'Models within this group: Claude Opus, GPT-OSS',
+      buckets: [bucket('weekly', 0.05)],
+    },
+  ];
+
+  console.log(JSON.stringify({ conversation_id: '', status: 'SUCCESS', response: 'tsv text\n', command: { name: 'usage', data: { groups } } }));
+  process.exit(0);
+}
+
+// Reads the flags of a run. Every flag the companion passes takes a value, except --sandbox.
+const flags = {};
+let prompt;
+
+for (let index = 0; index < args.length; index++) {
+  const flag = args[index];
+
+  if (flag === '-p') {
+    prompt = args[++index];
+  } else if (flag === '--sandbox') {
+    flags.sandbox = true;
+  } else if (flag.startsWith('--')) {
+    flags[flag.slice(2)] = args[++index];
+  } else {
+    console.error(`error: unexpected argument ${flag}`);
+    process.exit(2);
+  }
+}
+
+if (flags['output-format'] !== 'json') {
+  console.error('error: the fake only answers --output-format json');
+  process.exit(2);
+}
+
+// The slug carries the effort, so the CLI contract of the spec never mixes the two.
+if (flags.model !== undefined && flags.effort !== undefined) {
+  console.error('error: --effort cannot be combined with a model slug');
+  process.exit(2);
+}
+
+if (flags.model !== undefined && !listText.split('\n').some(line => line.trim().split(/\s+/)[0] === flags.model)) {
+  console.error(`error: invalid model selection (--model "${flags.model}")`);
+  console.log(JSON.stringify({ conversation_id: '', status: 'ERROR', response: '', error: `model ${flags.model} is not recognized as a known model` }));
+  process.exit(1);
+}
+
+const writable = flags.mode === 'accept-edits';
+const sandboxed = flags.sandbox === true && flags.settings !== undefined;
+
+// A write-capable run creates a file and lists the folder, a read-only one is soft-denied as the CLI does.
+if (kind === 'write-run') {
+  if (writable) {
+    writeFileSync('created-by-agy.txt', 'created by agy\n');
+  } else {
+    console.error('jetski: no output produced, a tool required the "write_file" permission');
+  }
+
+  if (!sandboxed) {
+    console.error('jetski: the "command" permission was denied');
+  }
+}
+
+// An agy that ignores the permission mode and edits the work tree.
+if (kind === 'writes') {
+  writeFileSync('written.txt', 'written by agy\n');
+}
+
+if (kind === 'sleep') {
+  const child = spawn('sleep', ['60'], { stdio: 'ignore' });
+
+  writeFileSync(process.env.FAKE_AGY_PIDFILE, `${process.pid} ${child.pid}\n`);
+  // A test that fails before its cleanup must not leave this process behind.
+  setTimeout(() => process.exit(0), 120_000);
+  setInterval(() => {}, 1000);
+  return;
+}
+
+if (kind === 'noise') {
+  console.error('panic: agy lost its connection');
+  console.log('not json');
+  process.exit(1);
+}
+
+const conversation = flags.conversation ?? 'conv-new';
+
+const reviewJson = {
+  verdict: 'needs-attention',
+  summary: 'The change drops the error path.',
+  findings: [
+    {
+      severity: 'high',
+      title: 'Error path dropped',
+      body: 'The catch block swallows the failure.',
+      file: 'src/app.ts',
+      line_start: 4,
+      line_end: 6,
+      confidence: 0.8,
+      recommendation: 'Rethrow the error.',
+    },
+  ],
+  next_steps: ['Rethrow the error.'],
+};
+
+const outcome = {
+  error: { status: 'ERROR', response: '', error: 'quota exceeded', exit: 3 },
+  canceled: { status: 'CANCELED', response: '', exit: 0 },
+  timeout: { status: 'SUCCESS', response: 'Half an answer.\n', finished_reason: 'print_timeout', exit: 0 },
+  empty: { status: 'SUCCESS', response: '', exit: 0 },
+  allow: { status: 'SUCCESS', response: 'ALLOW: nothing to review\n', exit: 0 },
+  block: { status: 'SUCCESS', response: 'BLOCK: the new branch has no test\n', exit: 0 },
+  'review-bad': { status: 'SUCCESS', response: 'This is no JSON.\n', exit: 0 },
+  'review-text': { status: 'SUCCESS', response: `${JSON.stringify(reviewJson)}\n`, exit: 0 },
+}[kind] ?? (flags['json-schema'] !== undefined
+  ? { status: 'SUCCESS', response: `${JSON.stringify(reviewJson)}\n`, structured_output: reviewJson, exit: 0 }
+  : { status: 'SUCCESS', response: `answer: ${prompt}\n`, exit: 0 });
+
+if (kind === 'error') {
+  console.error('AGY_ERROR: {"code":"model_api","message":"upstream 503"}');
+}
+
+if (kind === 'denied') {
+  console.error('jetski: no output produced, a tool required the "write_file" permission');
+}
+
+const { exit, ...answer } = outcome;
+
+console.log(JSON.stringify({ conversation_id: conversation, ...answer, num_turns: flags.conversation === undefined ? 1 : 2 }));
+process.exit(exit);

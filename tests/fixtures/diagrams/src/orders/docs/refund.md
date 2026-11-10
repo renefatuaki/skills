@@ -3,6 +3,7 @@
 How does a refund get back to the customer?
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   accTitle: How does a refund get back to the customer?
   refundPayment{"Refund the payment"} -->|"within 30 days"| creditCustomer["Credit the customer"]

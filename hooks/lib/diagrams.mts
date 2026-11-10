@@ -53,6 +53,13 @@ type Mermaid = {
  */
 const DELIMITER_ROW = /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?$/;
 
+/** The directive that makes Mermaid draw every label as SVG text, as the diagrams skill writes it. Without it a flowchart, a state diagram and a class diagram draw HTML labels, which Safari and Chrome cut off at a page zoom other than 100 %. */
+const SVG_LABELS = '%%{init: {"htmlLabels": false}}%%';
+
+/** Matches the keyword of a type that draws HTML labels without the directive. */
+const HTML_LABEL_KEYWORD =
+  /^(flowchart|graph|stateDiagram-v2|stateDiagram|classDiagram)\b/;
+
 /** Stands in for DOMPurify, which needs a DOM that Node lacks and which Mermaid calls only to sanitize labels. */
 const PURIFY_STUB =
   'data:text/javascript,export default { addHook() {}, removeHook() {}, removeAllHooks() {}, sanitize: text => text }';
@@ -70,6 +77,12 @@ registerHooks({
 export const diagramSyntax: RuleSet = {
   heading: 'Mermaid syntax (diagrams skill)',
   check: checkSyntax,
+};
+
+/** The diagrams of a type that draws HTML labels, in every changed Markdown file, that lack the directive which turns the labels into SVG text. */
+export const svgLabels: RuleSet = {
+  heading: `Diagrams that draw HTML labels, which Safari and Chrome cut off at a page zoom other than 100 % (diagrams skill). Put ${SVG_LABELS} on the line before the keyword`,
+  check: checkSvgLabels,
 };
 
 /** The diagrams in the READMEs above a changed file and in the docs folders beside them whose table links a changed file, deleted files included. A diagram whose own file changed is left out. */
@@ -97,6 +110,45 @@ async function checkSyntax(changes: Changes): Promise<Finding[]> {
 
     return findings.map(finding => ({ file, ...finding }));
   });
+}
+
+/** Reports the keyword line of every diagram in a changed Markdown file that draws HTML labels. */
+async function checkSvgLabels(changes: Changes): Promise<Finding[]> {
+  const { root, files } = changes;
+  const documents = files.filter(file => isCheckable(root, file));
+
+  return checkEach(changes, documents, async file =>
+    diagramsOfFile(file)
+      .filter(drawsHtmlLabels)
+      .map(diagram => ({
+        file,
+        line: diagram.line + keywordIndexOf(diagram.body) + 1,
+        rule: 'html-labels',
+        message: `Draws HTML labels, put ${SVG_LABELS} on the line before the keyword.`,
+      })),
+  );
+}
+
+/** Tells whether the diagram is of a type that draws HTML labels and lacks the directive between its front matter and its keyword. */
+function drawsHtmlLabels({ body }: Diagram): boolean {
+  const head = body
+    .slice(frontmatterLengthOf(body), keywordIndexOf(body) + 1)
+    .map(line => line.trim());
+
+  return (
+    HTML_LABEL_KEYWORD.test(head.at(-1) ?? '') && !head.includes(SVG_LABELS)
+  );
+}
+
+/** Returns the index of the keyword line, the first after the front matter that is neither blank, a comment nor a directive, or the length of the body when there is none. */
+function keywordIndexOf(body: string[]): number {
+  const start = frontmatterLengthOf(body);
+  const index = body.findIndex(
+    (line, position) =>
+      position >= start && line.trim() !== '' && !line.trim().startsWith('%%'),
+  );
+
+  return index === -1 ? body.length : index;
 }
 
 /** Reads every candidate document once, resolves the links of its diagram tables and reports each diagram that links a changed file. */
@@ -161,18 +213,15 @@ function lineOf(error: string, diagram: Diagram): number {
 }
 
 /**
- * Lists the index of every body line Mermaid counts, which leaves out the front matter, the comments and the blank lines before the keyword.
+ * Lists the index of every body line Mermaid counts, which leaves out everything before the keyword and the comments.
  * @see {@link https://raw.githubusercontent.com/mermaid-js/mermaid/develop/packages/mermaid/src/preprocess.ts | Mermaid, preprocess.ts}
  */
 function countedLinesOf(body: string[]): number[] {
-  const counted = body
+  const keyword = keywordIndexOf(body);
+
+  return body
     .map((_, index) => index)
-    .slice(frontmatterLengthOf(body))
-    .filter(index => !/^\s*%%(?!\{)./.test(body[index]));
-
-  const keyword = counted.findIndex(index => body[index].trim() !== '');
-
-  return counted.slice(Math.max(keyword, 0));
+    .filter(index => index >= keyword && !/^\s*%%(?!\{)./.test(body[index]));
 }
 
 /**

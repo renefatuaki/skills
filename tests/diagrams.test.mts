@@ -7,7 +7,11 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { diagramSyntax, linkedDiagrams } from '../hooks/lib/diagrams.mts';
+import {
+  diagramSyntax,
+  linkedDiagrams,
+  svgLabels,
+} from '../hooks/lib/diagrams.mts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = join(root, 'tests', 'fixtures', 'diagrams');
@@ -19,7 +23,11 @@ const EXPECTED: Record<string, string[]> = {
   'docs/types.md': [],
   'docs/edge.md': [],
   'notes.md': [],
-  'docs/bad.md': ['docs/bad.md:10 syntax', 'docs/bad.md:21 syntax'],
+  'docs/bad.md': [
+    'docs/bad.md:11 syntax',
+    'docs/bad.md:22 syntax',
+    'docs/bad.md:22 html-labels',
+  ],
   'docs/README.md': [],
   'docs/schema.sql': ['docs/README.md:5 linked'],
   'src/orders/checkout.ts': [
@@ -31,9 +39,9 @@ const EXPECTED: Record<string, string[]> = {
   'src/orders/payment.ts': ['src/orders/README.md:5 linked'],
   'src/orders/edge.ts': [
     'docs/edge.md:5 linked',
-    'docs/edge.md:23 linked',
-    'docs/edge.md:46 linked',
-    'docs/edge.md:56 linked',
+    'docs/edge.md:25 linked',
+    'docs/edge.md:49 linked',
+    'docs/edge.md:60 linked',
   ],
   'src/orders/unlinked.ts': [],
   'src/orders/refund.ts': ['src/orders/docs/refund.md:5 linked'],
@@ -41,9 +49,9 @@ const EXPECTED: Record<string, string[]> = {
   'docs/missing.md': [],
 };
 
-/** What the rules report where the project has no Mermaid to parse with, no syntax finding and the same links. */
+/** What the rules report where the project has no Mermaid to parse with, no syntax finding, the same HTML labels and the same links. */
 const EXPECTED_WITHOUT_MERMAID: Record<string, string[]> = {
-  'docs/bad.md': [],
+  'docs/bad.md': ['docs/bad.md:22 html-labels'],
   'src/orders/checkout.ts': EXPECTED['src/orders/checkout.ts'],
 };
 
@@ -94,6 +102,7 @@ async function run(project: string, name: string): Promise<string[]> {
   const changes = { root: project, files: [join(project, name)] };
   const findings = [
     ...(await diagramSyntax.check(changes)),
+    ...(await svgLabels.check(changes)),
     ...(await linkedDiagrams.check(changes)),
   ];
 

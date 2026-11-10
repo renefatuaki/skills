@@ -29,6 +29,7 @@ The design isn't sacred once code starts. If implementation shows the same worka
 [`/arena`](../../skills/workflow/arena/SKILL.md) is the general tool underneath. N subagents attempt the same design or code brief in parallel, each writing to its own worktree or directory. A read-only judge, on a different model family when your configuration allows one, scores every candidate against a rubric. The coordinator reads each candidate end to end, picks a base, grafts in the best ideas from the losers, and verifies the result.
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart LR
     A[One task] --> B[Configured panel]
     B --> C[Candidate 1]

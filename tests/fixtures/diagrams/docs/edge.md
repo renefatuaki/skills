@@ -3,6 +3,7 @@
 Which layouts of a diagram and its table does the hook still read?
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   accTitle: Which steps run?
   startEdge --> finishEdge
@@ -13,6 +14,7 @@ Element | Source
 startEdge | [`start`](../src/orders/edge.ts)
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   accTitle: Which steps run?
   a --> b
@@ -21,6 +23,7 @@ flowchart TD
 | not a table
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   accTitle: Which steps run?
   a --> b
@@ -44,6 +47,7 @@ Shop,Orders,1
 ```
 
 > ```mermaid
+> %%{init: {"htmlLabels": false}}%%
 > flowchart TD
 >   accTitle: Which steps run?
 >   quoted --> done
@@ -65,6 +69,7 @@ sequenceDiagram
 | `bob` | [`start`](../src/orders/edge.ts) |
 
 ```mermaid
+%%{init: {"htmlLabels": false}}%%
 flowchart TD
   accTitle: Which steps run?
   first-->second
