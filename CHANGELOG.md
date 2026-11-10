@@ -1,5 +1,15 @@
 # forge
 
+## 1.11.0
+
+### Minor Changes
+
+- f1eda09: Google Antigravity is a third model family next to Claude and Codex. It runs through the new `antigravity` plugin of this marketplace, the way Codex runs through the `codex` plugin. A role in `~/.claude/rules/models.md` takes `antigravity:<model>/<effort>`, such as `antigravity:pro/high`, wherever it takes a Codex entry. The models are `flash`, `pro`, `argon`, and `carbon`, ascending by strength, and the efforts are the ladder `low`, `medium`, `high`, `xhigh`, and `max`. The skill defaults stay unchanged. Before a run the `antigravity-model.mts` script of the engineering skill resolves the slug, the newest version of the model at the exact effort or the nearest effort it lists, and checks the Gemini usage with `/usage` of `agy`. The slot falls back when less than the `antigravity minimum` line is left, 20% without the line. The slot then spawns `antigravity:antigravity-rescue`. A review or judging slot runs read-only and fails when a file of the git work tree changed, and a runner of `/arena` or `/architect` runs write-capable in its own worktree. When Antigravity fails, the slot runs on the Claude model of the same rank, `sonnet` for `flash` and `opus` for the others. `/setup-models` offers the entries, asks for the minimum, and shows the slug each model runs today and the usage left per Gemini group. The band above the prompt shows the Antigravity usage next to the Codex usage, such as `Antigravity week 91%`.
+
+### Patch Changes
+
+- 6e4c2be: Every `flowchart`, `stateDiagram-v2` and `classDiagram` the diagrams skill draws carries the line `%%{init: {"htmlLabels": false}}%%` before its keyword, so Mermaid draws the labels as SVG text. Without it Mermaid draws each label as HTML in a box it measured at 100 % zoom, and Safari and Chrome cut the text off at any other page zoom, on GitHub as everywhere else. The Stop hook reports `path:line html-labels` for a diagram of these types without the line, in a project with or without Mermaid.
+
 ## 1.10.0
 
 ### Minor Changes
