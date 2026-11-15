@@ -37,7 +37,7 @@
 
 <!-- What the reviewer needs before the first step. -->
 
-- **Run** `pnpm install`, then `claude --plugin-dir .` to load the plugin from the checkout
+- **Run** `pnpm install`, then `claude --plugin-dir plugins/forge` to load the plugin from the checkout
 - **Environment** macOS or Linux, Node 24 or newer, pnpm 12.6.0, Claude Code 2.1.275 or later
 - **Input** none
 

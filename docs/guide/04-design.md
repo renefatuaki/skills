@@ -10,7 +10,7 @@ The two most common design mistakes are taking the agent's first design and poli
 /architect design the import pipeline before writing any code. i care most about how callers use it.
 ```
 
-[`/architect`](../../skills/workflow/architect/SKILL.md) grounds itself first, running `/how` over the code the design touches and `/why` when it moves ownership or layers. Then it runs `/arena` to produce competing design sketches, with the caller's usage written first in each, followed by types, signatures, and a module map.
+[`/architect`](../../plugins/forge/skills/workflow/architect/SKILL.md) grounds itself first, running `/how` over the code the design touches and `/why` when it moves ownership or layers. Then it runs `/arena` to produce competing design sketches, with the caller's usage written first in each, followed by types, signatures, and a module map.
 
 By default it proceeds straight from the synthesized design into implementation. If you want to see the design first, say so:
 
@@ -26,7 +26,7 @@ The design isn't sacred once code starts. If implementation shows the same worka
 /arena take my prompt to the arena verbatim. i want to compare their proposals with yours.
 ```
 
-[`/arena`](../../skills/workflow/arena/SKILL.md) is the general tool underneath. N subagents attempt the same design or code brief in parallel, each writing to its own worktree or directory. A read-only judge, on a different model family when your configuration allows one, scores every candidate against a rubric. The coordinator reads each candidate end to end, picks a base, grafts in the best ideas from the losers, and verifies the result.
+[`/arena`](../../plugins/forge/skills/workflow/arena/SKILL.md) is the general tool underneath. N subagents attempt the same design or code brief in parallel, each writing to its own worktree or directory. A read-only judge, on a different model family when your configuration allows one, scores every candidate against a rubric. The coordinator reads each candidate end to end, picks a base, grafts in the best ideas from the losers, and verifies the result.
 
 ```mermaid
 %%{init: {"htmlLabels": false}}%%
@@ -43,7 +43,7 @@ flowchart LR
     H --> I[Verify]
 ```
 
-The panel comes from your [`/setup-models`](../../skills/meta/setup-models/SKILL.md) configuration, and you can adjust it per task. Ask for more candidates when the decision matters, fewer when it doesn't:
+The panel comes from your [`/setup-models`](../../plugins/forge/skills/meta/setup-models/SKILL.md) configuration, and you can adjust it per task. Ask for more candidates when the decision matters, fewer when it doesn't:
 
 ```text
 /arena this, 5 candidates. the cache key format is expensive to change later.
@@ -55,7 +55,7 @@ The panel comes from your [`/setup-models`](../../skills/meta/setup-models/SKILL
 /swarm check every package under packages/ against its check.sh. one worker per package. one report.
 ```
 
-[`/swarm`](../../skills/workflow/swarm/SKILL.md) fans N workers across independent slices, coverage matrices, gauntlet lanes, exploration partitions, or declared race arms. Each worker gets its own scope and check, then reports `PASS`, `ISSUES`, or `BLOCKED`. The parent waits for the workers and returns one compact report with any gaps or dropouts.
+[`/swarm`](../../plugins/forge/skills/workflow/swarm/SKILL.md) fans N workers across independent slices, coverage matrices, gauntlet lanes, exploration partitions, or declared race arms. Each worker gets its own scope and check, then reports `PASS`, `ISSUES`, or `BLOCKED`. The parent waits for the workers and returns one compact report with any gaps or dropouts.
 
 Reach for it when parallelism buys coverage or lets independent checks race. `/arena` gives every worker the same design or code brief, then picks a base and grafts the best parts. `/swarm` covers slices or runs a race with a selection rule declared up front. It does not use the base-selection and grafting ceremony.
 
@@ -65,7 +65,7 @@ Reach for it when parallelism buys coverage or lets independent checks race. `/a
 /interrogate the whole branch, but skeptically. no nitpicks unless it's an actual bug or regression.
 ```
 
-[`/interrogate`](../../skills/workflow/interrogate/SKILL.md) sends the same diff, intent, and rubric to reviewers on different model families. Model diversity is the point. Different models have different blind spots, so a finding two models raise independently is high-confidence signal. The lead sorts everything into `Act on`, `Consider`, `Noted`, and `Dismissed`, with a reason for each dismissal, and applies nothing automatically.
+[`/interrogate`](../../plugins/forge/skills/workflow/interrogate/SKILL.md) sends the same diff, intent, and rubric to reviewers on different model families. Model diversity is the point. Different models have different blind spots, so a finding two models raise independently is high-confidence signal. The lead sorts everything into `Act on`, `Consider`, `Noted`, and `Dismissed`, with a reason for each dismissal, and applies nothing automatically.
 
 Read the dismissals too. The lead is a pragmatic senior engineer, not an oracle, and you can override it.
 
@@ -77,7 +77,7 @@ Never take the first design. Ask for a few, and pick from evidence you can see:
 /engineering prototype a few options for the new dropdown menu. take screenshots or videos for me to compare.
 ```
 
-The [Prototype playbook](../../skills/workflow/engineering/playbooks/prototype.md) builds throwaway sketches in a scratch directory, puts the variants behind one switcher, drives each one, and captures screenshots or timings. It also works for behavior and algorithms, not just UI. Prototypes are planning with code. They let the agent answer its own open questions by running something instead of asking you, and they leave room for an option you wouldn't have thought of.
+The [Prototype playbook](../../plugins/forge/skills/workflow/engineering/playbooks/prototype.md) builds throwaway sketches in a scratch directory, puts the variants behind one switcher, drives each one, and captures screenshots or timings. It also works for behavior and algorithms, not just UI. Prototypes are planning with code. They let the agent answer its own open questions by running something instead of asking you, and they leave room for an option you wouldn't have thought of.
 
 The same idea scales up to a real design. Pair `/architect` with prototypes and keep a review gate:
 
@@ -95,7 +95,7 @@ For a package or API that other code will use, start with the doc a user would r
 /engineering write a tutorial for how i would use the new config package first. then /teach me why it beats the current one.
 ```
 
-Writing the tutorial first forces the caller's view. You describe the API to a hypothetical user and work back to the implementation. The doc also becomes a concrete target the agent checks its own work against. Name [`/technical-writing`](../../skills/docs/technical-writing/SKILL.md) when the doc itself matters, so a tutorial stays a tutorial instead of drifting into reference and explanation at once.
+Writing the tutorial first forces the caller's view. You describe the API to a hypothetical user and work back to the implementation. The doc also becomes a concrete target the agent checks its own work against. Name [`/technical-writing`](../../plugins/forge/skills/docs/technical-writing/SKILL.md) when the doc itself matters, so a tutorial stays a tutorial instead of drifting into reference and explanation at once.
 
 ## Plan after the design settles
 
@@ -105,7 +105,7 @@ forge has no planning skill, on purpose. When you do want a written plan, ask fo
 /engineering turn this design into an epic. one sub-issue per small verifiable PR, each with its own verification steps.
 ```
 
-The [`issue`](../../skills/github/issue/SKILL.md) skill creates the epic first, then one sub-issue per part from its own template, each with the criteria its template asks for. The epic is the deliverable. It is never implemented itself. Each sub-issue is a ticket that `/engineering #<issue>` works to a PR ready for review, as [Work a GitHub issue](./11-github-workflow.md) shows. A part that builds on another is blocked by it, and its PR stacks on that part's PR, so it starts before the one below is merged.
+The [`issue`](../../plugins/forge/skills/github/issue/SKILL.md) skill creates the epic first, then one sub-issue per part from its own template, each with the criteria its template asks for. The epic is the deliverable. It is never implemented itself. Each sub-issue is a ticket that `/engineering #<issue>` works to a PR ready for review, as [Work a GitHub issue](./11-github-workflow.md) shows. A part that builds on another is blocked by it, and its PR stacks on that part's PR, so it starts before the one below is merged.
 
 For a migration, state the bar in the prompt:
 

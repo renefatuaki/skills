@@ -28,13 +28,13 @@ A perf prompt states the measurement, not an impression:
 /engineering startup takes 1.8s on this fixture. trace it, fix the measured cause, show me before and after.
 ```
 
-Each of these routes to its playbook ([Bug fix](../../skills/workflow/engineering/playbooks/bug-fix.md), [Feature](../../skills/workflow/engineering/playbooks/feature.md), [Refactoring](../../skills/workflow/engineering/playbooks/refactoring.md), [Perf issue](../../skills/workflow/engineering/playbooks/perf-issue.md)), and the playbook supplies the steps you didn't type: reproduce before fixing, name the data shape before implementing, pin behavior before restructuring, profile before optimizing.
+Each of these routes to its playbook ([Bug fix](../../plugins/forge/skills/workflow/engineering/playbooks/bug-fix.md), [Feature](../../plugins/forge/skills/workflow/engineering/playbooks/feature.md), [Refactoring](../../plugins/forge/skills/workflow/engineering/playbooks/refactoring.md), [Perf issue](../../plugins/forge/skills/workflow/engineering/playbooks/perf-issue.md)), and the playbook supplies the steps you didn't type: reproduce before fixing, name the data shape before implementing, pin behavior before restructuring, profile before optimizing.
 
-For sustained improvement of one number, there's the [Hillclimb playbook](../../skills/workflow/engineering/playbooks/hillclimb.md). Give it the metric, a target, and a floor on attempts, and it loops one hypothesis at a time with a frozen measurement harness. It keeps wins and reverts everything else.
+For sustained improvement of one number, there's the [Hillclimb playbook](../../plugins/forge/skills/workflow/engineering/playbooks/hillclimb.md). Give it the metric, a target, and a floor on attempts, and it loops one hypothesis at a time with a frozen measurement harness. It keeps wins and reverts everything else.
 
-Both perf playbooks run [`/benchmark-checklist`](../../skills/verification/benchmark-checklist/SKILL.md) on their numbers. Perf issue vets its baseline and every number after it, and Hillclimb vets its harness before freezing it. [Verify and ship](./06-verify-and-ship.md#vet-a-measured-number-with-benchmark-checklist) shows when to type it yourself.
+Both perf playbooks run [`/benchmark-checklist`](../../plugins/forge/skills/verification/benchmark-checklist/SKILL.md) on their numbers. Perf issue vets its baseline and every number after it, and Hillclimb vets its harness before freezing it. [Verify and ship](./06-verify-and-ship.md#vet-a-measured-number-with-benchmark-checklist) shows when to type it yourself.
 
-Sometimes you want the cause before any fix. For a live symptom, such as a leak, an idle CPU spin, or a visual glitch, the [Runtime forensics playbook](../../skills/workflow/engineering/playbooks/runtime-forensics.md) instruments the running process. For a profile you already captured, the [Trace forensics playbook](../../skills/workflow/engineering/playbooks/trace-forensics.md) reads the artifact and maps the hot frame to source. Both return a diagnosis, not a fix:
+Sometimes you want the cause before any fix. For a live symptom, such as a leak, an idle CPU spin, or a visual glitch, the [Runtime forensics playbook](../../plugins/forge/skills/workflow/engineering/playbooks/runtime-forensics.md) instruments the running process. For a profile you already captured, the [Trace forensics playbook](../../plugins/forge/skills/workflow/engineering/playbooks/trace-forensics.md) reads the artifact and maps the hot frame to source. Both return a diagnosis, not a fix:
 
 ```text
 /engineering here's a cpuprofile from the slow startup. tell me where the time goes and which source lines own it. no fix yet.
@@ -48,17 +48,17 @@ When a bug has a cheap local test path, the whole prompt can be two words:
 /tdd implement
 ```
 
-In context, that's enough. [`/tdd`](../../skills/workflow/tdd/SKILL.md) writes the smallest test that fails for the intended reason, then the fix, then reruns the test. If a test would need broad harness setup or brittle mocks, the skill says so and uses the closest executable check instead. Don't force a test where a real command is stronger evidence.
+In context, that's enough. [`/tdd`](../../plugins/forge/skills/workflow/tdd/SKILL.md) writes the smallest test that fails for the intended reason, then the fix, then reruns the test. If a test would need broad harness setup or brittle mocks, the skill says so and uses the closest executable check instead. Don't force a test where a real command is stronger evidence.
 
 ## Load the TypeScript rules by name
 
-[`typescript-best-practices`](../../skills/clean-code/typescript-best-practices/SKILL.md) turns the type-system principles into concrete rules: discriminated unions, `unknown` at boundaries, exhaustive variants, schema-derived types. It doesn't load on its own, so type `/typescript-best-practices` when a task touches `.ts` or `.tsx` files.
+[`typescript-best-practices`](../../plugins/forge/skills/clean-code/typescript-best-practices/SKILL.md) turns the type-system principles into concrete rules: discriminated unions, `unknown` at boundaries, exhaustive variants, schema-derived types. It doesn't load on its own, so type `/typescript-best-practices` when a task touches `.ts` or `.tsx` files.
 
 ## Clean before you commit
 
-The [Opening a PR playbook](../../skills/workflow/engineering/playbooks/pull-request.md) runs the [`clean-code`](../../skills/clean-code/clean-code/SKILL.md) skill over the diff of the branch, then the [`code-comments`](../../skills/clean-code/code-comments/SKILL.md) skill over the same diff, and commits what they change with the [`commit`](../../skills/git/commit/SKILL.md) skill. The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill writes the PR description to the [`technical-writing`](../../skills/docs/technical-writing/SKILL.md) rules.
+The [Opening a PR playbook](../../plugins/forge/skills/workflow/engineering/playbooks/pull-request.md) runs the [`clean-code`](../../plugins/forge/skills/clean-code/clean-code/SKILL.md) skill over the diff of the branch, then the [`code-comments`](../../plugins/forge/skills/clean-code/code-comments/SKILL.md) skill over the same diff, and commits what they change with the [`commit`](../../plugins/forge/skills/git/commit/SKILL.md) skill. The [`pull-request`](../../plugins/forge/skills/github/pull-request/SKILL.md) skill writes the PR description to the [`technical-writing`](../../plugins/forge/skills/docs/technical-writing/SKILL.md) rules.
 
-For prose, [`/unslop`](../../skills/docs/unslop/SKILL.md) takes a target and any extra rules you have:
+For prose, [`/unslop`](../../plugins/forge/skills/docs/unslop/SKILL.md) takes a target and any extra rules you have:
 
 ```text
 /unslop the readme changes, no emdashes
@@ -68,7 +68,7 @@ You'll develop your own shorthand. The skill reads intent fine from terse prompt
 
 ## Hold the comments to one rule with `code-comments`
 
-Comments need their own pass. The [`code-comments`](../../skills/clean-code/code-comments/SKILL.md) skill keeps a comment only when it tells the reader something the code cannot: what a non-obvious symbol does, why a foreign API is used the way it is, or how a complex workflow proceeds. Everything else the code says through its names. A stale comment gets rewritten or deleted. Commented-out code and a `TODO` without an issue link come out.
+Comments need their own pass. The [`code-comments`](../../plugins/forge/skills/clean-code/code-comments/SKILL.md) skill keeps a comment only when it tells the reader something the code cannot: what a non-obvious symbol does, why a foreign API is used the way it is, or how a complex workflow proceeds. Everything else the code says through its names. A stale comment gets rewritten or deleted. Commented-out code and a `TODO` without an issue link come out.
 
 The skill runs whenever code that carries comments gets written or edited, and a hook checks the files a turn changed when the turn ends. Opening a PR runs it once more over the whole diff. To run it by hand:
 
