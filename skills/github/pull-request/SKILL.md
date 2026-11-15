@@ -4,7 +4,7 @@ description: pull-request, the rules for every GitHub pull request. Use whenever
 argument-hint: "[base] [#issue] [reviewer]"
 ---
 
-Rules for every GitHub pull request you create. A pull request carries a test plan, the steps a reviewer runs in the running application before approving, in the format of [pull_request_template.md](../templates/assets/pull_request_template.md) of the templates skill. This skill opens it ready for review without stopping, always as the user's GitHub App and with the user as reviewer, so the user can approve it. Then it gets the checks green, runs its own test steps and reports every decision it took as an assumption.
+Rules for every GitHub pull request you create. A pull request carries a test plan, the steps a reviewer runs in the running application before approving, in the format of [pull_request_template.md](../templates/assets/pull_request_template.md) of the templates skill. This skill opens it ready for review without stopping, always as the user's GitHub App and with the user as reviewer, so the user can approve it. A branch with several changes opens as a stack, one pull request per change. Then it gets the checks green, runs its own test steps and reports every decision it took as an assumption.
 
 ## Steps
 
@@ -18,6 +18,14 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 2. **Ensure the template.** Read [templates](../templates/SKILL.md) and follow it for the pull request template. Its reply folds into this skill's reply. If the user asked only for a template, this is the end. The body of this pull request follows the asset of the templates skill.
 3. **Read the branch.** When `gh pr view --json number,url,state,title,body,baseRefName` finds an open pull request for the branch, steps 4 to 7 revise it in place of opening one. The base is the branch the user or the calling playbook named, otherwise the `baseRefName` of that open pull request, otherwise `dev` when the remote has it and the current branch is another one, otherwise the default branch. Run `git fetch origin <base>`, then read `git status --porcelain`, `git log origin/<base>..HEAD` and `git diff origin/<base>...HEAD`. Stop and say why when the current branch is the base or has no commit beyond it. Uncommitted changes stay out of the pull request.
 4. **Find the issue.** Look in the prompt, the branch name and the `Refs`, `Closes`, `Fixes` and `Resolves` trailers of the commits. Read it with `gh issue view <number> --json number,title,body,labels,milestone,projectItems,url`. A branch without an issue gets a pull request without one. Then bring the diagrams up to date. Run the Update steps of the `diagrams` skill for the files of the diff, and commit each diagram that changed with the `commit` skill, `docs: update the <topic> diagram`, with this issue in its footer. A branch that touches no file a diagram links skips this.
+
+   **Split.** Prefer five narrow PRs to one large PR. Each commit is a future PR: landable, ordered to tell the story. A branch without an open pull request has its history tidied now with the `tidy-history` skill, naming the base of step 3. When it then holds two or more commits beyond the base, diagram updates not counted, it opens as a stack with one layer per commit, in the order of the history. A diagram update joins the top layer. The branch itself is the top layer, so the issue's link to it stays. Each layer below gets the branch `<branch>-<k>` at its commit, `<k>` counting from 1 at the bottom.
+
+   ```sh
+   git branch <branch>-<k> <commit>
+   ```
+
+   Steps 5 and 6 then run once per layer from the bottom up, and step 7 once per layer after all are open. In them `<branch>` is the layer's branch, its base is the layer below, the bottom layer's base is the base of step 3, and its diff, title and body cover only its own commits. Step 7 fixes a lower layer in a worktree of its own and removes it afterwards. A branch with an open pull request is never split.
 5. **Write the title and the body** in English, whatever language the existing pull requests use. The headings stay as the template writes them, because the `pull-request-review` skill finds the test plan by them. The title is a Conventional Commits subject for the whole branch, as the `commit` skill writes one, since a squash merge turns it into the commit message. Then write one value per section, in template order, each filled the way its comment says, the comments left out.
    - Content comes only from the repository, the diff, the commits, the issue and the conversation.
    - The prose follows [technical-writing](../../docs/technical-writing/SKILL.md), every layer except Diátaxis.
@@ -34,7 +42,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - **A pull request that already exists** is revised from what it says. Read its title and body first, then bring every section up to date with the branch and keep what still holds, whoever wrote it.
    - Cut pass, once the sections are written. Reread the body and delete every sentence, collapsed or not, whose removal changes neither what the reviewer does nor how they judge a step.
    - Metadata. The assignee is the user's login from `gh api user --jq .login`. The reviewer is the user, plus whoever the user named. Label, milestone and projects are the issue's, the projects by the `title` of each of its `projectItems`.
-6. **Open the pull request**, ready for review and without asking. Tidy the history with the `tidy-history` skill, naming the base of step 3 and that this skill rebases the layers above. Then push the branch and create the pull request, the body from a quoted heredoc. A flag without a value is left out.
+6. **Open the pull request**, ready for review and without asking. Tidy the history with the `tidy-history` skill, naming the base of step 3 and that this skill rebases the layers above. A layer of a split skips the tidy, which step 4 ran. Then push the branch and create the pull request, the body from a quoted heredoc. A flag without a value is left out.
 
    ```sh
    git push --set-upstream origin <branch>
@@ -169,7 +177,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
      | grep -E '^\s*[-*] \[ \] [0-9]+\.' \
      | grep -vE '\(needs a person: [^)]+\)'
    ```
-8. **Hand over.** Reply with the URL and the title, then every check and every test step that failed or could not run. Then the assumptions, one line each.
+8. **Hand over.** Reply with the URL and the title, for a split those of every layer from the bottom up, then every check and every test step that failed or could not run. Then the assumptions, one line each.
    - The base, when the user did not name it.
    - For a layer of a stack, its pull requests bottom to top, or why it is not linked, and the layers above that a rebase left as they were.
    - The issue and where it was found, or that the pull request has none.
@@ -182,4 +190,4 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
    End the reply by saying that the pull request waits for the user's approval.
 
-Done when the pull request exists on GitHub ready for review, opened by the app, with the user and every named reviewer requested, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the history holds one commit per change with the tree unchanged unless a person had reviewed it, the pull request is in every project of its issue, the issue is In Review, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, the checks ran through loop-on-ci, the steps an agent can run are tested, every unticked step that did not fail ends with `(needs a person: <reason>)`, and the reply lists the failures and the assumptions.
+Done when a new branch with two or more commits beyond its base, diagram updates not counted, is split into one layer per commit as step 4 says, each layer's pull request meets the rest of this list, the pull request exists on GitHub ready for review, opened by the app, with the user and every named reviewer requested, or the open pull request carries the new test plan, with every section filled or left out as step 5 says, the history holds one commit per change with the tree unchanged unless a person had reviewed it, the pull request is in every project of its issue, the issue is In Review, the diagrams that link a file of the branch are true for it, the pull request of a visible change carries the before and after comment of the current head, with its images or the reason why there are none, the pull request of a changed output carries the examples comment of the current head, with its real rows or the reason why there are none, the check of step 6 passes, a layer of a stack is linked and the layers above it rebased, or the reply says why not, the checks ran through loop-on-ci, the steps an agent can run are tested, every unticked step that did not fail ends with `(needs a person: <reason>)`, and the reply lists the failures and the assumptions.
