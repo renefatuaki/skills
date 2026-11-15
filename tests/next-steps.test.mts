@@ -7,11 +7,11 @@ import {
   openTestSteps,
   parseSteps,
   stepList,
-} from '../skills/github/next-steps/scripts/steps.mts';
+} from '../plugins/forge/skills/github/next-steps/scripts/steps.mts';
 import type {
   Action,
   PullRequestStatus,
-} from '../skills/github/next-steps/scripts/steps.mts';
+} from '../plugins/forge/skills/github/next-steps/scripts/steps.mts';
 
 const ACTION_CASES: {
   name: string;

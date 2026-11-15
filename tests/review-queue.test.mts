@@ -6,11 +6,11 @@ import {
   parsePullRequests,
   queueRows,
   queueTable,
-} from '../skills/github/review-queue/scripts/order.mts';
+} from '../plugins/forge/skills/github/review-queue/scripts/order.mts';
 import type {
   OpenPullRequest,
   QueueRow,
-} from '../skills/github/review-queue/scripts/order.mts';
+} from '../plugins/forge/skills/github/review-queue/scripts/order.mts';
 
 /** The numbers of the pull requests in the review order, each with the number it waits on or null. */
 type Order = [number, number | null][];

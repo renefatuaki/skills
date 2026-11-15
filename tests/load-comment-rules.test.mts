@@ -9,7 +9,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const script = join(root, 'hooks', 'load-comment-rules.mts');
+const pluginRoot = join(root, 'plugins', 'forge');
+const script = join(pluginRoot, 'hooks', 'load-comment-rules.mts');
 const dir = mkdtempSync(join(tmpdir(), 'load-comment-rules-'));
 
 const SKILL_MARKER = 'Rules for every comment you write or touch.';
@@ -17,9 +18,9 @@ const TYPESCRIPT_MARKER = 'Doc comments use TSDoc or JSDoc: `/** ... */`.';
 const SKILL_BODY_LINE =
   '5. **Prune.** Every comment inside the touched symbol must still be true for the current code.';
 
-const SKILL_PATH = join(root, 'skills/clean-code/code-comments/SKILL.md');
+const SKILL_PATH = join(pluginRoot, 'skills/clean-code/code-comments/SKILL.md');
 const GUIDE_PATH = join(
-  root,
+  pluginRoot,
   'skills/clean-code/code-comments/languages/typescript.md',
 );
 
@@ -172,7 +173,7 @@ function run(input: Record<string, unknown>): Output {
       ...input,
     }),
     encoding: 'utf8',
-    env: { ...process.env, CLAUDE_PLUGIN_ROOT: root },
+    env: { ...process.env, CLAUDE_PLUGIN_ROOT: pluginRoot },
   });
 
   if (result.status !== 0) {

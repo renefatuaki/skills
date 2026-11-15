@@ -3,7 +3,7 @@
 // Copied from mattpocock/skills at commit f3554ac (MIT License, Copyright (c) 2026 Matt Pocock).
 // https://github.com/mattpocock/skills/blob/main/scripts/sync-plugin-version.mjs
 
-// Copies the version of each package.json into the plugin.json next to it after `changeset version`, forge at the root and every plugin under plugins/, with --check it only exits 1 on a mismatch.
+// Copies the version of each package.json into the plugin.json next to it after `changeset version`, for every plugin under plugins/, with --check it only exits 1 on a mismatch.
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
@@ -12,13 +12,10 @@ import { fileURLToPath } from 'node:url';
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..');
 const plugins = join(repo, 'plugins');
 
-const folders = [
-  repo,
-  ...readdirSync(plugins, { withFileTypes: true })
-    .filter(entry => entry.isDirectory())
-    .map(entry => join(plugins, entry.name))
-    .filter(folder => existsSync(join(folder, 'package.json'))),
-];
+const folders = readdirSync(plugins, { withFileTypes: true })
+  .filter(entry => entry.isDirectory())
+  .map(entry => join(plugins, entry.name))
+  .filter(folder => existsSync(join(folder, 'package.json')));
 
 let mismatch = false;
 

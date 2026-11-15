@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const script = join(
   root,
+  'plugins',
+  'forge',
   'skills',
   'workflow',
   'engineering',
