@@ -30,42 +30,42 @@ Each phrase lands because the rule behind it is specific. The agent still has to
 
 The core principles decide how much to build and when to rethink the design:
 
-- [Laziness Protocol](../../skills/principles/laziness-protocol/SKILL.md) prefers deletion and the smallest change that solves the problem.
-- [Foundational Thinking](../../skills/principles/foundational-thinking/SKILL.md) chooses the core data structures before writing logic.
-- [Redesign from First Principles](../../skills/principles/redesign-from-first-principles/SKILL.md) integrates a new requirement as if it had been there from day one.
-- [Attack the Premise](../../skills/principles/attack-the-premise/SKILL.md) writes down the premise that two or more failed fixes shared and tests it directly before the next fix.
-- [Subtract Before You Add](../../skills/principles/subtract-before-you-add/SKILL.md) removes dead weight before building on top of it.
-- [Minimize Reader Load](../../skills/principles/minimize-reader-load/SKILL.md) collapses layers and hidden state a reader must hold in their head.
-- [Outcome-Oriented Execution](../../skills/principles/outcome-oriented-execution/SKILL.md) converges rewrites on the target design instead of preserving throwaway compatibility states.
-- [Experience First](../../skills/principles/experience-first/SKILL.md) chooses the user's result over implementation convenience.
-- [Exhaust the Design Space](../../skills/principles/exhaust-the-design-space/SKILL.md) builds two or three competing prototypes when there's no precedent.
-- [Build the Lever](../../skills/principles/build-the-lever/SKILL.md) builds the script that does or proves the work, so a reviewer can rerun it. When an agent keeps doing the same thing by hand, have it write the tool or skill it wishes it had. If a script can do a step the same way every time, use the script, and save agents for the judgment calls.
+- [Laziness Protocol](../../plugins/forge/skills/principles/laziness-protocol/SKILL.md) prefers deletion and the smallest change that solves the problem.
+- [Foundational Thinking](../../plugins/forge/skills/principles/foundational-thinking/SKILL.md) chooses the core data structures before writing logic.
+- [Redesign from First Principles](../../plugins/forge/skills/principles/redesign-from-first-principles/SKILL.md) integrates a new requirement as if it had been there from day one.
+- [Attack the Premise](../../plugins/forge/skills/principles/attack-the-premise/SKILL.md) writes down the premise that two or more failed fixes shared and tests it directly before the next fix.
+- [Subtract Before You Add](../../plugins/forge/skills/principles/subtract-before-you-add/SKILL.md) removes dead weight before building on top of it.
+- [Minimize Reader Load](../../plugins/forge/skills/principles/minimize-reader-load/SKILL.md) collapses layers and hidden state a reader must hold in their head.
+- [Outcome-Oriented Execution](../../plugins/forge/skills/principles/outcome-oriented-execution/SKILL.md) converges rewrites on the target design instead of preserving throwaway compatibility states.
+- [Experience First](../../plugins/forge/skills/principles/experience-first/SKILL.md) chooses the user's result over implementation convenience.
+- [Exhaust the Design Space](../../plugins/forge/skills/principles/exhaust-the-design-space/SKILL.md) builds two or three competing prototypes when there's no precedent.
+- [Build the Lever](../../plugins/forge/skills/principles/build-the-lever/SKILL.md) builds the script that does or proves the work, so a reviewer can rerun it. When an agent keeps doing the same thing by hand, have it write the tool or skill it wishes it had. If a script can do a step the same way every time, use the script, and save agents for the judgment calls.
 
 The architecture principles decide where state, validation, and compatibility live:
 
-- [Model the Domain](../../skills/principles/model-the-domain/SKILL.md) encodes repeated rules in one structure, not scattered conditionals.
-- [Boundary Discipline](../../skills/principles/boundary-discipline/SKILL.md) validates at the boundary and trusts internal types.
-- [Type System Discipline](../../skills/principles/type-system-discipline/SKILL.md) makes illegal states unrepresentable.
-- [Make Operations Idempotent](../../skills/principles/make-operations-idempotent/SKILL.md) converges retries on the same end state.
-- [Migrate Callers Then Delete Legacy APIs](../../skills/principles/migrate-callers-then-delete-legacy-apis/SKILL.md) migrates and deletes in one wave.
-- [Separate Before Serializing Shared State](../../skills/principles/separate-before-serializing-shared-state/SKILL.md) removes the sharing before adding coordination.
+- [Model the Domain](../../plugins/forge/skills/principles/model-the-domain/SKILL.md) encodes repeated rules in one structure, not scattered conditionals.
+- [Boundary Discipline](../../plugins/forge/skills/principles/boundary-discipline/SKILL.md) validates at the boundary and trusts internal types.
+- [Type System Discipline](../../plugins/forge/skills/principles/type-system-discipline/SKILL.md) makes illegal states unrepresentable.
+- [Make Operations Idempotent](../../plugins/forge/skills/principles/make-operations-idempotent/SKILL.md) converges retries on the same end state.
+- [Migrate Callers Then Delete Legacy APIs](../../plugins/forge/skills/principles/migrate-callers-then-delete-legacy-apis/SKILL.md) migrates and deletes in one wave.
+- [Separate Before Serializing Shared State](../../plugins/forge/skills/principles/separate-before-serializing-shared-state/SKILL.md) removes the sharing before adding coordination.
 
 The verification principles define what counts as proof:
 
-- [Prove It Works](../../skills/principles/prove-it-works/SKILL.md) verifies the real artifact, not a proxy.
-- [Fix Root Causes](../../skills/principles/fix-root-causes/SKILL.md) reproduces and traces to the cause before changing code.
-- [Sequence Work into Verifiable Units](../../skills/principles/sequence-verifiable-units/SKILL.md) ends each small unit in a check before starting the next.
-- [Test Behavior, Not Implementation](../../skills/principles/test-behavior-not-implementation/SKILL.md) asserts what the code's users can observe, so a test fails when that behavior breaks and survives a change to the internals.
-- [Explain the Number](../../skills/principles/explain-the-number/SKILL.md) names what limits a measured number and rules out that it measured something else, before anyone trusts or reports it. [`/benchmark-checklist`](../../skills/verification/benchmark-checklist/SKILL.md) turns it into seven questions you answer from real runs.
+- [Prove It Works](../../plugins/forge/skills/principles/prove-it-works/SKILL.md) verifies the real artifact, not a proxy.
+- [Fix Root Causes](../../plugins/forge/skills/principles/fix-root-causes/SKILL.md) reproduces and traces to the cause before changing code.
+- [Sequence Work into Verifiable Units](../../plugins/forge/skills/principles/sequence-verifiable-units/SKILL.md) ends each small unit in a check before starting the next.
+- [Test Behavior, Not Implementation](../../plugins/forge/skills/principles/test-behavior-not-implementation/SKILL.md) asserts what the code's users can observe, so a test fails when that behavior breaks and survives a change to the internals.
+- [Explain the Number](../../plugins/forge/skills/principles/explain-the-number/SKILL.md) names what limits a measured number and rules out that it measured something else, before anyone trusts or reports it. [`/benchmark-checklist`](../../plugins/forge/skills/verification/benchmark-checklist/SKILL.md) turns it into seven questions you answer from real runs.
 
 The delegation principles keep parallel work sane:
 
-- [Guard the Context Window](../../skills/principles/guard-the-context-window/SKILL.md) routes bulk reading to subagents and keeps findings in the main chat.
-- [Never Block on the Human](../../skills/principles/never-block-on-the-human/SKILL.md) proceeds on reversible work and presents the result.
+- [Guard the Context Window](../../plugins/forge/skills/principles/guard-the-context-window/SKILL.md) routes bulk reading to subagents and keeps findings in the main chat.
+- [Never Block on the Human](../../plugins/forge/skills/principles/never-block-on-the-human/SKILL.md) proceeds on reversible work and presents the result.
 
 And one meta principle:
 
-- [Encode Lessons in Structure](../../skills/principles/encode-lessons-in-structure/SKILL.md) turns advice you've repeated twice into a lint, check, or script. [`/correct`](../../skills/meta/correct/SKILL.md) applies it to a whole repo, as shown in [Make it yours](./09-make-it-yours.md#fix-the-environment-with-correct).
+- [Encode Lessons in Structure](../../plugins/forge/skills/principles/encode-lessons-in-structure/SKILL.md) turns advice you've repeated twice into a lint, check, or script. [`/correct`](../../plugins/forge/skills/meta/correct/SKILL.md) applies it to a whole repo, as shown in [Make it yours](./09-make-it-yours.md#fix-the-environment-with-correct).
 
 Don't memorize the list. Skim it now, then come back when you catch the agent doing something a name here would have prevented. That's how the vocabulary sticks.
 

@@ -10,7 +10,7 @@ Start smaller than you think. You don't need many skills on day one, or even thi
 /automate-me
 ```
 
-You don't describe your style, because [`/automate-me`](../../skills/meta/automate-me/SKILL.md) reads it out of your history. It mines your recent transcripts in the active workspace for repeated preferences, in how you like replies, delegation, verification, code, prose, and process, then asks you which patterns are really you. It drafts `.claude/skills/<your-name>-mode/SKILL.md` through the `skill-creator:skill-creator` skill, runs the draft through [`/unslop`](../../skills/docs/unslop/SKILL.md), and opens a PR from a worktree so you review it like any other change.
+You don't describe your style, because [`/automate-me`](../../plugins/forge/skills/meta/automate-me/SKILL.md) reads it out of your history. It mines your recent transcripts in the active workspace for repeated preferences, in how you like replies, delegation, verification, code, prose, and process, then asks you which patterns are really you. It drafts `.claude/skills/<your-name>-mode/SKILL.md` through the `skill-creator:skill-creator` skill, runs the draft through [`/unslop`](../../plugins/forge/skills/docs/unslop/SKILL.md), and opens a PR from a worktree so you review it like any other change.
 
 Run it again whenever your habits drift:
 
@@ -28,7 +28,7 @@ Right after a task that taught you something, run:
 /reflect that took way too long. capture what we learned so the next run doesn't repeat it.
 ```
 
-[`/reflect`](../../skills/meta/reflect/SKILL.md) sends the transcript to three parallel reviewers, then a synthesizer sorts the proposals into `Accepted`, `Rejected`, and `Backlog` and waits for your approval before any skill changes. Approve a proposal only if it would change a future decision. One weird session is an anecdote, not a rule.
+[`/reflect`](../../plugins/forge/skills/meta/reflect/SKILL.md) sends the transcript to three parallel reviewers, then a synthesizer sorts the proposals into `Accepted`, `Rejected`, and `Backlog` and waits for your approval before any skill changes. Approve a proposal only if it would change a future decision. One weird session is an anecdote, not a rule.
 
 ## Fix the environment with `/correct`
 
@@ -39,7 +39,7 @@ When you correct agents for the same mistake again and again, the fix belongs in
 3. Catch it with a test.
 4. Write it down as a doc or agent rule. Nothing fails when an agent skips a rule, so this comes last.
 
-Human review isn't on the list. A reviewer who must catch the same mistake on every PR is the problem this fixes. [`/correct`](../../skills/meta/correct/SKILL.md) does the work:
+Human review isn't on the list. A reviewer who must catch the same mistake on every PR is the problem this fixes. [`/correct`](../../plugins/forge/skills/meta/correct/SKILL.md) does the work:
 
 ```text
 /correct agents keep calling the database client directly instead of going through the repository layer
@@ -57,9 +57,9 @@ When you already know the workflow you want to capture:
 /engineering write a skill for verifying database migrations in this repo
 ```
 
-Writing a skill matches the [Authoring or modifying a skill playbook](../../skills/workflow/engineering/playbooks/authoring-a-skill.md), which routes through the `skill-creator:skill-creator` skill, validates the frontmatter and links, and ships the result through the Opening a PR playbook. Agent-facing prose has a higher bar than human prose, because an unhelpful sentence becomes an instruction some future agent follows. Let the playbook hold that bar rather than writing a `SKILL.md` freehand.
+Writing a skill matches the [Authoring or modifying a skill playbook](../../plugins/forge/skills/workflow/engineering/playbooks/authoring-a-skill.md), which routes through the `skill-creator:skill-creator` skill, validates the frontmatter and links, and ships the result through the Opening a PR playbook. Agent-facing prose has a higher bar than human prose, because an unhelpful sentence becomes an instruction some future agent follows. Let the playbook hold that bar rather than writing a `SKILL.md` freehand.
 
-Two special cases have their own generators. A skill that must drive your app and prove behavior is a verification skill, so use [`/create-verification-skill`](../../skills/verification/create-verification-skill/SKILL.md) and [`/maintain-verification-skill`](../../skills/verification/maintain-verification-skill/SKILL.md) instead. A skill that checks a property of your code with a model checker, a proof, or another verifier is a formal verification skill, so use [`/create-formal-verification-skill`](../../skills/verification/create-formal-verification-skill/SKILL.md) and [`/maintain-formal-verification-skill`](../../skills/verification/maintain-formal-verification-skill/SKILL.md). [Verify and ship](./06-verify-and-ship.md#prove-a-property-with-a-formal-verification-skill) covers both kinds.
+Two special cases have their own generators. A skill that must drive your app and prove behavior is a verification skill, so use [`/create-verification-skill`](../../plugins/forge/skills/verification/create-verification-skill/SKILL.md) and [`/maintain-verification-skill`](../../plugins/forge/skills/verification/maintain-verification-skill/SKILL.md) instead. A skill that checks a property of your code with a model checker, a proof, or another verifier is a formal verification skill, so use [`/create-formal-verification-skill`](../../plugins/forge/skills/verification/create-formal-verification-skill/SKILL.md) and [`/maintain-formal-verification-skill`](../../plugins/forge/skills/verification/maintain-formal-verification-skill/SKILL.md). [Verify and ship](./06-verify-and-ship.md#prove-a-property-with-a-formal-verification-skill) covers both kinds.
 
 ## Write docs to a standard with `/technical-writing`
 
@@ -69,7 +69,7 @@ Skills aren't the only prose you ship. For docs, RFCs, readmes, PR descriptions,
 /technical-writing review the readme changes
 ```
 
-[`/technical-writing`](../../skills/docs/technical-writing/SKILL.md) applies a layered standard. Its goal is prose that a tired engineer understands on the first read. It picks the document's mode first (tutorial, how-to, reference, or explanation), then works sentence by sentence: who does what, one thought per sentence, nothing readable two ways. Use it to review what you or an agent just wrote, or name it up front when you ask for a doc.
+[`/technical-writing`](../../plugins/forge/skills/docs/technical-writing/SKILL.md) applies a layered standard. Its goal is prose that a tired engineer understands on the first read. It picks the document's mode first (tutorial, how-to, reference, or explanation), then works sentence by sentence: who does what, one thought per sentence, nothing readable two ways. Use it to review what you or an agent just wrote, or name it up front when you ask for a doc.
 
 ## Test a skill change blind
 
@@ -87,7 +87,7 @@ When a skill keeps missing and you know what it should do, change and test it in
 
 Asking for the eval up front keeps the edit honest. A fix written from one bad session tends to overfit that session, and over many edits the skill drifts. The eval catches the drift before it ships.
 
-The [Eval playbook](../../skills/workflow/engineering/playbooks/eval.md) is built around one failure mode, the observer effect. An agent that knows it's being evaluated behaves differently. So candidate agents get an organic-looking task in sanitized directories, never the words "eval" or "candidate", and never each other's existence. One judge scores all outputs under neutral labels, and chain-following gets graded from which files each candidate actually read, not from what it claims.
+The [Eval playbook](../../plugins/forge/skills/workflow/engineering/playbooks/eval.md) is built around one failure mode, the observer effect. An agent that knows it's being evaluated behaves differently. So candidate agents get an organic-looking task in sanitized directories, never the words "eval" or "candidate", and never each other's existence. One judge scores all outputs under neutral labels, and chain-following gets graded from which files each candidate actually read, not from what it claims.
 
 Read every output yourself before accepting the verdict. If you disagree with the judge, suspect the rubric before you suspect your judgment.
 

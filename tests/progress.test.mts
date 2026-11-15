@@ -12,7 +12,7 @@ import {
   INITIAL_RUN,
   parseUsage,
   step,
-} from '../hooks/progress/run.mts';
+} from '../plugins/forge/hooks/progress/run.mts';
 import type {
   Band,
   Event,
@@ -20,11 +20,13 @@ import type {
   Provider,
   Run,
   Tone,
-} from '../hooks/progress/run.mts';
+} from '../plugins/forge/hooks/progress/run.mts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const script = join(
   root,
+  'plugins',
+  'forge',
   'skills',
   'workflow',
   'engineering',
@@ -34,6 +36,8 @@ const script = join(
 
 const antigravityScript = join(
   root,
+  'plugins',
+  'forge',
   'skills',
   'workflow',
   'engineering',

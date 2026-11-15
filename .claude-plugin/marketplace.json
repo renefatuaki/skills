@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "forge",
-      "source": "./",
+      "source": "./plugins/forge",
       "description": "Claude Code skills for clean code, engineering workflows and project management.",
       "category": "engineering",
       "keywords": [

@@ -202,6 +202,8 @@ importers:
 
   plugins/antigravity: {}
 
+  plugins/forge: {}
+
 packages:
 
   '@antfu/install-pkg@2.1.0':

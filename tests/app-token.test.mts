@@ -10,7 +10,7 @@ import {
   appJwt,
   configDirectory,
   parseAppConfig,
-} from '../skills/github/pull-request/scripts/github-app.mts';
+} from '../plugins/forge/skills/github/pull-request/scripts/github-app.mts';
 
 let failures = 0;
 

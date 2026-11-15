@@ -11,7 +11,7 @@ import {
   diagramSyntax,
   linkedDiagrams,
   svgLabels,
-} from '../hooks/lib/diagrams.mts';
+} from '../plugins/forge/hooks/lib/diagrams.mts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = join(root, 'tests', 'fixtures', 'diagrams');

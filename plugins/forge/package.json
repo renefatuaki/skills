@@ -1,0 +1,15 @@
+{
+  "name": "forge",
+  "version": "1.11.0",
+  "private": true,
+  "description": "Claude Code skills for clean code, engineering workflows and project management.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/renefatuaki/skills",
+    "directory": "plugins/forge"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

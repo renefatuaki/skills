@@ -5,7 +5,7 @@
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { docs } from '../hooks/lib/docs.mts';
+import { docs } from '../plugins/forge/hooks/lib/docs.mts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixtures = join(root, 'tests', 'fixtures');

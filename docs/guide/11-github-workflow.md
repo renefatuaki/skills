@@ -15,10 +15,10 @@ flowchart LR
 
 | Element | Source |
 | --- | --- |
-| `issue` | [`issue`](../../skills/github/issue/SKILL.md) |
-| `ticket` | [`ticket.md`](../../skills/workflow/engineering/playbooks/ticket.md) |
-| `pullRequest` | [`pull-request`](../../skills/github/pull-request/SKILL.md) |
-| `pullRequestReview` | [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) |
+| `issue` | [`issue`](../../plugins/forge/skills/github/issue/SKILL.md) |
+| `ticket` | [`ticket.md`](../../plugins/forge/skills/workflow/engineering/playbooks/ticket.md) |
+| `pullRequest` | [`pull-request`](../../plugins/forge/skills/github/pull-request/SKILL.md) |
+| `pullRequestReview` | [`pull-request-review`](../../plugins/forge/skills/github/pull-request-review/SKILL.md) |
 
 ## Write the ticket
 
@@ -28,9 +28,9 @@ Describe the work, and ask for an issue:
 the csv export drops its last row since yesterday's deploy. write an issue for it.
 ```
 
-The [`issue`](../../skills/github/issue/SKILL.md) skill picks the template, bug, feature, refactor, chore or epic. Where the request leaves a field open, it interviews you with the grilling skill. It writes every criterion as a checkbox, so the skills below can tick it once it is proven. It creates the issue and asks you with its link whether anything should change. Work with several parts that ship on their own becomes an epic with one sub-issue per part.
+The [`issue`](../../plugins/forge/skills/github/issue/SKILL.md) skill picks the template, bug, feature, refactor, chore or epic. Where the request leaves a field open, it interviews you with the grilling skill. It writes every criterion as a checkbox, so the skills below can tick it once it is proven. It creates the issue and asks you with its link whether anything should change. Work with several parts that ship on their own becomes an epic with one sub-issue per part.
 
-A board with the Status, Priority and Size fields comes from the [`project`](../../skills/github/project/SKILL.md) skill. Run `/project` to create one for the repository.
+A board with the Status, Priority and Size fields comes from the [`project`](../../plugins/forge/skills/github/project/SKILL.md) skill. Run `/project` to create one for the repository.
 
 ## Work the ticket
 
@@ -38,22 +38,22 @@ A board with the Status, Priority and Size fields comes from the [`project`](../
 /engineering #42
 ```
 
-The [Ticket playbook](../../skills/workflow/engineering/playbooks/ticket.md) runs on its own and asks only where its steps say so.
+The [Ticket playbook](../../plugins/forge/skills/workflow/engineering/playbooks/ticket.md) runs on its own and asks only where its steps say so.
 
 1. It stops on a ticket that is closed, an epic, set to Blocked, assigned to someone else, or held back by an earlier ticket, and says which case applies. An earlier ticket is an open blocker, or a ticket In Progress or In Review with a branch in the same repository. It holds the ticket back while it has no open PR, or while the open PRs form more than one stack.
 2. It takes the ticket over in its own worktree `../<repo>-<number>`, on a branch `<type>/<number>-<slug>` off `dev`, or off the default branch when the remote has no `dev`. A ticket whose earlier tickets have open PRs branches off the top one instead, so its PR becomes the next layer of a stack. Two tickets of one repository never branch off the same `dev` side by side, unless their `app: <name>` labels name no common app. The branch is created as a branch of the issue, so the issue links it and the PR opened from it. It sets the Status to In Progress and assigns you.
 3. It asks you through the grilling skill where a criterion reads two ways, two criteria contradict each other, or several approaches lead to a result you would see differently. It may also ask whether to set up a test runner or a verification skill.
 4. It opens the playbook the label names. `bug` gives Bug fix, `refactor` gives Refactoring, and every other label gives Feature.
 5. It builds each criterion in a fresh subagent, test first, with the test named after the criterion. A refactoring pins today's behaviour with a test before it changes the structure.
-6. It commits criterion by criterion with the [`commit`](../../skills/git/commit/SKILL.md) skill, `Refs` on every commit and `Closes` on the last. Once a criterion's test is green and verified, it ticks the criterion in the issue.
-7. It reviews the diff with [`/interrogate`](../../skills/workflow/interrogate/SKILL.md), and with [`/blast-radius`](../../skills/workflow/blast-radius/SKILL.md) when the diff changes a schema, a public API, the dependencies or a flag.
-8. It runs [Opening a PR](../../skills/workflow/engineering/playbooks/pull-request.md).
+6. It commits criterion by criterion with the [`commit`](../../plugins/forge/skills/git/commit/SKILL.md) skill, `Refs` on every commit and `Closes` on the last. Once a criterion's test is green and verified, it ticks the criterion in the issue.
+7. It reviews the diff with [`/interrogate`](../../plugins/forge/skills/workflow/interrogate/SKILL.md), and with [`/blast-radius`](../../plugins/forge/skills/workflow/blast-radius/SKILL.md) when the diff changes a schema, a public API, the dependencies or a flag.
+8. It runs [Opening a PR](../../plugins/forge/skills/workflow/engineering/playbooks/pull-request.md).
 
 A ticket that already has a branch or an open PR resumes where it stopped. A ticket that needs something outside the repository, such as an account or a secret, ends as Blocked, with the obstacle in a comment on the issue.
 
 ## Open the PR
 
-The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill opens one PR per branch, ready for review and with you as the reviewer. Its base is `dev` when the remote has it, otherwise the default branch. A layer of a stack targets the branch below it, and the skill links it into the [stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) on GitHub with the `gh stack` extension. After a push to a lower layer it rebases the layers above. Before every push it runs the [`tidy-history`](../../skills/git/tidy-history/SKILL.md) skill, which folds the history to one commit per change, so a fix from a check folds into the commit it finishes. A pushed branch goes up again with `--force-with-lease`, and a PR you have reviewed keeps its history. Run `/tidy-history` yourself to tidy the branch of the current worktree at any time. GitHub merges a stack bottom-up and moves the layers left to `dev`. Its description carries a test plan, the steps a reviewer runs in the running app before approving. When the branch changes what the application shows, the skill posts a comment with every changed screen before and after, a web application on desktop and on mobile. It rewrites that comment after each push that changes the screens. When the branch changes what code, a script or a skill outputs, the skill posts a second comment with real examples. Each changed behaviour gets a table of real inputs with the output before and after, and a Tradeoffs section lists the inputs where the new output is worse. Then the [ci-watcher](../../agents/ci-watcher.md) agent watches the checks, a failed check goes through `/loop-on-ci`, and the skill runs every test step it can run itself. Its reply names what failed and every assumption it took.
+The [`pull-request`](../../plugins/forge/skills/github/pull-request/SKILL.md) skill opens one PR per branch, ready for review and with you as the reviewer. Its base is `dev` when the remote has it, otherwise the default branch. A layer of a stack targets the branch below it, and the skill links it into the [stack](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs) on GitHub with the `gh stack` extension. After a push to a lower layer it rebases the layers above. The skill splits a new branch with two or more changes into such a stack, one branch and one PR per change in the order of the history. A diagram update does not count as a change. Only the top PR closes the issue. Before every push it runs the [`tidy-history`](../../plugins/forge/skills/git/tidy-history/SKILL.md) skill, which folds the history to one commit per change, so a fix from a check folds into the commit it finishes. A pushed branch goes up again with `--force-with-lease`, and a PR you have reviewed keeps its history. Run `/tidy-history` yourself to tidy the branch of the current worktree at any time. GitHub merges a stack bottom-up and moves the layers left to `dev`. Its description carries a test plan, the steps a reviewer runs in the running app before approving. When the branch changes what the application shows, the skill posts a comment with every changed screen before and after, a web application on desktop and on mobile. It rewrites that comment after each push that changes the screens. When the branch changes what code, a script or a skill outputs, the skill posts a second comment with real examples. Each changed behaviour gets a table of real inputs with the output before and after, and a Tradeoffs section lists the inputs where the new output is worse. Then the [ci-watcher](../../plugins/forge/agents/ci-watcher.md) agent watches the checks, a failed check goes through `/loop-on-ci`, and the skill runs every test step it can run itself. Its reply names what failed and every assumption it took.
 
 ## Approve your own PRs
 
@@ -83,7 +83,7 @@ GitHub lets nobody approve their own PR. When a GitHub App of yours opens it, yo
    node skills/github/pull-request/scripts/app-token.mts | cut -c1-4
    ```
 
-A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CONFIG_HOME/forge` when that is set. The [`app-token.mts`](../../skills/github/pull-request/scripts/app-token.mts) script signs a JSON Web Token with the key and trades it for an installation token of the current repository, valid for an hour. The [`pull-request`](../../skills/github/pull-request/SKILL.md) skill creates, edits and comments on the PR with that token, and requests you as the reviewer, plus whoever you named. Your commits, the push and the projects stay under your login, because GitHub gives an app no access to the projects of a user. The review that [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) posts on the app's PR is a comment of the app, so the approval and the request for changes stay yours.
+A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CONFIG_HOME/forge` when that is set. The [`app-token.mts`](../../plugins/forge/skills/github/pull-request/scripts/app-token.mts) script signs a JSON Web Token with the key and trades it for an installation token of the current repository, valid for an hour. The [`pull-request`](../../plugins/forge/skills/github/pull-request/SKILL.md) skill creates, edits and comments on the PR with that token, and requests you as the reviewer, plus whoever you named. Your commits, the push and the projects stay under your login, because GitHub gives an app no access to the projects of a user. The review that [`pull-request-review`](../../plugins/forge/skills/github/pull-request-review/SKILL.md) posts on the app's PR is a comment of the app, so the approval and the request for changes stay yours.
 
 ## Review the PR
 
@@ -91,7 +91,7 @@ A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CON
 /pull-request-review 42
 ```
 
-The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with its reason in parentheses. Then it posts the result as a comment or a request for changes. A passed step marked `(criterion <n>)` ticks that criterion in the issue, for the criteria no test could prove. The approval stays your own click on GitHub.
+The [`pull-request-review`](../../plugins/forge/skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with its reason in parentheses. Then it posts the result as a comment or a request for changes. A passed step marked `(criterion <n>)` ticks that criterion in the issue, for the criteria no test could prove. The approval stays your own click on GitHub.
 
 ## Plan a day of tickets
 
@@ -99,7 +99,7 @@ The [`pull-request-review`](../../skills/github/pull-request-review/SKILL.md) sk
 /today-issues
 ```
 
-The [`today-issues`](../../skills/github/today-issues/SKILL.md) skill reads the open tickets of the board and asks for today's three budgets: how long sessions may run, how long you answer their questions, and how long you review PRs. It also asks which Sizes run today. Naming some, such as XS and S, pulls tickets of those Sizes from Backlog too. A questions budget of none plans an auto run, which leaves out every ticket with an open decision or with work only you can do. It ranks the tickets and groups them into tracks that run side by side, one table per track. Tickets that change code in the same repository, named by their `repo: <name>` label, share a track. A ticket that does not fit a budget lands under Not today with the reason. The skill only reads, except for epics whose sub-issues are all closed. It asks you once whether to tick their success criteria and close them. Start each ticket of the plan with its URL:
+The [`today-issues`](../../plugins/forge/skills/github/today-issues/SKILL.md) skill reads the open tickets of the board and asks for today's three budgets: how long sessions may run, how long you answer their questions, and how long you review PRs. It also asks which Sizes run today. Naming some, such as XS and S, pulls tickets of those Sizes from Backlog too. A questions budget of none plans an auto run, which leaves out every ticket with an open decision or with work only you can do. It ranks the tickets and groups them into tracks that run side by side, one table per track. Tickets that change code in the same repository, named by their `repo: <name>` label, share a track. A ticket that does not fit a budget lands under Not today with the reason. The skill only reads, except for epics whose sub-issues are all closed. It asks you once whether to tick their success criteria and close them. Start each ticket of the plan with its URL:
 
 ```text
 /engineering https://github.com/<owner>/<repo>/issues/42
