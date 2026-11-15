@@ -30,7 +30,7 @@
     "markdownlint": "^0.41.1",
     "mermaid": "11.15.0",
     "oxfmt": "^0.77.0",
-    "oxlint": "^1.91.0",
+    "oxlint": "^1.93.0",
     "typescript": "^7.0.2"
   },
   "engines": {
