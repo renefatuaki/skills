@@ -1,5 +1,25 @@
 # forge
 
+## 1.11.0
+
+### Minor Changes
+
+- f1eda09: Google Antigravity is a third model family next to Claude and Codex. It runs through the new `antigravity` plugin of this marketplace, the way Codex runs through the `codex` plugin. A role in `~/.claude/rules/models.md` takes `antigravity:<model>/<effort>`, such as `antigravity:pro/high`, wherever it takes a Codex entry. The models are `flash`, `pro`, `argon`, and `carbon`, ascending by strength, and the efforts are the ladder `low`, `medium`, `high`, `xhigh`, and `max`. The skill defaults stay unchanged. Before a run the `antigravity-model.mts` script of the engineering skill resolves the slug, the newest version of the model at the exact effort or the nearest effort it lists, and checks the Gemini usage with `/usage` of `agy`. The slot falls back when less than the `antigravity minimum` line is left, 20% without the line. The slot then spawns `antigravity:antigravity-rescue`. A review or judging slot runs read-only and fails when a file of the git work tree changed, and a runner of `/arena` or `/architect` runs write-capable in its own worktree. When Antigravity fails, the slot runs on the Claude model of the same rank, `sonnet` for `flash` and `opus` for the others. `/setup-models` offers the entries, asks for the minimum, and shows the slug each model runs today and the usage left per Gemini group. The band above the prompt shows the Antigravity usage next to the Codex usage, such as `Antigravity week 91%`.
+
+### Patch Changes
+
+- 6e4c2be: Every `flowchart`, `stateDiagram-v2` and `classDiagram` the diagrams skill draws carries the line `%%{init: {"htmlLabels": false}}%%` before its keyword, so Mermaid draws the labels as SVG text. Without it Mermaid draws each label as HTML in a box it measured at 100 % zoom, and Safari and Chrome cut the text off at any other page zoom, on GitHub as everywhere else. The Stop hook reports `path:line html-labels` for a diagram of these types without the line, in a project with or without Mermaid.
+
+## 1.10.0
+
+### Minor Changes
+
+- d82ce50: Every skill that reads the text after its slash command shows a hint after `/<name> `, such as `[pr-number | pr-url]` for `/pull-request-review` and `[base]` for `/tidy-history`. A skill that ignores that text shows none.
+- 863f25e: `/setup-models` asks right after the budget which model the code roles run on, `sonnet`, `opus` or `fable`. The code roles are `feature, refactoring`, `bug-fix`, `perf-issue`, `hillclimb` and `swarm workers`, and each keeps its effort. `/engineering <task> model:opus` runs the code roles of one task on that model, and `model:sonnet` or `model:fable` work the same way. After `/engineering `, Claude Code shows the hint `[model:sonnet | model:opus | model:fable]`, and a misspelled model such as `model:opsu` gets a question instead of being ignored.
+- 3e8d3b2: `/setup-models` asks for an effort mode right after the budget. With `fixed`, the default, every subagent spawns with the effort of its line in `~/.claude/rules/models.md`. With `adaptive`, the agent raises or lowers that effort to fit each job. A `~` or `=` after an entry's effort makes that one entry adaptive or fixed. `/engineering <task> effort:adaptive` or `/engineering <task> effort:fixed` sets the mode for one task. After `/engineering `, Claude Code shows the hint `[task | #issue] [auto] [effort:adaptive | effort:fixed]`, and a misspelled mode such as `effort:adaptiv` gets a question instead of being ignored.
+- 72f4794: The Status options In Progress and In Review are written in title case like every other option. The `project` skill creates them under these names, and the Ticket playbook, `pull-request` and `today-issues` set and read them under these names.
+- 338c9c0: The skills copied from pstack follow upstream `cursor/plugins` at `9580c23`. Four skills are new. `sharpen` rewrites a prompt so it asks for a deeper version of the task, and `in-your-own-words` restates the goal and the problem before any work. `create-formal-verification-skill` writes a project skill that proves one key property of the code with a model checker or another verifier, and `maintain-formal-verification-skill` brings that check back in line after the code changed. After its offer of a verification skill, `/setup-models` offers once to generate a formal verification skill. The `engineer` agent is a delegate of the session that runs `/engineering`, never the runner of a playbook. When several copies of the plugin are installed, it reads the newest. `reflect` never edits a skill in the plugin cache. It changes a skill of this plugin on a branch of the plugin's repository, with its own pull request. The principles fix-root-causes, test-behavior-not-implementation, attack-the-premise and make-operations-idempotent explain the idea instead of naming mechanisms, and seven skills lose sections that did not change what an agent does. `worktree-audit.sh` takes `-b <ref>` for the branch that pull requests merge into, and reads file times with GNU and BSD `stat`.
+
 ## 1.9.0
 
 ### Minor Changes
