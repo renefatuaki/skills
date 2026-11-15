@@ -1,5 +1,15 @@
 # forge
 
+## 1.12.0
+
+### Minor Changes
+
+- 1547f2c: The `pull-request` skill now opens a new branch with two or more changes as a stack of pull requests, one per change, in place of one large pull request. It tidies the history first with `tidy-history`, so each commit is one change. Then it gives each commit below the top its own branch `<branch>-<k>`, and the branch itself stays the top layer. Each layer gets its own title, description and test plan for its own commits. Each layer also gets its own checks and test steps. The `gh stack` extension links the layers on GitHub. A diagram update does not count as a change and goes into the top layer. Only the top pull request closes the issue. The layers below refer to it with `Refs`. The skill never splits a branch that already has an open pull request. The Ticket playbook resumes on the branch without the `-<k>` suffix.
+
+### Patch Changes
+
+- 28ae3c8: forge loads in Claude cloud sessions again. Its plugin root moved from the repository root to `plugins/forge`, so the antigravity plugin no longer lies inside it. The cloud refused forge before with "plugin.json must be at .claude-plugin/plugin.json at the plugin root". A local install picks up the new source after `/plugin marketplace update renefatuaki`.
+
 ## 1.11.0
 
 ### Minor Changes
