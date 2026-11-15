@@ -24,10 +24,10 @@ import {
   FAILED,
   type Finding,
   type RuleSet,
-} from '../hooks/lib/hook.mts';
+} from '../plugins/forge/hooks/lib/hook.mts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const script = join(root, 'hooks', 'check-turn.mts');
+const script = join(root, 'plugins', 'forge', 'hooks', 'check-turn.mts');
 
 /** Everything the run creates lives here, the journals of the hook included, because os.tmpdir() of the hook reads TMPDIR. */
 const sandbox = realpathSync(mkdtempSync(join(tmpdir(), 'turn-test-')));

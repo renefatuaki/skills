@@ -5,7 +5,7 @@
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { comments } from '../hooks/lib/comments.mts';
+import { comments } from '../plugins/forge/hooks/lib/comments.mts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixtures = join(root, 'tests', 'fixtures');

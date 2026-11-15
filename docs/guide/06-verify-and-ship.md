@@ -1,6 +1,6 @@
 # Verify the result and open a PR
 
-"It compiles" is not evidence. The [Prove It Works principle](../../skills/principles/prove-it-works/SKILL.md) makes the agent check the real artifact before it reports success, and your job is to make "the real artifact" checkable. This page covers stating a finish condition, vetting a measured number, generating a verification skill for your app, formally verifying a property tests rarely reach, opening the PR, and getting its checks green.
+"It compiles" is not evidence. The [Prove It Works principle](../../plugins/forge/skills/principles/prove-it-works/SKILL.md) makes the agent check the real artifact before it reports success, and your job is to make "the real artifact" checkable. This page covers stating a finish condition, vetting a measured number, generating a verification skill for your app, formally verifying a property tests rarely reach, opening the PR, and getting its checks green.
 
 Verification is the slowest step in most agent work, because it's the step that usually waits on a human. Make the agent able to do it, and you stop being the bottleneck. Skip it, and running more agents only gets you more unchecked work to review.
 
@@ -17,14 +17,14 @@ Now the agent has three checks it can run, not a mood to satisfy. When the reply
 Match the check to the change:
 
 - A CLI change runs the real command.
-- A UI change walks the changed flow in the running app. When it must match a reference pixel for pixel, the [Visual parity playbook](../../skills/workflow/engineering/playbooks/visual-parity.md) diffs screenshots against a frozen baseline instead of judging by eye.
+- A UI change walks the changed flow in the running app. When it must match a reference pixel for pixel, the [Visual parity playbook](../../plugins/forge/skills/workflow/engineering/playbooks/visual-parity.md) diffs screenshots against a frozen baseline instead of judging by eye.
 - A parser or migration replays a saved input.
 - A perf change compares before and after profiles.
 - A storage change reads back the written value.
 
 Ask for the proof as an artifact you can inspect yourself: the failing test and then the passing one, a before-and-after video, the trace, the screenshot. If the fix already merged, ask for the same check again on main. An artifact beats a plausible explanation, because you can challenge it without replaying the whole run.
 
-For a small diff you don't fully trust, [`/blast-radius`](../../skills/workflow/blast-radius/SKILL.md) finds what it could break elsewhere. It finds the one fact that makes the change safe and proves that fact by running code, not by arguing for it.
+For a small diff you don't fully trust, [`/blast-radius`](../../plugins/forge/skills/workflow/blast-radius/SKILL.md) finds what it could break elsewhere. It finds the one fact that makes the change safe and proves that fact by running code, not by arguing for it.
 
 ## Vet a measured number with `/benchmark-checklist`
 
@@ -34,7 +34,7 @@ A before-and-after number is the easiest evidence to get wrong by accident. A wa
 /benchmark-checklist vet the export speedup before it goes in the pr
 ```
 
-[`/benchmark-checklist`](../../skills/verification/benchmark-checklist/SKILL.md) asks seven questions and wants evidence from a run for each:
+[`/benchmark-checklist`](../../plugins/forge/skills/verification/benchmark-checklist/SKILL.md) asks seven questions and wants evidence from a run for each:
 
 1. What limits the number, and why isn't it double?
 2. Did every side run tuned the way production runs?
@@ -44,7 +44,7 @@ A before-and-after number is the easiest evidence to get wrong by accident. A wa
 6. Does it matter end to end, on the path a user waits on?
 7. Did the work actually happen inside the timed region?
 
-The verdict comes back as faster, slower, no measurable difference, or inconclusive, with the run count, range, and limiter. It says inconclusive when it can't name the limiter or a side ran untuned. `/engineering` already runs the checklist inside the Perf issue and Hillclimb playbooks, so you type it yourself when you measured something outside them, or when someone else's number looks too good. It's the working form of the [Explain the Number principle](../../skills/principles/explain-the-number/SKILL.md).
+The verdict comes back as faster, slower, no measurable difference, or inconclusive, with the run count, range, and limiter. It says inconclusive when it can't name the limiter or a side ran untuned. `/engineering` already runs the checklist inside the Perf issue and Hillclimb playbooks, so you type it yourself when you measured something outside them, or when someone else's number looks too good. It's the working form of the [Explain the Number principle](../../plugins/forge/skills/principles/explain-the-number/SKILL.md).
 
 ## Create a project verification skill
 
@@ -54,9 +54,9 @@ The UI bullet above hides a real requirement. The agent needs a scripted way to 
 /create-verification-skill
 ```
 
-[`/create-verification-skill`](../../skills/verification/create-verification-skill/SKILL.md) interviews the repository, not you. It works out what a user touches, how the app launches locally, what can drive it (an existing harness first, otherwise browser and CDP, a PTY, or plain HTTP), what evidence proves behavior, and whether two instances can run side by side. It asks you only what the code can't answer.
+[`/create-verification-skill`](../../plugins/forge/skills/verification/create-verification-skill/SKILL.md) interviews the repository, not you. It works out what a user touches, how the app launches locally, what can drive it (an existing harness first, otherwise browser and CDP, a PTY, or plain HTTP), what evidence proves behavior, and whether two instances can run side by side. It asks you only what the code can't answer.
 
-It writes `.claude/skills/verify-<app>/`, agent-facing instructions with exact Launch, Doctor, Drive, Evidence, and Cleanup sections, a Helpers section for any script it ships, plus a feature map under `features/` that indexes what the app does and what result proves each feature works. The skill ships a [worked feature-map example](../../skills/verification/create-verification-skill/references/feature-map-example/) with a README index and one file per feature using the four required H2s. Before handing it over, the generator proves the skill once end to end: launch, doctor check, drive one feature, capture evidence, clean up, then confirm the evidence survived the cleanup. If that proof fails, don't use the output.
+It writes `.claude/skills/verify-<app>/`, agent-facing instructions with exact Launch, Doctor, Drive, Evidence, and Cleanup sections, a Helpers section for any script it ships, plus a feature map under `features/` that indexes what the app does and what result proves each feature works. The skill ships a [worked feature-map example](../../plugins/forge/skills/verification/create-verification-skill/references/feature-map-example/) with a README index and one file per feature using the four required H2s. Before handing it over, the generator proves the skill once end to end: launch, doctor check, drive one feature, capture evidence, clean up, then confirm the evidence survived the cleanup. If that proof fails, don't use the output.
 
 From then on, "verify it in the app" is a step any agent can execute, in this repo, with no setup conversation. Name it in the prompt when you want the proof in a specific form:
 
@@ -68,9 +68,9 @@ From then on, "verify it in the app" is a step any agent can execute, in this re
 /engineering repro this with /verify-<app>. if it repros on main, fix it and show me a video as proof.
 ```
 
-Once the verify skill works, a [`/swarm`](../../skills/workflow/swarm/SKILL.md) can split a full pass by feature-map entry and aggregate the results. A swarm of verifiers also confirms a perf win over a big enough sample, or fuzzes the app for regressions before a PR ships.
+Once the verify skill works, a [`/swarm`](../../plugins/forge/skills/workflow/swarm/SKILL.md) can split a full pass by feature-map entry and aggregate the results. A swarm of verifiers also confirms a perf win over a big enough sample, or fuzzes the app for regressions before a PR ships.
 
-Treat the verification skill as infrastructure, not a one-off. Commit it, so every person and every agent on the team drives the app the same way. Then [build the lever](../../skills/principles/build-the-lever/SKILL.md). When agents keep writing throwaway scripts to click through the app, ask for a small control CLI that the skill calls instead. Agents spend fewer tokens, and every run becomes repeatable. A CLI that agents use well has these traits:
+Treat the verification skill as infrastructure, not a one-off. Commit it, so every person and every agent on the team drives the app the same way. Then [build the lever](../../plugins/forge/skills/principles/build-the-lever/SKILL.md). When agents keep writing throwaway scripts to click through the app, ask for a small control CLI that the skill calls instead. Agents spend fewer tokens, and every run becomes repeatable. A CLI that agents use well has these traits:
 
 - A few composable commands, each doing real work, rather than many thin ones.
 - A `--dry-run` option on anything destructive.
@@ -89,7 +89,7 @@ Apps change, and feature maps go out of date. Run this at least once a day, idea
 /maintain-verification-skill
 ```
 
-[`/maintain-verification-skill`](../../skills/verification/maintain-verification-skill/SKILL.md) audits the generated skill: one read-only source reader per feature in parallel, then one live pass that drives every mapped feature. It ends in exactly one of three outcomes. `clean` means full coverage and nothing to ship. `changed` means one PR of proven corrections, confined to the verification skill's own directory. `blocked` names the blocker. It never edits product code. If the live pass catches a product regression, it reports the regression instead of hiding it with a doc edit.
+[`/maintain-verification-skill`](../../plugins/forge/skills/verification/maintain-verification-skill/SKILL.md) audits the generated skill: one read-only source reader per feature in parallel, then one live pass that drives every mapped feature. It ends in exactly one of three outcomes. `clean` means full coverage and nothing to ship. `changed` means one PR of proven corrections, confined to the verification skill's own directory. `blocked` names the blocker. It never edits product code. If the live pass catches a product regression, it reports the regression instead of hiding it with a doc edit.
 
 ## Prove a property with a formal verification skill
 
@@ -99,7 +99,7 @@ A verification skill proves the paths you drive. Some bugs live on paths nobody 
 /create-formal-verification-skill
 ```
 
-[`/create-formal-verification-skill`](../../skills/verification/create-formal-verification-skill/SKILL.md) picks the target from the code: a promise the code makes, where a break harms users and tests rarely reach the case that breaks it. It picks the strongest target, not the easiest to verify. Name an area or a bug to start there instead:
+[`/create-formal-verification-skill`](../../plugins/forge/skills/verification/create-formal-verification-skill/SKILL.md) picks the target from the code: a promise the code makes, where a break harms users and tests rarely reach the case that breaks it. It picks the strongest target, not the easiest to verify. Name an area or a bug to start there instead:
 
 ```text
 /create-formal-verification-skill the job lease and retry logic. a job must never run twice at once.
@@ -111,7 +111,7 @@ It verifies one property and shows that property failing on a broken variant of 
 
 It writes a project-local skill that tells the next agent whether a change touches the verified code, how to run the check with one command, and how to tell a real bug from a modeling error. Before handing it over, the generator follows that skill once on a scratch change that breaks the property, and the check must catch it. The handoff says what was verified, with which tool and bounds, what the check found, and what it doesn't cover. A pass covers the model or the bound, not the whole system.
 
-The skill also records which code each check covers and the commit where the check last matched it. Merges and refactors that skip the skill can leave the check passing on a description of code that's gone. After them, run [`/maintain-formal-verification-skill`](../../skills/verification/maintain-formal-verification-skill/SKILL.md). It updates the verification from the code, reruns it, shows that each updated check can still fail, and tells you whether each failure is drift in the verification or a bug in the code.
+The skill also records which code each check covers and the commit where the check last matched it. Merges and refactors that skip the skill can leave the check passing on a description of code that's gone. After them, run [`/maintain-formal-verification-skill`](../../plugins/forge/skills/verification/maintain-formal-verification-skill/SKILL.md). It updates the verification from the code, reruns it, shows that each updated check can still fail, and tells you whether each failure is drift in the verification or a bug in the code.
 
 ## Open the PR
 
@@ -119,11 +119,11 @@ The skill also records which code each check covers and the commit where the che
 /engineering open the pr. evidence in the description.
 ```
 
-The [Opening a PR playbook](../../skills/workflow/engineering/playbooks/pull-request.md) cleans the diff with `clean-code` and `code-comments`, commits what is still open with the `commit` skill, and has the [`pull-request`](../../skills/github/pull-request/SKILL.md) skill open one PR per branch against its base, ready for review. It never rebases a branch onto its base. A branch based on another PR's branch becomes a layer of a [stacked PR](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs), and a push to a lower layer rebases the layers above with the `gh stack` extension. The description carries a test plan, the steps a reviewer runs in the running app before approving. Five narrow PRs beat one fat one. The `pull-request` skill splits a new branch with several changes into a stack with one PR per change.
+The [Opening a PR playbook](../../plugins/forge/skills/workflow/engineering/playbooks/pull-request.md) cleans the diff with `clean-code` and `code-comments`, commits what is still open with the `commit` skill, and has the [`pull-request`](../../plugins/forge/skills/github/pull-request/SKILL.md) skill open one PR per branch against its base, ready for review. It never rebases a branch onto its base. A branch based on another PR's branch becomes a layer of a [stacked PR](https://docs.github.com/en/pull-requests/get-started/about-stacked-prs), and a push to a lower layer rebases the layers above with the `gh stack` extension. The description carries a test plan, the steps a reviewer runs in the running app before approving. Five narrow PRs beat one fat one. The `pull-request` skill splits a new branch with several changes into a stack with one PR per change.
 
 ## Get the checks green with `/loop-on-ci`
 
-An open PR starts collecting blockers immediately. Checks fail, reviewers comment, trunk moves. The `pull-request` skill watches its own PR first. It spawns the [ci-watcher](../../agents/ci-watcher.md) agent, follows `/loop-on-ci` when a check fails, and runs the test steps it can run itself. Hand later failing checks to [`/loop-on-ci`](../../skills/github/loop-on-ci/SKILL.md):
+An open PR starts collecting blockers immediately. Checks fail, reviewers comment, trunk moves. The `pull-request` skill watches its own PR first. It spawns the [ci-watcher](../../plugins/forge/agents/ci-watcher.md) agent, follows `/loop-on-ci` when a check fails, and runs the test steps it can run itself. Hand later failing checks to [`/loop-on-ci`](../../plugins/forge/skills/github/loop-on-ci/SKILL.md):
 
 ```text
 /loop-on-ci get this pr green.
@@ -135,6 +135,6 @@ It reads `gh pr checks`, diagnoses a failed check before it waits on pending one
 check on the ci of this branch.
 ```
 
-Nothing here merges, even with everything green, because merging is a different decision. The reviewer tests the PR by its test plan, with [`/pull-request-review`](../../skills/github/pull-request-review/SKILL.md) when they want help, then approves and merges it.
+Nothing here merges, even with everything green, because merging is a different decision. The reviewer tests the PR by its test plan, with [`/pull-request-review`](../../plugins/forge/skills/github/pull-request-review/SKILL.md) when they want help, then approves and merges it.
 
 Next: [Run work while you sleep](./07-overnight.md).

@@ -7,7 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const script = join(root, 'hooks', 'session-context.mts');
+const script = join(root, 'plugins', 'forge', 'hooks', 'session-context.mts');
 const pluginRoot = '/plugins/forge';
 
 const ROOT_LINE =
