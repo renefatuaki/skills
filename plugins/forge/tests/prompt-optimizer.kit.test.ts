@@ -150,6 +150,55 @@ test('a tag, a fence or quotes around the whole reply do not reach the box', asy
   await ui.unmount();
 });
 
+test('German quotes around the whole reply do not reach the box', async ($, on) => {
+  const { world } = standInForEngine(on, () =>
+    answered('„Behebe den Login-Test.“'),
+  );
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' });
+
+  await typeDraft($, world, 'fix den test');
+
+  await ui.press({ key: 'trigger' });
+
+  expect(world.draft).toBe('Behebe den Login-Test.');
+  await ui.unmount();
+});
+
+test('a draft that is only a code fence keeps its fence', async ($, on) => {
+  const draft = '```ts\nconst total = price * quantity\n```';
+  const { world } = standInForEngine(on, () => answered(draft));
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' });
+
+  await typeDraft($, world, draft);
+
+  await ui.press({ key: 'trigger' });
+
+  expect(world.draft).toBe(draft);
+  expect(world.toasts).toEqual([
+    'The draft is already clear. Nothing changed.',
+  ]);
+
+  await ui.unmount();
+});
+
+test('a draft that is wholly in quotes keeps its quotes', async ($, on) => {
+  const draft = '"fix the login test"';
+  const { world } = standInForEngine(on, () => answered(draft));
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' });
+
+  await typeDraft($, world, draft);
+
+  await ui.press({ key: 'trigger' });
+
+  expect(world.draft).toBe(draft);
+  expect(world.toasts).toEqual([
+    'The draft is already clear. Nothing changed.',
+  ]);
+
+  await ui.unmount();
+});
+
 test('a whitespace draft stays untouched and asks no model', async ($, on) => {
   const { world } = standInForEngine(on, () => answered('unused'));
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' });

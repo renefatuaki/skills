@@ -21,6 +21,7 @@ const REPLY_WRAPPERS = [
   /^"([^"]*)"$/,
   /^'([^']*)'$/,
   /^“([^“”]*)”$/,
+  /^„([^„“]*)“$/,
 ];
 
 export async function rewriteDraft(
@@ -34,7 +35,7 @@ export async function rewriteDraft(
     return { isRewritten: false, reason: describeUnanswered(reply) };
   }
 
-  const text = unwrapReply(reply.text);
+  const text = unwrapReply(reply.text, draft);
 
   if (text === '') {
     return { isRewritten: false, reason: 'the model returned no text' };
@@ -89,11 +90,16 @@ function describeUnanswered(reply: Unanswered): string {
   }
 }
 
-/** Strips one tag, code fence or pair of quotes the model wrapped around the whole reply. */
-function unwrapReply(reply: string): string {
+/** Strips one tag, code fence or pair of quotes the model wrapped around the whole reply, unless the draft came wrapped the same way. */
+function unwrapReply(reply: string, draft: string): string {
   const trimmed = reply.trim();
+  const trimmedDraft = draft.trim();
 
   for (const wrapper of REPLY_WRAPPERS) {
+    if (wrapper.test(trimmedDraft)) {
+      continue;
+    }
+
     const body = wrapper.exec(trimmed)?.[1];
 
     if (body !== undefined) {
