@@ -21,7 +21,7 @@ Rebuilds the history of the branch checked out in the session's worktree, so a r
 
    - The remote holds commits the branch lacks. `git fetch origin <branch>` succeeds and `git merge-base --is-ancestor origin/<branch> HEAD` fails.
    - Layers of a stack build on the branch, so `gh pr list --base <branch> --state open --json number` lists a pull request, unless the calling skill rebases them after the push.
-3. **Name the changes.** A reviewer reads one commit per change, such as a criterion of the issue, a refactoring it builds on or a diagram update. A commit that only finishes an earlier one of the branch belongs to that commit, such as a fix from a review or a check, a revert, a format or lint pass, or work in progress. Read `git log --reverse --format='%h %s%n%b' <fork>..HEAD` and name the changes. When the branch holds no more commits than changes, the history is tidy and this is the end.
+3. **Name the changes.** A reviewer reads one commit per change, such as a criterion of the issue, a refactoring it builds on, an edge-case trim of the `trim-edge-cases` skill or a diagram update. A commit that only finishes an earlier one of the branch belongs to that commit, such as a fix from a review or a check, a revert, a format or lint pass, or work in progress. An edge-case trim, the commit `refactor: trim edge cases in <area>`, never folds into the commit before it. Read `git log --reverse --format='%h %s%n%b' <fork>..HEAD` and name the changes. When the branch holds no more commits than changes, the history is tidy and this is the end.
 4. **Rebuild the branch.** Note `git rev-parse HEAD` as `<old>`.
 
    ```sh

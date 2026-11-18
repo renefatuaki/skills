@@ -65,6 +65,7 @@ hillclimb: sonnet/high
 judgment and prose: opus/xhigh
 hardest tasks: opus/xhigh
 follow-up judge: fable/xhigh
+edge-case judge: fable/xhigh
 how explorer: sonnet/high
 how explainer: opus/xhigh
 why investigators: sonnet/high

@@ -55,3 +55,14 @@ Make internals unreachable from outside the module, so an import from outside fa
 Two or more places list the same items, and adding an item means editing every list. An agent that sees one list updates only that one.
 
 Keep one list and derive the others from it. If a list can't be derived, make the build fail when the lists disagree.
+
+## Speculative case
+
+The design handles a case that does not occur in normal use. Code handles a case only when it occurs in normal use. A case occurs in normal use when a caller passes the value, a system boundary (network, file, user input) lets it in, an acceptance criterion asks for it, or an observed bug shows it. A rare race, a coincidence of several actors or the leftovers of a run that stopped halfway do not count, unless an acceptance criterion or an observed bug names them.
+
+Look for these signs:
+
+- A type, a state or an error variant that no caller and no boundary produces.
+- A lock, a lane, a retry or a reconciliation step for a race or a crash that no criterion and no bug names.
+
+Cut the case from the candidate before synthesis. Between two viable candidates, mark down the one that handles more such cases.
