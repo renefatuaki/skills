@@ -38,7 +38,7 @@ pnpm install
 - The commit-msg hook runs commitlint.
 - The [Check workflow](.github/workflows/check.yml) runs the checks on every pull request and before every release.
 - Each change ships with a changeset under `.changeset/`.
-- The hooks under `plugins/forge/hooks/` run when a session starts and while a turn runs. [plugins/forge/hooks/README.md](plugins/forge/hooks/README.md) shows how they work together.
+- The hooks under `plugins/forge/hooks/` run when a session starts, while a turn runs and when the key of the prompt optimizer is pressed. [plugins/forge/hooks/README.md](plugins/forge/hooks/README.md) shows how they work together.
 
 The clean-code skill carries a formatter and linter configuration per language under `plugins/forge/skills/clean-code/clean-code/formatting/`. Which rule each tool covers, and where the agent fills the gap, is listed in [coverage.md](plugins/forge/skills/clean-code/clean-code/formatting/coverage.md).
 
@@ -88,7 +88,7 @@ The skills of the plugin live in one folder per category.
 | [`verification`](plugins/forge/skills/verification) | control-ui, control-cli, verify-this, create-verification-skill, maintain-verification-skill, create-formal-verification-skill, maintain-formal-verification-skill, benchmark-checklist | drive the running application and check a claim |
 | [`meta`](plugins/forge/skills/meta) | reflect, correct, recall, automate-me, teach, bro, sharpen, in-your-own-words, setup-models | learn from past sessions, explain, sharpen a prompt, and configure the models |
 | [`docs`](plugins/forge/skills/docs) | diagrams, project-docs, unslop, technical-writing | write documentation and prose |
-| [`clean-code`](plugins/forge/skills/clean-code) | clean-code, code-comments, typescript-best-practices | write readable code |
+| [`clean-code`](plugins/forge/skills/clean-code) | clean-code, code-comments, trim-edge-cases, typescript-best-practices | write readable code and keep cases that never occur out of it |
 | [`git`](plugins/forge/skills/git) | commit, tidy-history | write commits and tidy the history of a branch |
 | [`github`](plugins/forge/skills/github) | issue, project, pull-request, pull-request-review, review-queue, next-steps, templates, today-issues, loop-on-ci | plan and ship work on GitHub |
 | [`tooling`](plugins/forge/skills/tooling) | package-manager | run the package manager of the repository |
@@ -96,6 +96,10 @@ The skills of the plugin live in one folder per category.
 A skill with `disable-model-invocation: true` in its frontmatter starts only through its slash command. The engineering skill and its playbooks read such a skill from its `SKILL.md` instead.
 
 Run `/setup-models` once to pick the model and the reasoning effort of each role a skill of this plugin spawns. It writes `~/.claude/rules/models.md`, and without that file every role runs on its default.
+
+## The prompt optimizer
+
+Press `ctrl+x b` at the prompt, and a Claude model rewrites the draft in the prompt box into a clearer prompt for the same request. It never sends the prompt, and the same key cancels a running rewrite or brings the draft back. [plugins/forge/hooks/prompt-optimizer/README.md](plugins/forge/hooks/prompt-optimizer/README.md) shows what the key does and how to move it to another key.
 
 ## Claude Code settings
 

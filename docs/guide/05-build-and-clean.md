@@ -56,7 +56,7 @@ In context, that's enough. [`/tdd`](../../plugins/forge/skills/workflow/tdd/SKIL
 
 ## Clean before you commit
 
-The [Opening a PR playbook](../../plugins/forge/skills/workflow/engineering/playbooks/pull-request.md) runs the [`clean-code`](../../plugins/forge/skills/clean-code/clean-code/SKILL.md) skill over the diff of the branch, then the [`code-comments`](../../plugins/forge/skills/clean-code/code-comments/SKILL.md) skill over the same diff, and commits what they change with the [`commit`](../../plugins/forge/skills/git/commit/SKILL.md) skill. The [`pull-request`](../../plugins/forge/skills/github/pull-request/SKILL.md) skill writes the PR description to the [`technical-writing`](../../plugins/forge/skills/docs/technical-writing/SKILL.md) rules.
+The [Opening a PR playbook](../../plugins/forge/skills/workflow/engineering/playbooks/pull-request.md) runs the [`clean-code`](../../plugins/forge/skills/clean-code/clean-code/SKILL.md) skill over the diff of the branch, then the [`code-comments`](../../plugins/forge/skills/clean-code/code-comments/SKILL.md) skill over the same diff, and commits what they change with the [`commit`](../../plugins/forge/skills/git/commit/SKILL.md) skill. Then it runs the [`trim-edge-cases`](../../plugins/forge/skills/clean-code/trim-edge-cases/SKILL.md) skill, which removes the cases that never occur in normal use from every function the diff touches, as a `refactor` commit of its own. The [`pull-request`](../../plugins/forge/skills/github/pull-request/SKILL.md) skill writes the PR description to the [`technical-writing`](../../plugins/forge/skills/docs/technical-writing/SKILL.md) rules.
 
 For prose, [`/unslop`](../../plugins/forge/skills/docs/unslop/SKILL.md) takes a target and any extra rules you have:
 

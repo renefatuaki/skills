@@ -31,7 +31,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - The prose follows [technical-writing](../../docs/technical-writing/SKILL.md), every layer except Diátaxis.
    - The person running the session is the author, so the body ends with its last section and carries no line naming an AI and no session link.
    - **Diagram** shows the change when the branch changes a flow or a structure, however small the change is, as the planned state of the `diagrams` skill, with its legend and its consequences. Any other branch leaves the section out.
-   - **Scope** is always filled. It names what the branch covers and what it leaves out on purpose, one to three short items.
+   - **Scope** is always filled. It names what the branch covers and what it leaves out on purpose, one to three short items. A case the code does not handle because it does not occur in normal use is no such item, and no other section names it.
    - **Tradeoffs** holds only a rejected alternative a reviewer would otherwise ask about, such as the design the [architect](../../workflow/architect/SKILL.md) skill rejected. A branch without a real choice leaves the section out. A case where the new output is worse goes into the examples comment of step 6, not here.
    - **Blast radius** holds the one or two sentences the template comment asks for. They condense the result of the [blast-radius](../../workflow/blast-radius/SKILL.md) skill when it ran, otherwise they come from the diff.
    - **Automated coverage** names the tests that exercise the change, added, changed or already there, and the CI checks that run them.
