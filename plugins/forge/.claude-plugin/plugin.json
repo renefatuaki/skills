@@ -94,5 +94,14 @@
   "agents": [
     "./agents/ci-watcher.md",
     "./agents/engineer.md"
-  ]
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "chord": {
+      "type": "string",
+      "title": "Chord of the prompt optimizer",
+      "description": "The keys that rewrite the draft in the prompt box, shown in the band above the prompt. They are the keys bound to app:cycleDiffBase in keybindings.json. Change this label when you rebind the action.",
+      "default": "ctrl+x b"
+    }
+  }
 }

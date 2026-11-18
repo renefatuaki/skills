@@ -1,16 +1,18 @@
 # Hooks
 
-What happens when a session starts, while a turn runs, and while Claude works through a todo list?
+What happens when a session starts, while a turn runs, while Claude works through a todo list, and when the key of the prompt optimizer is pressed?
 
 ```mermaid
 %%{init: {"htmlLabels": false}}%%
 flowchart TD
-  accTitle: What happens when a session starts, while a turn runs, and while Claude works through a todo list?
+  accTitle: What happens when a session starts, while a turn runs, while Claude works through a todo list, and when the key of the prompt optimizer is pressed?
   hooksJson["Start every hook of the event"]
   hooksJson -->|"when a session starts"| sessionContext["Hand Claude the transcript of the session and the root of the plugin"]
   hooksJson -->|"before an Edit or a Write"| loadCommentRules["Deny the edit of a source file until the comment rules are in the context of the agent"]
   hooksJson -->|"when a prompt starts, before an Edit or a Write, and when a turn or a subagent stops"| checkTurn["Note the turn and its edits, and check what it changed when it stops"]
-  hooksJson -->|"when a session starts, on a todo or task call, a Codex call, an Antigravity call, a prompt, a usage measurement and /clear"| progress["Turn what happens in the main session into events of the run and draw the run above the prompt"]
+  hooksJson -->|"when Claude Code loads the plugin"| module["Register the hooks of the progress band and of the prompt optimizer, and stack what the two draw above the prompt"]
+  module -->|"when a session starts, on a todo or task call, a Codex call, an Antigravity call, a prompt, a usage measurement and /clear"| progress["Turn what happens in the main session into events of the run and draw the run above the prompt"]
+  module -->|"on each edit of the draft, on a prompt and on the key of the prompt optimizer"| promptOptimizer["Rewrite the draft in the prompt box into a clearer prompt and draw the trigger above the prompt"]
   checkTurn -->|"when a turn or a subagent stops"| changes["Find the files the turn changed in every checkout it worked in"]
   checkTurn -->|"when a turn or a subagent stops"| comments["Check the comments of a source file"]
   checkTurn -->|"when a turn or a subagent stops"| docs["Check the prose and the links of a documentation file"]
@@ -42,14 +44,20 @@ flowchart TD
 | `languages` | [`lib/languages.mts`](lib/languages.mts) |
 | `markdown` | [`lib/markdown.mts`](lib/markdown.mts) |
 | `hook` | [`lib/hook.mts`](lib/hook.mts) |
+| `module` | [`module.mts`](module.mts) |
 | `progress` | [`progress/index.mts`](progress/index.mts) |
 | `run` | [`progress/run.mts`](progress/run.mts) |
 | `codexModel` | [`../skills/workflow/engineering/scripts/codex-model.mts`](../skills/workflow/engineering/scripts/codex-model.mts) |
 | `antigravity` | [`../skills/workflow/engineering/scripts/antigravity-model.mts`](../skills/workflow/engineering/scripts/antigravity-model.mts) |
+| `promptOptimizer` | [`prompt-optimizer/README.md`](prompt-optimizer/README.md) |
 
 The session hook informs. `loadCommentRules` denies the edit of a source file once, until the transcript of the agent holds the comment rules and the guide of the language, and stays silent when it cannot read the transcript. The turn hook blocks the end of a turn once when a file the turn changed breaks a rule, and stays silent on the stop after it. A hook that has nothing to report prints nothing.
 
-`progress/` is a hooks module, named under `modules` in `hooks.json`. It runs inside Claude Code with no Node, keeps the run in a variable of the module and draws it above the prompt. Each part of the band shows only when it has something to show, and with none the band draws nothing.
+`module.mts` is the hooks module of the plugin, named under `modules` in `hooks.json`, which takes one module per plugin. It runs inside Claude Code with no Node and registers the hooks of `progress/` and of `prompt-optimizer/`. A hooks module takes each event once and a plugin has one row above the prompt. So `module.mts` itself hooks the prompt and the band, hands the prompt to both parts and stacks the trigger of the prompt optimizer under the progress band.
+
+`prompt-optimizer/` rewrites the draft in the prompt box into a clearer prompt on `ctrl+x b` and never sends it. [prompt-optimizer/README.md](prompt-optimizer/README.md) shows what the key does and how to move it to another key.
+
+`progress/` keeps the run in a variable of the module and draws it above the prompt. Each part of the band shows only when it has something to show, and with none the band draws nothing.
 
 On the terminal the band is one line.
 
