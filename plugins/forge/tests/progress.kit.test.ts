@@ -412,7 +412,7 @@ test('desktop and mobile draw the usage alone as a caption at the right end of t
   }
 });
 
-test('no list and a failed read draw nothing on any surface', async ($, on) => {
+test('no list and a failed read leave the terminal to the engine and the apps with the trigger of the prompt optimizer alone', async ($, on) => {
   answerEngine(on, 'not json');
   await startSession($);
   await settled();
@@ -420,7 +420,9 @@ test('no list and a failed read draw nothing on any surface', async ($, on) => {
   expect(await drawn($)).toBe('ENGINE');
 
   for (const surface of GRAPHICAL_SURFACES) {
-    expect(cellOf(await drawnTree($, surface)).text).toBe('ENGINE');
+    const parts = elementsOf(await forgeRow($, surface));
+
+    expect(parts.map(part => part.type)).toEqual(['Button']);
   }
 });
 
@@ -923,11 +925,12 @@ async function drawn($: Engine): Promise<string | undefined> {
   return text;
 }
 
-/** An element of a drawn tree as plain data, the kit's `drawn()` answer. */
+/** An element of a drawn tree as plain data, the kit's `drawn()` answer, with the plugin on the row it drew. */
 type Drawn = {
   type: string;
   props?: Record<string, unknown>;
   children?: (Drawn | string)[];
+  part?: { plugin: string };
 };
 
 /** An element with its own props and those of everything inside it in one record, and the text it shows. */
@@ -955,8 +958,22 @@ async function graphicalBand(
   };
 }
 
-/** Mounts the band on the surface and returns the tree it draws. */
+/** Mounts the band on the surface and returns the tree the progress band draws, which stands above the trigger of the prompt optimizer. */
 async function drawnTree(
+  $: Engine,
+  surface: (typeof GRAPHICAL_SURFACES)[number],
+): Promise<Drawn> {
+  const [progress, trigger] = elementsOf(await forgeRow($, surface));
+
+  if (progress === undefined || trigger === undefined) {
+    throw new Error(`no progress band above the trigger on ${surface}`);
+  }
+
+  return progress;
+}
+
+/** Mounts the band on the surface and returns the row of this plugin, which the kit stacks with the ENGINE row of the test. */
+async function forgeRow(
   $: Engine,
   surface: (typeof GRAPHICAL_SURFACES)[number],
 ): Promise<Drawn> {
@@ -967,11 +984,11 @@ async function drawnTree(
     props: PROPS,
   });
 
-  const tree = (await ui.drawn()) as Drawn;
+  const band = (await ui.drawn()) as Drawn;
 
   await ui.unmount();
 
-  return tree;
+  return elementsOf(band).find(row => row.part?.plugin === 'forge') ?? band;
 }
 
 function elementsOf(element: Drawn | undefined): Drawn[] {

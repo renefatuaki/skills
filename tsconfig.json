@@ -28,6 +28,10 @@
   // Specifies an array of filenames or patterns that should be skipped when resolving include.
   "exclude": [
     "node_modules",
-    "plugins/forge/hooks/progress/index.mts"
+    "plugins/forge/hooks/module.mts",
+    "plugins/forge/hooks/progress/index.mts",
+    "plugins/forge/hooks/prompt-optimizer/band.mts",
+    "plugins/forge/hooks/prompt-optimizer/index.mts",
+    "plugins/forge/hooks/prompt-optimizer/rewrite.mts"
   ]
 }

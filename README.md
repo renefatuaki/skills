@@ -38,7 +38,7 @@ pnpm install
 - The commit-msg hook runs commitlint.
 - The [Check workflow](.github/workflows/check.yml) runs the checks on every pull request and before every release.
 - Each change ships with a changeset under `.changeset/`.
-- The hooks under `plugins/forge/hooks/` run when a session starts and while a turn runs. [plugins/forge/hooks/README.md](plugins/forge/hooks/README.md) shows how they work together.
+- The hooks under `plugins/forge/hooks/` run when a session starts, while a turn runs and when the key of the prompt optimizer is pressed. [plugins/forge/hooks/README.md](plugins/forge/hooks/README.md) shows how they work together.
 
 The clean-code skill carries a formatter and linter configuration per language under `plugins/forge/skills/clean-code/clean-code/formatting/`. Which rule each tool covers, and where the agent fills the gap, is listed in [coverage.md](plugins/forge/skills/clean-code/clean-code/formatting/coverage.md).
 
@@ -96,6 +96,10 @@ The skills of the plugin live in one folder per category.
 A skill with `disable-model-invocation: true` in its frontmatter starts only through its slash command. The engineering skill and its playbooks read such a skill from its `SKILL.md` instead.
 
 Run `/setup-models` once to pick the model and the reasoning effort of each role a skill of this plugin spawns. It writes `~/.claude/rules/models.md`, and without that file every role runs on its default.
+
+## The prompt optimizer
+
+Press `ctrl+x b` at the prompt, and a Claude model rewrites the draft in the prompt box into a clearer prompt for the same request. It never sends the prompt, and the same key cancels a running rewrite or brings the draft back. [plugins/forge/hooks/prompt-optimizer/README.md](plugins/forge/hooks/prompt-optimizer/README.md) shows what the key does and how to move it to another key.
 
 ## Claude Code settings
 

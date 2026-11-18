@@ -5,9 +5,12 @@ import type {
   BuiltinToolInputs,
   ElementTable,
   EngineInterface,
+  Frozen,
   PromptOrigin,
+  PromptSubmitInput,
   Register,
   RenderElement,
+  RenderInput,
   SessionRateLimit,
   TextProps,
   ToolCallResult,
@@ -119,20 +122,6 @@ export const register: Register = on => {
     async ($, e, next) => readAfter($, 'antigravity', await next(e)),
   ).catch(($, e, next) => next(e));
 
-  on('prompt.submit', ($, e, next) => {
-    if (e.isMeta === true) {
-      return next(e);
-    }
-
-    if (PERSON_ORIGINS.has(e.origin.kind)) {
-      dispatch($, { kind: 'personPrompted' });
-    }
-
-    readUsages($);
-
-    return next(e);
-  }).catch(($, e, next) => next(e));
-
   on('session.start', ($, e, next) => {
     readUsages($);
     void readSessionUsage($);
@@ -153,20 +142,40 @@ export const register: Register = on => {
 
     return next(e);
   });
-
-  on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
-    const band = bandOf(run);
-
-    if (band === null || e.props.hasSurvey) {
-      return next(e);
-    }
-
-    // Every other surface has the Box and Text the graphical tree draws with, mobile included.
-    return e.surface === 'terminal'
-      ? terminalBand($.ui.resolve(e), band, e.props.bodyColumns)
-      : graphicalBand($.ui.resolve(e), band);
-  });
 };
+
+/** Notes a prompt of the person as an event of the run and reads the usage of each provider again, unless the prompt is a meta one. */
+export function notePrompt(
+  $: EngineInterface,
+  e: Frozen<PromptSubmitInput>,
+): void {
+  if (e.isMeta === true) {
+    return;
+  }
+
+  if (PERSON_ORIGINS.has(e.origin.kind)) {
+    dispatch($, { kind: 'personPrompted' });
+  }
+
+  readUsages($);
+}
+
+/** Draws the run above the prompt, null while the run has nothing to show or a survey holds the band. */
+export function progressBand(
+  $: EngineInterface,
+  e: Frozen<RenderInput<'AbovePrompt'>>,
+): RenderElement | null {
+  const band = bandOf(run);
+
+  if (band === null || e.props.hasSurvey) {
+    return null;
+  }
+
+  // Every other surface has the Box and Text the graphical tree draws with, mobile included.
+  return e.surface === 'terminal'
+    ? terminalBand($.ui.resolve(e), band, e.props.bodyColumns)
+    : graphicalBand($.ui.resolve(e), band);
+}
 
 /** Draws the band as one line of characters cut to the columns, the Claude usage at the left edge and the usages of the providers padded to the right edge. */
 function terminalBand(
