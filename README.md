@@ -88,7 +88,7 @@ The skills of the plugin live in one folder per category.
 | [`verification`](plugins/forge/skills/verification) | control-ui, control-cli, verify-this, create-verification-skill, maintain-verification-skill, create-formal-verification-skill, maintain-formal-verification-skill, benchmark-checklist | drive the running application and check a claim |
 | [`meta`](plugins/forge/skills/meta) | reflect, correct, recall, automate-me, teach, bro, sharpen, in-your-own-words, setup-models | learn from past sessions, explain, sharpen a prompt, and configure the models |
 | [`docs`](plugins/forge/skills/docs) | diagrams, project-docs, unslop, technical-writing | write documentation and prose |
-| [`clean-code`](plugins/forge/skills/clean-code) | clean-code, code-comments, typescript-best-practices | write readable code |
+| [`clean-code`](plugins/forge/skills/clean-code) | clean-code, code-comments, trim-edge-cases, typescript-best-practices | write readable code and keep cases that never occur out of it |
 | [`git`](plugins/forge/skills/git) | commit, tidy-history | write commits and tidy the history of a branch |
 | [`github`](plugins/forge/skills/github) | issue, project, pull-request, pull-request-review, review-queue, next-steps, templates, today-issues, loop-on-ci | plan and ship work on GitHub |
 | [`tooling`](plugins/forge/skills/tooling) | package-manager | run the package manager of the repository |

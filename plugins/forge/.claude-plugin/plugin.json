@@ -20,6 +20,7 @@
   "skills": [
     "./skills/clean-code/clean-code",
     "./skills/clean-code/code-comments",
+    "./skills/clean-code/trim-edge-cases",
     "./skills/clean-code/typescript-best-practices",
     "./skills/docs/diagrams",
     "./skills/docs/project-docs",

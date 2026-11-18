@@ -10,6 +10,10 @@ Reviewers, especially adversarial ones, tend to fill their review. If they don't
 
 "What if someone passes null here?" is only a finding if the caller can actually pass null. Trace the call site. If the input is validated upstream or the type system prevents it, dismiss the finding. Reviewers working from a diff can't always see the full call chain. You can.
 
+### Outside Normal Use
+
+Code handles a case only when it occurs in normal use. A case occurs in normal use when a caller passes the value, a system boundary (network, file, user input) lets it in, an acceptance criterion asks for it, or an observed bug shows it. A rare race, a coincidence of several actors or the leftovers of a run that stopped halfway do not count, unless an acceptance criterion or an observed bug names them. One fresh subagent judges every finding about a case, `subagent_type: "forge:engineer"` with the `edge-case judge` role, `fable/xhigh` by default, resolved per `${CLAUDE_PLUGIN_ROOT}/skills/workflow/engineering/references/model-roles.md`. Its brief holds this rule, the findings with their traced paths, the diff and the intent. It changes no file and answers per finding whether the case occurs in normal use, with one sentence of reason. Dismiss a finding the judge rules outside normal use, even when the reviewer traces a concrete execution path to it. Input an attacker controls enters through a system boundary, so a security finding with a traced input path stays.
+
 ### Premature Abstraction Warnings
 
 Reviewers often suggest extracting functions, adding interfaces, or creating abstractions. Does this code need to change in a second way? If not, the abstraction is premature. Simple inline code that works beats a clean abstraction that's overkill for the current scope.

@@ -6,13 +6,15 @@ Review through whichever lenses are relevant. Not every lens applies to every ch
 
 Does the code actually do what the intent says it should?
 
-- Edge cases: empty inputs, nil/undefined, boundary values, concurrent access
+Code handles a case only when it occurs in normal use. A case occurs in normal use when a caller passes the value, a system boundary (network, file, user input) lets it in, an acceptance criterion asks for it, or an observed bug shows it. A rare race, a coincidence of several actors or the leftovers of a run that stopped halfway do not count, unless an acceptance criterion or an observed bug names them. A case that does not occur in normal use is not a finding.
+
+- Edge cases that occur in normal use: empty inputs, nil/undefined, boundary values, concurrent access
 - Error handling: are errors caught, propagated, or silently swallowed?
 - Off-by-one, type coercion, integer overflow, string encoding
-- State management: race conditions, stale closures, dangling references
+- State management: race conditions that occur in normal use, stale closures, dangling references
 - Do both the happy path and the sad path work?
-- Idempotency: what happens if this operation runs twice, or if a previous run crashed halfway? If the answer is "it depends on what state was left behind," a reconciliation step is missing.
-- Concurrency: if multiple actors can touch the same mutable state (files, branches, shared data), is access serialized structurally (locks, sequential phases, exclusive ownership), or by conventions that won't hold?
+- Idempotency: where a rerun or a crash occurs in normal use, what happens if this operation runs twice, or if a previous run crashed halfway? If the answer is "it depends on what state was left behind," a reconciliation step is missing.
+- Concurrency: if multiple actors touch the same mutable state (files, branches, shared data) in normal use, is access serialized structurally (locks, sequential phases, exclusive ownership), or by conventions that won't hold?
 
 When you find a potential bug, trace the execution path. Don't just flag "this could be nil". Show the call chain that makes it nil.
 
