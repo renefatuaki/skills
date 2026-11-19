@@ -1,5 +1,11 @@
 # forge
 
+## 1.15.1
+
+### Patch Changes
+
+- be58f85: The trigger of the prompt optimizer is one glyph in the desktop app and on mobile too, `✦`, `■` or `↶`. It still read `Optimize prompt` there, because the apps draw the label of a button and not its children.
+
 ## 1.15.0
 
 ### Minor Changes
