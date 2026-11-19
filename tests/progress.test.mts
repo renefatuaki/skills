@@ -107,7 +107,15 @@ const FABLE: Event = {
 /** The read of the model limits that failed, which leaves none. */
 const NO_MODELS: Event = { kind: 'claudeModelsRead', models: [] };
 
+/** The context window 34% used. */
+const CONTEXT: Event = { kind: 'contextMeasured', percent: 34 };
+
+/** The context window after a compaction, with no figure. */
+const NO_CONTEXT: Event = { kind: 'contextMeasured', percent: null };
+
 const CLAUDE_5H = 'Claude 5h 77%';
+
+const CLAUDE_CONTEXT_5H = 'Claude Context 34% · 5h 77%';
 
 const CLAUDE_WEEK = 'Claude week 67% · Fable 57%';
 
@@ -343,6 +351,39 @@ const CASES: {
     events: [CLAUDE],
     columns: 5,
     expected: 'quiet:Claude 5h 77%',
+  },
+  {
+    name: 'the context stands first in the Claude usage, before the windows',
+    events: [CLAUDE, CONTEXT],
+    expected: atEdgeOf('', COLUMNS, ['quiet', CLAUDE_CONTEXT_5H]),
+  },
+  {
+    name: 'the context stands alone in the Claude usage with no window',
+    events: [CONTEXT],
+    expected: atEdgeOf('', COLUMNS, ['quiet', 'Claude Context 34%']),
+  },
+  {
+    name: 'the context stands before the weekly window and the model limit',
+    events: [WEEK, FABLE, CONTEXT],
+    expected: atEdgeOf('', COLUMNS, [
+      'quiet',
+      'Claude Context 34% · week 67% · Fable 57%',
+    ]),
+  },
+  {
+    name: 'a measurement with no context figure takes the context away and keeps the windows',
+    events: [CLAUDE, CONTEXT, NO_CONTEXT],
+    expected: atEdgeOf('', COLUMNS, ['quiet', CLAUDE_5H]),
+  },
+  {
+    name: 'a measurement with no window keeps the context',
+    events: [CLAUDE, CONTEXT, { kind: 'claudeMeasured', windows: [] }],
+    expected: atEdgeOf('', COLUMNS, ['quiet', 'Claude Context 34%']),
+  },
+  {
+    name: 'the context is the Claude usage beside the Codex usage and the list',
+    events: [CONTEXT, OPEN, answer(USAGE)],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', 'Claude Context 34%'], ['quiet', CODEX])}`,
   },
   {
     name: 'an account with no 5-hour window shows its weekly window at the right edge',
