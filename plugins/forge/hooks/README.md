@@ -11,7 +11,7 @@ flowchart TD
   hooksJson -->|"before an Edit or a Write"| loadCommentRules["Deny the edit of a source file until the comment rules are in the context of the agent"]
   hooksJson -->|"when a prompt starts, before an Edit or a Write, and when a turn or a subagent stops"| checkTurn["Note the turn and its edits, and check what it changed when it stops"]
   hooksJson -->|"when Claude Code loads the plugin"| module["Register the hooks of the progress band and of the prompt optimizer, and join what the two draw into the one row above the prompt"]
-  module -->|"when a session starts, on a todo or task call, a Codex call, an Antigravity call, a prompt, a usage measurement and /clear"| progress["Turn what happens in the main session into events of the run and draw the run above the prompt"]
+  module -->|"when a session starts, on a todo or task call, a Codex call, an Antigravity call, a prompt, a usage measurement, a context measurement and /clear"| progress["Turn what happens in the main session into events of the run and draw the run above the prompt"]
   module -->|"on each edit of the draft, on a prompt and on the key of the prompt optimizer"| promptOptimizer["Rewrite the draft in the prompt box into a clearer prompt and draw the trigger above the prompt"]
   checkTurn -->|"when a turn or a subagent stops"| changes["Find the files the turn changed in every checkout it worked in"]
   checkTurn -->|"when a turn or a subagent stops"| comments["Check the comments of a source file"]
@@ -63,17 +63,18 @@ On the terminal the band is one line.
 
 - The progress such as `5/8 · Write the parser` stands at the left edge.
 - The usages stand side by side at the right edge, three columns apart, the Claude usage first.
-- The Claude usage reads `Claude 5h 77%`. An account with no 5-hour window reads `Claude week 67% · Fable 57%` instead, its weekly window and the weekly limit of each model.
+- The Claude usage reads `Claude Context 34% used · 5h 77%`. The context reading comes first and shows the share of the context window the session has used, where every other reading shows the share left. With no context figure yet, in a fresh session or just after a compaction, the reading is left out and the usage reads `Claude 5h 77%`. Off a subscription it reads `Claude Context 34% used` alone.
+- An account with no 5-hour window reads `Claude Context 34% used · week 67% · Fable 57%` instead, the context before its weekly window and the weekly limit of each model.
 - The Codex usage such as `Codex 5h 62% · week 81%` follows it, then the Antigravity usage such as `Antigravity week 91%`.
 - A narrow line cuts the title first, then leaves out the Antigravity usage once the title would vanish, then the Codex usage by the same rule, and leaves out the Claude usage last.
 
 | Part | What it shows | When the module reads it |
 | --- | --- | --- |
-| Claude usage | The share left of the 5-hour window of the Claude subscription, rounded down. An account with no 5-hour window shows the share left of its weekly window and of the weekly limit of each model by the name of the model | When the session starts, and on each measurement that moved a rate-limit window |
+| Claude usage | The share of the context window the session has used, then the share left of the 5-hour window of the Claude subscription, rounded down. An account with no 5-hour window shows the share left of its weekly window and of the weekly limit of each model by the name of the model | When the session starts, on each measurement that moved the context, and on each measurement that moved a rate-limit window |
 | Codex usage | The share left of the 5-hour and the weekly Codex window, as `codexModel` reports it | When the session starts, on every prompt that is not a meta prompt and after each Codex call |
 | Antigravity usage | The share left of each Gemini group, the tightest limit of the group, as `antigravity` reports it | When the session starts, on every prompt that is not a meta prompt and after each `antigravity:antigravity-rescue` call |
 
-Off a subscription and before the first response Claude Code has no reading, so the Claude usage stays hidden.
+Off a subscription Claude Code has no rate-limit reading, so the Claude usage holds the context alone. Before the first response of the context window it has no context figure either, so the Claude usage stays hidden unless a rate-limit window is read.
 
 The windows come from the rate-limit reading of Claude Code. The weekly limit of each model is not part of that reading, so an account with no 5-hour window asks the usage endpoint of Anthropic for it with the login of the session, at the same moments. With no first-party login, a refused request or a body the band cannot read, the band shows the weekly window alone. An account with a 5-hour window never asks the endpoint.
 

@@ -1,4 +1,4 @@
-// Folds what happens in a session into the run of the progress band, reads what the band shows and lays out the terminal's line, with no Node and no engine.
+// Folds what happens in a session into the run of the progress band, reads what the band shows, the progress, the context fill and the usages, and lays out the terminal's line, with no Node and no engine.
 // https://code.claude.com/docs/en/plugins/mods/events.md
 
 /** Where an item of the list stands, as TodoWrite and the Task tools spell it. */
@@ -41,6 +41,8 @@ export type Run = {
   readonly claude: readonly Limit[];
   /** Holds the weekly limit of each model by its display name, none while the account has a 5-hour window or the read fails. */
   readonly claudeModels: readonly Limit[];
+  /** Holds the whole percent of the context window the session has used, null before the first response of the window and after a compaction. */
+  readonly context: number | null;
 };
 
 type List = NonNullable<Run['list']>;
@@ -64,12 +66,13 @@ export type Event =
       readonly budget: Budget | null;
     }
   | { readonly kind: 'claudeMeasured'; readonly windows: readonly Limit[] }
-  | { readonly kind: 'claudeModelsRead'; readonly models: readonly Limit[] };
+  | { readonly kind: 'claudeModelsRead'; readonly models: readonly Limit[] }
+  | { readonly kind: 'contextMeasured'; readonly percent: number | null };
 
 /** How a part of the line reads, plain for the progress, quiet for a usage, alarm below the minimum of the provider. */
 export type Tone = 'plain' | 'quiet' | 'alarm';
 
-/** The usage left of the Claude account or of a provider under its label, each limit that reported it as a reading such as `5h 62%`, alarm when any limit is below the minimum. */
+/** The usage of the Claude account or of a provider under its label, each limit that reported it as a reading such as `5h 62%` and the Claude context fill as `Context 34% used`, alarm when any limit is below the minimum. */
 export type Usage = {
   readonly label: string;
   readonly readings: readonly [string, ...string[]];
@@ -110,6 +113,7 @@ export const INITIAL_RUN: Run = {
   budgets: { codex: null, antigravity: null },
   claude: [],
   claudeModels: [],
+  context: null,
 };
 
 /** The fewest columns between the progress and the usages at the right edge. */
@@ -157,6 +161,8 @@ export function step(run: Run, event: Event): Run {
       return { ...run, claude: event.windows };
     case 'claudeModelsRead':
       return { ...run, claudeModels: event.models };
+    case 'contextMeasured':
+      return { ...run, context: event.percent };
     default:
       return unreachable(event);
   }
@@ -432,9 +438,12 @@ function providerUsages(budgets: Run['budgets']): Usage[] {
   });
 }
 
-/** Words the windows and the model limits of the account as the Claude usage, none with none of them. */
-function claudeUsages({ claude, claudeModels }: Run): Usage[] {
-  const [first, ...rest] = [...claude, ...claudeModels].map(readingOf);
+/** Words the context fill, the windows and the model limits of the account as the Claude usage, none with none of them. */
+function claudeUsages({ context, claude, claudeModels }: Run): Usage[] {
+  const [first, ...rest] = [
+    ...(context === null ? [] : [`Context ${context}% used`]),
+    ...[...claude, ...claudeModels].map(readingOf),
+  ];
 
   return first === undefined
     ? []

@@ -1,4 +1,4 @@
-// Turns the main session's todo calls, provider calls, prompts and usage measurements into events of the run, reads the usage of each provider when the session starts, on each prompt and after each call of its subagent, reads the Claude usage when the session starts and when a measurement moves its windows, and draws the run above the prompt.
+// Turns the main session's todo calls, provider calls, prompts and usage measurements into events of the run, reads the usage of each provider when the session starts, on each prompt and after each call of its subagent, reads the Claude usage when the session starts and when a measurement moves its windows, takes the context fill from the session start and from each measurement that moves it, and draws the run above the prompt.
 // https://code.claude.com/docs/en/plugins/mods/events.md
 
 import type {
@@ -136,6 +136,10 @@ export const register: Register = on => {
   });
 
   on('session.measure', ($, e, next) => {
+    if (e.changed.includes('context')) {
+      dispatch($, contextMeasured(e.context.percent));
+    }
+
     if (e.changed.includes('rateLimits')) {
       void readClaude($, e.rateLimits);
     }
@@ -344,14 +348,17 @@ async function readUsage(
   });
 }
 
-/** Reads the Claude usage outside the session start hook's time and applies it as one more event, with no reading when the read is refused. */
+/** Reads the context fill and the Claude usage outside the session start hook's time and applies them as more events, with no reading when the read is refused. */
 async function readSessionUsage($: EngineInterface): Promise<void> {
-  const rateLimits = await $.session.usage().then(
-    usage => usage.rateLimits,
-    () => [],
-  );
+  const usage = await $.session.usage().catch(() => null);
 
-  await readClaude($, rateLimits);
+  dispatch($, contextMeasured(usage?.context.percent));
+  await readClaude($, usage?.rateLimits ?? []);
+}
+
+/** Wraps the percent of the context window used into its event, no percent before the first response of the window. */
+function contextMeasured(percent: number | undefined): Event {
+  return { kind: 'contextMeasured', percent: percent ?? null };
 }
 
 /** Applies the account windows of a reading at once, then the weekly limit per model, which only an account with no 5-hour window has. */
