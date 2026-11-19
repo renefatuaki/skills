@@ -10,6 +10,7 @@ import {
   bandLine,
   bandOf,
   INITIAL_RUN,
+  parseModelLimits,
   parseUsage,
   step,
 } from '../plugins/forge/hooks/progress/run.mts';
@@ -17,6 +18,7 @@ import type {
   Band,
   Event,
   Item,
+  Limit,
   Provider,
   Run,
   Tone,
@@ -81,7 +83,33 @@ const DONE: Event = {
 
 const PERSON: Event = { kind: 'personPrompted' };
 
-const CLAUDE: Event = { kind: 'claudeMeasured', left: 77 };
+const CLAUDE: Event = {
+  kind: 'claudeMeasured',
+  windows: [{ name: '5h', left: 77 }],
+};
+
+/** The weekly window of an account with no 5-hour window, 67% left. */
+const WEEK: Event = {
+  kind: 'claudeMeasured',
+  windows: [{ name: 'week', left: 67 }],
+};
+
+/** The body of the usage endpoint with the weekly limit of the Fable model, 43% used. */
+const MODELS_BODY =
+  '{"five_hour":null,"seven_day":{"utilization":33.0},"limits":[{"kind":"weekly_all","percent":33,"scope":null},{"kind":"weekly_scoped","percent":43,"scope":{"model":{"id":null,"display_name":"Fable"},"surface":null}}]}';
+
+/** The weekly limit of the Fable model read from the body, 57% left. */
+const FABLE: Event = {
+  kind: 'claudeModelsRead',
+  models: parseModelLimits(MODELS_BODY),
+};
+
+/** The read of the model limits that failed, which leaves none. */
+const NO_MODELS: Event = { kind: 'claudeModelsRead', models: [] };
+
+const CLAUDE_5H = 'Claude 5h 77%';
+
+const CLAUDE_WEEK = 'Claude week 67% · Fable 57%';
 
 const CODEX = 'Codex 5h 62% · week 81%';
 
@@ -97,7 +125,7 @@ const CASES: {
   name: string;
   events: Event[];
   columns?: number;
-  /** The band's line with each part's tone, such as `quiet:Claude 5h 77% ·  | plain:2/4 · Parse | quiet:<spaces to the right edge>Codex 5h 62%`, null when the band shows nothing. */
+  /** The band's line with each part's tone, such as `plain:2/4 · Parse | quiet:<spaces to the right edge>Claude 5h 77%   Codex 5h 62%`, null when the band shows nothing. */
   expected: string | null;
 }[] = [
   {
@@ -245,35 +273,58 @@ const CASES: {
     expected: 'quiet:Codex 5h 62% · week 81%',
   },
   {
-    name: 'the Claude usage alone stands at the left edge',
+    name: 'the Claude usage alone stands at the right edge',
     events: [CLAUDE],
-    expected: 'quiet:Claude 5h 77%',
+    expected: atEdgeOf('', COLUMNS, ['quiet', CLAUDE_5H]),
   },
   {
-    name: 'the Claude usage comes first, then the progress and the Codex usage at the right edge',
-    events: [CLAUDE, OPEN, answer(USAGE)],
-    expected: `quiet:Claude 5h 77% ·  | plain:1/4 · Write the parser | quiet:${atEdge('Claude 5h 77% · 1/4 · Write the parser', CODEX)}`,
+    name: 'the progress stands at the left edge and the Claude usage at the right edge',
+    events: [CLAUDE, OPEN],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', CLAUDE_5H])}`,
   },
   {
     name: 'the Claude usage stands beside done',
     events: [CLAUDE, OPEN, DONE],
-    expected: 'quiet:Claude 5h 77% ·  | plain:2/2 done',
+    expected: `plain:2/2 done | ${atEdgeOf('2/2 done', COLUMNS, ['quiet', CLAUDE_5H])}`,
   },
   {
-    name: 'with no list the Claude usage stands at the left edge and the Codex usage at the right edge',
+    name: 'with no list the Claude usage comes first and the Codex usage follows three columns after it',
     events: [CLAUDE, answer(USAGE)],
-    expected: `quiet:Claude 5h 77% | quiet:${atEdge('Claude 5h 77%', CODEX)}`,
+    expected: atEdgeOf('', COLUMNS, ['quiet', CLAUDE_5H], ['quiet', CODEX]),
+  },
+  {
+    name: 'the Claude, the Codex and the Antigravity usage stand side by side at the right edge, whatever the order of the reads',
+    events: [CLAUDE, OPEN, answerAntigravity(AGY_USAGE), answer(USAGE)],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', CLAUDE_5H], ['quiet', CODEX], ['quiet', AGY])}`,
   },
   {
     name: 'a measurement with no reading hides the Claude usage',
-    events: [CLAUDE, OPEN, { kind: 'claudeMeasured', left: null }],
+    events: [CLAUDE, OPEN, { kind: 'claudeMeasured', windows: [] }],
     expected: 'plain:1/4 · Write the parser',
   },
   {
-    name: 'a narrow band cuts the title and the Codex usage before the Claude usage',
-    events: [CLAUDE, OPEN, answer(USAGE)],
-    columns: 30,
-    expected: 'quiet:Claude 5h 77% ·  | plain:1/4 · Write t…',
+    name: 'a narrow band cuts the title before it leaves out the Antigravity usage',
+    events: [CLAUDE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 73,
+    expected: `plain:1/4 · … | ${atEdgeOf('1/4 · …', 73, ['quiet', CLAUDE_5H], ['quiet', CODEX], ['quiet', AGY])}`,
+  },
+  {
+    name: 'the Antigravity usage is the first to go once the title would vanish beside the Claude usage',
+    events: [CLAUDE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 72,
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, 72, ['quiet', CLAUDE_5H], ['quiet', CODEX])}`,
+  },
+  {
+    name: 'the Codex usage goes next and leaves the Claude usage',
+    events: [CLAUDE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 49,
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, 49, ['quiet', CLAUDE_5H])}`,
+  },
+  {
+    name: 'the Claude usage goes last, once the title would vanish beside it',
+    events: [CLAUDE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 23,
+    expected: `plain:${LEFT}`,
   },
   {
     name: 'the Claude usage is cut once it and the count no longer fit',
@@ -282,16 +333,53 @@ const CASES: {
     expected: 'plain:1/4 · Write the par…',
   },
   {
-    name: 'the Claude usage keeps the left edge when the Codex usage does not fit beside it',
+    name: 'with no list the Claude usage stays when the Codex usage does not fit beside it',
     events: [CLAUDE, answer(USAGE)],
     columns: 30,
-    expected: 'quiet:Claude 5h 77%',
+    expected: atEdgeOf('', 30, ['quiet', CLAUDE_5H]),
   },
   {
-    name: 'the Claude usage alone wider than the band is left for the terminal to cut',
+    name: 'the Claude usage alone wider than the band starts at the left edge for the terminal to cut',
     events: [CLAUDE],
     columns: 5,
     expected: 'quiet:Claude 5h 77%',
+  },
+  {
+    name: 'an account with no 5-hour window shows its weekly window at the right edge',
+    events: [WEEK],
+    expected: atEdgeOf('', COLUMNS, ['quiet', 'Claude week 67%']),
+  },
+  {
+    name: 'the weekly limit of a model follows the weekly window',
+    events: [WEEK, FABLE],
+    expected: atEdgeOf('', COLUMNS, ['quiet', CLAUDE_WEEK]),
+  },
+  {
+    name: 'the weekly window and the model limit stand before the Codex usage at the right edge',
+    events: [WEEK, FABLE, OPEN, answer(USAGE)],
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', CLAUDE_WEEK], ['quiet', CODEX])}`,
+  },
+  {
+    name: 'a failed read of the model limits leaves the weekly window',
+    events: [WEEK, FABLE, NO_MODELS],
+    expected: atEdgeOf('', COLUMNS, ['quiet', 'Claude week 67%']),
+  },
+  {
+    name: 'a 5-hour reading clears the model limits and keeps the 5-hour window as it was',
+    events: [WEEK, FABLE, CLAUDE, NO_MODELS],
+    expected: atEdgeOf('', COLUMNS, ['quiet', CLAUDE_5H]),
+  },
+  {
+    name: 'a narrow band cuts the title and leaves out the usages after the weekly window and the model limit',
+    events: [WEEK, FABLE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 40,
+    expected: `plain:1/4 · Wr… | ${atEdgeOf('1/4 · Wr…', 40, ['quiet', CLAUDE_WEEK])}`,
+  },
+  {
+    name: 'the weekly window and the model limit are left out once the title would vanish beside them',
+    events: [WEEK, FABLE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
+    columns: 37,
+    expected: `plain:${LEFT}`,
   },
   {
     name: 'the Codex usage comes first and the Antigravity usage follows at the right edge, whatever the order of the reads',
@@ -367,18 +455,6 @@ const CASES: {
     expected: 'plain:1/4 · Write the parser',
   },
   {
-    name: 'a narrow band leaves out the Antigravity usage and the Codex usage before the Claude usage',
-    events: [CLAUDE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
-    columns: 30,
-    expected: 'quiet:Claude 5h 77% ·  | plain:1/4 · Write t…',
-  },
-  {
-    name: 'the Claude usage keeps the left edge while the Antigravity usage goes first',
-    events: [CLAUDE, OPEN, answer(USAGE), answerAntigravity(AGY_USAGE)],
-    columns: 70,
-    expected: `quiet:Claude 5h 77% ·  | plain:${LEFT} | ${atEdgeOf(`Claude 5h 77% · ${LEFT}`, 70, ['quiet', CODEX])}`,
-  },
-  {
     name: 'with no list the Antigravity usage goes before the Codex usage',
     events: [answer(USAGE), answerAntigravity(AGY_USAGE)],
     columns: 40,
@@ -395,12 +471,12 @@ const CASES: {
 /** What the band shows after the events, the same on every surface. */
 const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
   {
-    name: 'the band reads the Claude window, the count, the done share, the item in progress and each window of the usage',
+    name: 'the band reads the count, the done share, the item in progress, the Claude window and each window of the usage',
     events: [CLAUDE, OPEN, answer(USAGE)],
     expected: {
-      claude: { window: '5h 77%' },
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
       usages: [
+        { label: 'Claude', readings: ['5h 77%'], tone: 'quiet' },
         { label: 'Codex', readings: ['5h 62%', 'week 81%'], tone: 'quiet' },
       ],
     },
@@ -418,7 +494,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
       },
     ],
     expected: {
-      claude: null,
       progress: { count: '2/3', filled: '66%', title: 'Test the parser' },
       usages: [],
     },
@@ -427,7 +502,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     name: 'a finished list has no title and a full share',
     events: [OPEN, DONE],
     expected: {
-      claude: null,
       progress: { count: '2/2', filled: '100%', title: null },
       usages: [],
     },
@@ -439,7 +513,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
       answer('{"primary":null,"secondary":9,"belowMinimum":true}'),
     ],
     expected: {
-      claude: null,
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
       usages: [{ label: 'Codex', readings: ['week 9%'], tone: 'alarm' }],
     },
@@ -451,7 +524,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
       answer('{"primary":null,"secondary":null,"belowMinimum":false}'),
     ],
     expected: {
-      claude: null,
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
       usages: [],
     },
@@ -460,7 +532,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     name: 'no list shows the usage alone',
     events: [answer(USAGE), OPEN, { kind: 'cleared' }],
     expected: {
-      claude: null,
       progress: null,
       usages: [
         { label: 'Codex', readings: ['5h 62%', 'week 81%'], tone: 'quiet' },
@@ -470,15 +541,40 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
   {
     name: 'the Claude usage alone is a band',
     events: [answer('not json'), CLAUDE],
-    expected: { claude: { window: '5h 77%' }, progress: null, usages: [] },
+    expected: {
+      progress: null,
+      usages: [{ label: 'Claude', readings: ['5h 77%'], tone: 'quiet' }],
+    },
   },
   {
-    name: 'the usages follow the order of the providers, not the order of the reads',
-    events: [answerAntigravity(AGY_USAGE), answer(USAGE)],
+    name: 'the Claude usage reads the weekly window and the limit of each model',
+    events: [WEEK, FABLE],
     expected: {
-      claude: null,
       progress: null,
       usages: [
+        {
+          label: 'Claude',
+          readings: ['week 67%', 'Fable 57%'],
+          tone: 'quiet',
+        },
+      ],
+    },
+  },
+  {
+    name: 'the Claude usage keeps the 5-hour window alone, whatever the model limits were',
+    events: [WEEK, FABLE, CLAUDE, NO_MODELS],
+    expected: {
+      progress: null,
+      usages: [{ label: 'Claude', readings: ['5h 77%'], tone: 'quiet' }],
+    },
+  },
+  {
+    name: 'the Claude usage comes before the providers, which follow the order of the providers, not the order of the reads',
+    events: [answerAntigravity(AGY_USAGE), answer(USAGE), CLAUDE],
+    expected: {
+      progress: null,
+      usages: [
+        { label: 'Claude', readings: ['5h 77%'], tone: 'quiet' },
         { label: 'Codex', readings: ['5h 62%', 'week 81%'], tone: 'quiet' },
         { label: 'Antigravity', readings: ['week 91%'], tone: 'quiet' },
       ],
@@ -488,7 +584,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     name: 'a limit below the minimum is the alarm tone of the Antigravity usage alone',
     events: [answer(USAGE), answerAntigravity(AGY_LOW_USAGE)],
     expected: {
-      claude: null,
       progress: null,
       usages: [
         { label: 'Codex', readings: ['5h 62%', 'week 81%'], tone: 'quiet' },
@@ -500,7 +595,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     name: 'several groups read by the short name of the group, Gemini for the shared group',
     events: [answerAntigravity(AGY_GROUPS_USAGE)],
     expected: {
-      claude: null,
       progress: null,
       usages: [
         {
@@ -519,7 +613,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
       ),
     ],
     expected: {
-      claude: null,
       progress: null,
       usages: [
         {
@@ -534,7 +627,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     name: 'an Antigravity report without a group shows no usage',
     events: [OPEN, answerAntigravity('{"groups":{},"belowMinimum":false}')],
     expected: {
-      claude: null,
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
       usages: [],
     },
@@ -548,7 +640,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
       ),
     ],
     expected: {
-      claude: null,
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
       usages: [],
     },
@@ -557,7 +648,6 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
     name: 'an Antigravity report with groups as a list shows no usage',
     events: [OPEN, answerAntigravity('{"groups":[91],"belowMinimum":false}')],
     expected: {
-      claude: null,
       progress: { count: '1/4', filled: '25%', title: 'Write the parser' },
       usages: [],
     },
@@ -568,9 +658,46 @@ const BAND_CASES: { name: string; events: Event[]; expected: Band | null }[] = [
       CLAUDE,
       OPEN,
       { kind: 'cleared' },
-      { kind: 'claudeMeasured', left: null },
+      { kind: 'claudeMeasured', windows: [] },
     ],
     expected: null,
+  },
+];
+
+/** The weekly limits per model a body of the usage endpoint holds, none for a body that is no usage body. */
+const MODEL_LIMIT_CASES: { name: string; body: string; expected: Limit[] }[] = [
+  {
+    name: 'the weekly limit of a model is its percent left under the display name',
+    body: MODELS_BODY,
+    expected: [{ name: 'Fable', left: 57 }],
+  },
+  {
+    name: 'every weekly limit of a model is taken, the weekly limit of the account is not',
+    body: '{"limits":[{"kind":"weekly_all","percent":10,"scope":null},{"kind":"weekly_scoped","percent":43,"scope":{"model":{"display_name":"Fable"}}},{"kind":"weekly_scoped","percent":100.5,"scope":{"model":{"display_name":"Opus"}}}]}',
+    expected: [
+      { name: 'Fable', left: 57 },
+      { name: 'Opus', left: 0 },
+    ],
+  },
+  {
+    name: 'a limit scoped to no model is left out',
+    body: '{"limits":[{"kind":"weekly_scoped","percent":43,"scope":{"model":null,"surface":"cli"}}]}',
+    expected: [],
+  },
+  {
+    name: 'a limit without a display name or a number as its percent is left out',
+    body: '{"limits":[{"kind":"weekly_scoped","percent":43,"scope":{"model":{"display_name":""}}},{"kind":"weekly_scoped","percent":"43","scope":{"model":{"display_name":"Fable"}}}]}',
+    expected: [],
+  },
+  {
+    name: 'a body with no list of limits shows none',
+    body: '{"five_hour":null}',
+    expected: [],
+  },
+  {
+    name: 'a body that is no JSON shows none',
+    body: 'not json',
+    expected: [],
   },
 ];
 
@@ -603,6 +730,10 @@ for (const { name, events, columns, expected } of CASES) {
 
 for (const { name, events, expected } of BAND_CASES) {
   failures += report(name, bandOf(runOf(events)), expected);
+}
+
+for (const { name, body, expected } of MODEL_LIMIT_CASES) {
+  failures += report(name, parseModelLimits(body), expected);
 }
 
 for (const { name, provider, usage, expected } of SCRIPT_CASES) {

@@ -61,19 +61,21 @@ The session hook informs. `loadCommentRules` denies the edit of a source file on
 
 On the terminal the band is one line.
 
-- The Claude usage such as `Claude 5h 77%` stands at the left edge.
-- The progress such as `5/8 · Write the parser` follows it.
-- The Codex usage such as `Codex 5h 62% · week 81%` stands at the right edge.
-- The Antigravity usage such as `Antigravity week 91%` follows the Codex usage at the right edge, three columns after it.
-- A narrow line cuts the title first, then leaves out the Antigravity usage once the title would vanish, then the Codex usage by the same rule, and leaves out the Claude usage last, once it and the count no longer fit.
+- The progress such as `5/8 · Write the parser` stands at the left edge.
+- The usages stand side by side at the right edge, three columns apart, the Claude usage first.
+- The Claude usage reads `Claude 5h 77%`. An account with no 5-hour window reads `Claude week 67% · Fable 57%` instead, its weekly window and the weekly limit of each model.
+- The Codex usage such as `Codex 5h 62% · week 81%` follows it, then the Antigravity usage such as `Antigravity week 91%`.
+- A narrow line cuts the title first, then leaves out the Antigravity usage once the title would vanish, then the Codex usage by the same rule, and leaves out the Claude usage last.
 
 | Part | What it shows | When the module reads it |
 | --- | --- | --- |
-| Claude usage | The share left of the current session, the 5-hour window of the Claude subscription, rounded down | When the session starts, and on each measurement Claude Code reports after a turn |
+| Claude usage | The share left of the 5-hour window of the Claude subscription, rounded down. An account with no 5-hour window shows the share left of its weekly window and of the weekly limit of each model by the name of the model | When the session starts, and on each measurement that moved a rate-limit window |
 | Codex usage | The share left of the 5-hour and the weekly Codex window, as `codexModel` reports it | When the session starts, on every prompt that is not a meta prompt and after each Codex call |
 | Antigravity usage | The share left of each Gemini group, the tightest limit of the group, as `antigravity` reports it | When the session starts, on every prompt that is not a meta prompt and after each `antigravity:antigravity-rescue` call |
 
 Off a subscription and before the first response Claude Code has no reading, so the Claude usage stays hidden.
+
+The windows come from the rate-limit reading of Claude Code. The weekly limit of each model is not part of that reading, so an account with no 5-hour window asks the usage endpoint of Anthropic for it with the login of the session, at the same moments. With no first-party login, a refused request or a body the band cannot read, the band shows the weekly window alone. An account with a 5-hour window never asks the endpoint.
 
 The reads of the two providers run side by side and each one draws as soon as its script answers, so a slow `agy` never delays the Codex usage. A script that fails hides only its own usage.
 
@@ -83,12 +85,11 @@ The Antigravity usage names each limit by its Gemini group.
 - Several groups read by a short name taken from the group name. The words `Gemini` and `Models` and version numbers are left out, so `Gemini Models` reads `Gemini` and `Gemini 4 Argon` reads `Argon`. The text is `Antigravity Gemini 91% · Argon 40%`.
 - A limit below the minimum turns the usage red and adds `(below minimum)`, like the Codex usage.
 
-In the desktop app and on mobile the band is one row of up to five parts, and every color is a key of the theme. With no todo list open the row holds the Claude caption at its left end and the captions of the providers at its right end.
+In the desktop app and on mobile the band is one row of up to five parts, and every color is a key of the theme. With no todo list open the row holds only the captions of the usages at its right end.
 
-- The Claude usage opens the row as a small caption with `Claude` dim.
 - The count such as `5/8` follows, beside a short bar filled to the done share of the items rounded down, in the accent color and green once every item is done.
 - The title of the current item takes the free width and the surface cuts it at the width it draws, or a dim `done` stands there once every item is done.
-- The usage of each provider closes the row as a small caption, the Codex caption first and the Antigravity caption after it, both built by the same function. A caption has the provider name and the dots between its readings dim. The readings turn red with `below minimum` after them once a limit of the provider is below the minimum.
+- The usages close the row, each as a small caption, the Claude caption first, then the Codex caption and the Antigravity caption, all built by the same function. A caption has the provider name and the dots between its readings dim. The readings turn red with `below minimum` after them once a limit of the provider is below the minimum.
 
 Only `run.mts` decides what the band shows and how the terminal line reads, and `index.mts` writes the run through it alone.
 
