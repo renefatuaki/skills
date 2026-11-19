@@ -33,7 +33,7 @@ const GLYPHS: Record<Phase['kind'], string> = {
   failed: '✦',
 };
 
-/** Names the control where a surface reads it out instead of drawing the glyph. */
+/** Names the control on the terminal, which draws the glyph from the children. */
 const NAMES: Record<Phase['kind'], string> = {
   idle: 'Optimize prompt',
   optimizing: 'Cancel',
@@ -86,10 +86,10 @@ export function appTrigger(
         ]
       : [];
 
+  // The glyph is the label, because the apps draw the label of a Button and not its children.
   const button = Button({
     key: TRIGGER_KEY,
-    label: NAMES[phase.kind],
-    children: [GLYPHS[phase.kind]],
+    label: GLYPHS[phase.kind],
     onPress: onTrigger,
   });
 
