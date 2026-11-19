@@ -452,7 +452,6 @@ test('the desktop draws its own tree, with a button on an empty box', async ($, 
     key: 'trigger',
     label: 'Optimize prompt',
     action: 'app:cycleDiffBase',
-    plain: true,
     dimColor: true,
   });
 
@@ -481,7 +480,7 @@ test('the trigger stands at the left end of the row and the progress band takes 
     row: { flexDirection: 'row', alignItems: 'center', gap: 1 },
     trigger: ['Button', ['✦']],
     rest: { flexDirection: 'column', flexGrow: 1, minWidth: 0 },
-    progress: 'Claude 5h 77%'.padStart(BAND.props.bodyColumns - 2),
+    progress: 'Claude 5h 77%'.padStart(BAND.props.bodyColumns - 6),
   });
 
   await ui.unmount();

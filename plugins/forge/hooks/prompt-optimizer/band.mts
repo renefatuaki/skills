@@ -25,6 +25,9 @@ const TRIGGER_ACTION = 'app:cycleDiffBase';
 /** Cells between two parts of the row. */
 export const ROW_GAP = 1;
 
+/** The `[ ` and ` ]` the terminal draws around the label of a Button, which stand in for a border that would take three rows. */
+const BRACKETS = '[  ]';
+
 /** One cell each, so the trigger never changes its width between the phases. */
 const GLYPHS: Record<Phase['kind'], string> = {
   idle: '✦',
@@ -52,14 +55,16 @@ export function terminalTrigger(
   const button = Button({
     key: TRIGGER_KEY,
     action: TRIGGER_ACTION,
-    plain: true,
-    dimColor: phase.kind === 'idle',
+    dimColor: true,
     label: NAMES[phase.kind],
     children: [GLYPHS[phase.kind]],
     onPress: onTrigger,
   });
 
-  const texts = [GLYPHS[phase.kind], ...(reason === null ? [] : [reason])];
+  const texts = [
+    `${BRACKETS}${GLYPHS[phase.kind]}`,
+    ...(reason === null ? [] : [reason]),
+  ];
 
   return {
     parts: [button, ...failure],

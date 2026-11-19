@@ -50,7 +50,7 @@ The key never sends the prompt. You read the rewrite, change it if you want to, 
 
 | Surface | Trigger | You press it with |
 | --- | --- | --- |
-| Terminal | The glyph, shown while the prompt box holds a draft, a run is going or a failure shows | The key, from the prompt |
+| Terminal | The glyph in brackets, such as `[ ✦ ]`, shown while the prompt box holds a draft, a run is going or a failure shows | The key, from the prompt |
 | Desktop app and mobile | The glyph as a button, shown on an empty prompt box too | A click or a tap. Claude Code hands a key to a trigger on the terminal only |
 
 - The model of the session writes the rewrite at low effort, with the session before the draft, so it knows what `the second one` refers to. Before the first request of a session and right after `/clear`, Sonnet writes it from the draft alone.
