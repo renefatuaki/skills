@@ -168,10 +168,11 @@ export function notePrompt(
   readUsages($);
 }
 
-/** Draws the run above the prompt, null while the run has nothing to show or a survey holds the band. */
+/** Draws the run above the prompt at the given terminal columns, null while the run has nothing to show or a survey holds the band. */
 export function progressBand(
   $: EngineInterface,
   e: Frozen<RenderInput<'AbovePrompt'>>,
+  columns: number,
 ): RenderElement | null {
   const band = bandOf(run);
 
@@ -181,7 +182,7 @@ export function progressBand(
 
   // Every other surface has the Box and Text the graphical tree draws with, mobile included.
   return e.surface === 'terminal'
-    ? terminalBand($.ui.resolve(e), band, e.props.bodyColumns)
+    ? terminalBand($.ui.resolve(e), band, columns)
     : graphicalBand($.ui.resolve(e), band);
 }
 

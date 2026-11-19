@@ -1100,10 +1100,11 @@ async function drawnTree(
   $: Engine,
   surface: (typeof GRAPHICAL_SURFACES)[number],
 ): Promise<Drawn> {
-  const [progress, trigger] = elementsOf(await forgeRow($, surface));
+  const [trigger, rest] = elementsOf(await forgeRow($, surface));
+  const [progress] = elementsOf(rest);
 
   if (progress === undefined || trigger === undefined) {
-    throw new Error(`no progress band above the trigger on ${surface}`);
+    throw new Error(`no progress band beside the trigger on ${surface}`);
   }
 
   return progress;
