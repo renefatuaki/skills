@@ -24,7 +24,7 @@ export const register: Register = (on, options) => {
     await forgetRewrite($, e);
 
     return next(e);
-  }).catch(($, e, next) => next(e));
+  });
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const trigger = await promptOptimizerTrigger($, e);

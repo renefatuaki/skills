@@ -76,10 +76,7 @@ export async function promptOptimizerTrigger(
     return appTrigger($.ui.resolve(e), band);
   }
 
-  if (
-    e.surface !== 'terminal' ||
-    (current.kind === 'idle' && !isDraftPresent)
-  ) {
+  if (current.kind === 'idle' && !isDraftPresent) {
     return null;
   }
 
