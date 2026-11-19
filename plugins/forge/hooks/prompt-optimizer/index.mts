@@ -7,12 +7,12 @@ import type {
   Frozen,
   PromptSubmitInput,
   Register,
-  RenderElement,
   RenderInput,
 } from 'claude-code';
 
 import type { Phase } from '../../types/index.d.ts';
-import { appBand, terminalBand } from './band.mts';
+import { appTrigger, terminalTrigger } from './band.mts';
+import type { Trigger } from './band.mts';
 import { rewriteDraft } from './rewrite.mts';
 
 const IDLE: Phase = { kind: 'idle' };
@@ -58,12 +58,11 @@ export async function forgetRewrite(
   }
 }
 
-/** Draws the trigger above the prompt, null while a survey holds the band and on the terminal while the box is empty and no run shows. */
-export async function promptOptimizerBand(
+/** Draws the trigger for the left end of the row above the prompt, null while a survey holds the band and on the terminal while the box is empty and no run shows. */
+export async function promptOptimizerTrigger(
   $: EngineInterface,
   e: Frozen<RenderInput<'AbovePrompt'>>,
-  chord: string,
-): Promise<RenderElement | null> {
+): Promise<Trigger | null> {
   const current = await read($, phase);
   const isDraftPresent = await read($, hasDraft);
 
@@ -71,10 +70,10 @@ export async function promptOptimizerBand(
     return null;
   }
 
-  const band = { phase: current, chord, onTrigger: () => trigger($) };
+  const band = { phase: current, onTrigger: () => trigger($) };
 
   if (e.surface === 'desktop' || e.surface === 'mobile') {
-    return appBand($.ui.resolve(e), band);
+    return appTrigger($.ui.resolve(e), band);
   }
 
   if (
@@ -84,7 +83,7 @@ export async function promptOptimizerBand(
     return null;
   }
 
-  return terminalBand($.ui.resolve(e), band);
+  return terminalTrigger($.ui.resolve(e), band);
 }
 
 async function trigger($: EngineInterface): Promise<void> {

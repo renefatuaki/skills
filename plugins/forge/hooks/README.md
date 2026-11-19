@@ -10,7 +10,7 @@ flowchart TD
   hooksJson -->|"when a session starts"| sessionContext["Hand Claude the transcript of the session and the root of the plugin"]
   hooksJson -->|"before an Edit or a Write"| loadCommentRules["Deny the edit of a source file until the comment rules are in the context of the agent"]
   hooksJson -->|"when a prompt starts, before an Edit or a Write, and when a turn or a subagent stops"| checkTurn["Note the turn and its edits, and check what it changed when it stops"]
-  hooksJson -->|"when Claude Code loads the plugin"| module["Register the hooks of the progress band and of the prompt optimizer, and stack what the two draw above the prompt"]
+  hooksJson -->|"when Claude Code loads the plugin"| module["Register the hooks of the progress band and of the prompt optimizer, and join what the two draw into the one row above the prompt"]
   module -->|"when a session starts, on a todo or task call, a Codex call, an Antigravity call, a prompt, a usage measurement and /clear"| progress["Turn what happens in the main session into events of the run and draw the run above the prompt"]
   module -->|"on each edit of the draft, on a prompt and on the key of the prompt optimizer"| promptOptimizer["Rewrite the draft in the prompt box into a clearer prompt and draw the trigger above the prompt"]
   checkTurn -->|"when a turn or a subagent stops"| changes["Find the files the turn changed in every checkout it worked in"]
@@ -53,7 +53,7 @@ flowchart TD
 
 The session hook informs. `loadCommentRules` denies the edit of a source file once, until the transcript of the agent holds the comment rules and the guide of the language, and stays silent when it cannot read the transcript. The turn hook blocks the end of a turn once when a file the turn changed breaks a rule, and stays silent on the stop after it. A hook that has nothing to report prints nothing.
 
-`module.mts` is the hooks module of the plugin, named under `modules` in `hooks.json`, which takes one module per plugin. It runs inside Claude Code with no Node and registers the hooks of `progress/` and of `prompt-optimizer/`. A hooks module takes each event once and a plugin has one row above the prompt. So `module.mts` itself hooks the prompt and the band, hands the prompt to both parts and stacks the trigger of the prompt optimizer under the progress band.
+`module.mts` is the hooks module of the plugin, named under `modules` in `hooks.json`, which takes one module per plugin. It runs inside Claude Code with no Node and registers the hooks of `progress/` and of `prompt-optimizer/`. A hooks module takes each event once and a plugin has one row above the prompt. So `module.mts` itself hooks the prompt and the band, hands the prompt to both parts and puts the trigger of the prompt optimizer at the left end of the row, before the progress band.
 
 `prompt-optimizer/` rewrites the draft in the prompt box into a clearer prompt on `ctrl+x b` and never sends it. [prompt-optimizer/README.md](prompt-optimizer/README.md) shows what the key does and how to move it to another key.
 

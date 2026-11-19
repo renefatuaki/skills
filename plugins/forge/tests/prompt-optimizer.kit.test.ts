@@ -44,7 +44,7 @@ test('the band hides on an empty idle box and shows once a draft is typed', asyn
   await typeDraft($, world, 'fix bug');
 
   expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'optimize prompt (ctrl+x b)',
+    'Optimize prompt',
   );
 
   await typeDraft($, world, '');
@@ -71,7 +71,7 @@ test('a draft is replaced by the rewrite the model returns', async ($, on) => {
   ).toBe(true);
 
   expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'undo optimize (ctrl+x b)',
+    'Undo optimize',
   );
 
   await ui.unmount();
@@ -236,7 +236,7 @@ test('an edit made while optimizing is not overwritten', async ($, on) => {
   ]);
 
   expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'optimize prompt (ctrl+x b)',
+    'Optimize prompt',
   );
 
   await ui.unmount();
@@ -253,9 +253,7 @@ test('the trigger cancels a running optimization and keeps the draft', async ($,
 
   await clock.settle();
 
-  expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'optimizing… (ctrl+x b cancels)',
-  );
+  expect((await ui.find({ key: 'trigger' }))?.props.label).toBe('Cancel');
 
   await ui.press({ key: 'trigger' });
   release(answered('Fix the failing login test.'));
@@ -264,7 +262,7 @@ test('the trigger cancels a running optimization and keeps the draft', async ($,
   expect(world.draft).toBe('fix bug');
   expect(world.toasts).toEqual([]);
   expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'optimize prompt (ctrl+x b)',
+    'Optimize prompt',
   );
 
   await ui.unmount();
@@ -285,7 +283,7 @@ test('the trigger on the rewritten draft restores the original', async ($, on) =
   expect(world.draft).toBe('fix bug');
   expect(world.forkPrompts).toHaveLength(1);
   expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'optimize prompt (ctrl+x b)',
+    'Optimize prompt',
   );
 
   await ui.unmount();
@@ -306,7 +304,7 @@ test('an edit of the rewritten draft ends undo and optimizes afresh', async ($, 
   await typeDraft($, world, 'Fix the failing login test, add test');
 
   expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'optimize prompt (ctrl+x b)',
+    'Optimize prompt',
   );
 
   await ui.press({ key: 'trigger' });
@@ -396,14 +394,14 @@ test('a failed call shows its reason, keeps the draft, then clears', async ($, o
 
   expect(world.draft).toBe('fix bug');
   expect((await ui.find({ type: 'Text' }))?.text).toBe(
-    'optimize failed: the API answered with rate_limit ',
+    'failed: the API answered with rate_limit',
   );
 
   await clock.advance(6000);
 
   expect(await ui.find({ type: 'Text' })).toBeUndefined();
   expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'optimize prompt (ctrl+x b)',
+    'Optimize prompt',
   );
 
   await ui.unmount();
@@ -421,7 +419,7 @@ test('a run past its limit fails and its late reply is dropped', async ($, on) =
   await clock.advance(120_000);
 
   expect((await ui.find({ type: 'Text' }))?.text).toBe(
-    'optimize failed: the model took too long ',
+    'failed: the model took too long',
   );
 
   release(answered('Fix the failing login test.'));
@@ -438,7 +436,6 @@ test('the desktop draws its own tree, with a button on an empty box', async ($, 
   expect((await desktop.find({ key: 'trigger' }))?.props).toEqual({
     key: 'trigger',
     label: 'Optimize prompt',
-    variant: 'primary',
   });
 
   await desktop.press({ key: 'trigger' });
@@ -453,7 +450,7 @@ test('the desktop draws its own tree, with a button on an empty box', async ($, 
 
   expect((await terminal.find({ key: 'trigger' }))?.props).toEqual({
     key: 'trigger',
-    label: 'optimize prompt (ctrl+x b)',
+    label: 'Optimize prompt',
     action: 'app:cycleDiffBase',
     plain: true,
     dimColor: true,
@@ -463,24 +460,7 @@ test('the desktop draws its own tree, with a button on an empty box', async ($, 
   await terminal.unmount();
 });
 
-test(
-  'the band names the chord the person configured',
-  { options: { chord: 'option+i' } },
-  async ($, on) => {
-    const { world } = standInForEngine(on, () => answered('unused'));
-    const ui = await $.ui.mount({ ...BAND, surface: 'terminal' });
-
-    await typeDraft($, world, 'fix bug');
-
-    expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-      'optimize prompt (option+i)',
-    );
-
-    await ui.unmount();
-  },
-);
-
-test('the trigger stands under the progress band in the one row of the plugin', async ($, on) => {
+test('the trigger stands at the left end of the row and the progress band takes the columns it leaves', async ($, on) => {
   const { world, clock } = standInForEngine(on, () => answered('unused'));
 
   answerSessionStart(on);
@@ -490,17 +470,18 @@ test('the trigger stands under the progress band in the one row of the plugin', 
 
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' });
   const row = (await ui.drawn()) as Drawn;
+  const [trigger, rest] = row.children ?? [];
 
   expect({
     row: row.props,
-    parts: row.children?.map(part => part.type),
-    progress: (await ui.find({ type: 'Text' }))?.text?.trim(),
-    trigger: (await ui.find({ key: 'trigger' }))?.props.label,
+    trigger: [trigger?.type, trigger?.children],
+    rest: rest?.props,
+    progress: (await ui.find({ type: 'Text' }))?.text,
   }).toEqual({
-    row: { flexDirection: 'column' },
-    parts: ['Text', 'Box'],
-    progress: 'Claude 5h 77%',
-    trigger: 'optimize prompt (ctrl+x b)',
+    row: { flexDirection: 'row', alignItems: 'center', gap: 1 },
+    trigger: ['Button', ['✦']],
+    rest: { flexDirection: 'column', flexGrow: 1, minWidth: 0 },
+    progress: 'Claude 5h 77%'.padStart(BAND.props.bodyColumns - 2),
   });
 
   await ui.unmount();

@@ -7,7 +7,7 @@ What does the key of the prompt optimizer do with the draft in the prompt box?
 | Draft | The unsent text in the prompt box |
 | Rewrite | The clearer prompt for the same request that a Claude model writes from the draft |
 | Key | The keys bound to the action `app:cycleDiffBase`, `ctrl+x b` by default |
-| Trigger | What the band above the prompt draws for the key, a dim line on the terminal and a button in the desktop app and on mobile |
+| Trigger | The one glyph at the left end of the row above the prompt, before the progress band. `✦` rewrites the draft, `■` cancels the run and `↶` puts the draft back |
 
 ```mermaid
 %%{init: {"htmlLabels": false}}%%
@@ -42,16 +42,16 @@ stateDiagram-v2
 
 A draft `fix bug` runs through the states like this.
 
-1. `ctrl+x b` starts the run, and the trigger reads `optimizing… (ctrl+x b cancels)`.
-2. The model answers `Fix the failing login test.`, the prompt box holds that text, and the trigger reads `undo optimize (ctrl+x b)`.
+1. `ctrl+x b` starts the run, and the trigger turns from `✦` to `■`.
+2. The model answers `Fix the failing login test.`, the prompt box holds that text, and the trigger turns to `↶`.
 3. `ctrl+x b` again puts `fix bug` back.
 
 The key never sends the prompt. You read the rewrite, change it if you want to, and send it with Enter.
 
 | Surface | Trigger | You press it with |
 | --- | --- | --- |
-| Terminal | A dim line such as `optimize prompt (ctrl+x b)`, shown while the prompt box holds a draft, a run is going or a failure shows | The key, from the prompt |
-| Desktop app and mobile | A button `Optimize prompt`, shown on an empty prompt box too | A click or a tap |
+| Terminal | The glyph, shown while the prompt box holds a draft, a run is going or a failure shows | The key, from the prompt |
+| Desktop app and mobile | The glyph as a button, shown on an empty prompt box too | A click or a tap. Claude Code hands a key to a trigger on the terminal only |
 
 - The model of the session writes the rewrite at low effort, with the session before the draft, so it knows what `the second one` refers to. Before the first request of a session and right after `/clear`, Sonnet writes it from the draft alone.
 - The rewrite keeps the language of the draft and every fact, path, code block and slash command in it. [`optimizer-prompt.mts`](optimizer-prompt.mts) holds the rules, taken from [Prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices.md).
@@ -90,11 +90,16 @@ The key is the one Claude Code binds to `app:cycleDiffBase`, because the trigger
    }
    ```
 
-4. Run `/config` and set **Chord of the prompt optimizer** to the name of your key, such as `option+i`. The trigger shows that text. It is a label and binds nothing.
+4. In Ghostty with such a keyboard layout, send the key with a line in the Ghostty config instead, then reload the config.
+
+   ```
+   keybind = alt+i=esc:i
+   ```
 
 ## Limits
 
 - While the diff panel of `/diff` is open, the key cycles the comparison base of the panel and does not reach the prompt optimizer.
 - The button in the desktop app and on mobile works only where the app hands the prompt box to mods.
 - A session with a survey above the prompt shows no trigger until the survey is gone.
-- This plugin has one row above the prompt, so the trigger stands under the [progress band](../README.md).
+- This plugin has one row above the prompt, so the trigger shares it with the [progress band](../README.md), which draws in the columns the trigger leaves.
+- The key does nothing in the desktop app and on mobile, because Claude Code presses a trigger by its key on the terminal only.
