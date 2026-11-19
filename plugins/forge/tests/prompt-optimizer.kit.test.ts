@@ -328,9 +328,7 @@ test('a submitted prompt ends undo', async ($, on) => {
   await typeDraft($, world, 'fix bug');
   await ui.press({ key: 'trigger' });
 
-  expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'Undo optimize',
-  );
+  expect((await ui.find({ key: 'trigger' }))?.props.label).toBe('↶');
 
   await $.prompt.submit({
     text: world.draft,
@@ -338,9 +336,7 @@ test('a submitted prompt ends undo', async ($, on) => {
     origin: { kind: 'composer' },
   });
 
-  expect((await ui.find({ key: 'trigger' }))?.props.label).toBe(
-    'Optimize prompt',
-  );
+  expect((await ui.find({ key: 'trigger' }))?.props.label).toBe('✦');
 
   await ui.unmount();
 });
@@ -435,7 +431,7 @@ test('the desktop draws its own tree, with a button on an empty box', async ($, 
 
   expect((await desktop.find({ key: 'trigger' }))?.props).toEqual({
     key: 'trigger',
-    label: 'Optimize prompt',
+    label: '✦',
   });
 
   await desktop.press({ key: 'trigger' });
