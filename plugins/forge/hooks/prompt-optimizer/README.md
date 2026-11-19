@@ -92,7 +92,7 @@ The key is the one Claude Code binds to `app:cycleDiffBase`, because the trigger
 
 4. In Ghostty with such a keyboard layout, send the key with a line in the Ghostty config instead, then reload the config.
 
-   ```
+   ```ini
    keybind = alt+i=esc:i
    ```
 
