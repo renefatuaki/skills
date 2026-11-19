@@ -16,7 +16,7 @@ export const PROVIDERS = ['codex', 'antigravity'] as const;
 
 export type Provider = (typeof PROVIDERS)[number];
 
-/** A limit of a provider under the name the band shows, such as `5h`, with the whole percent left of it. */
+/** A limit of a provider or of the Claude account under the name the band shows, such as `5h`, with the whole percent left of it. */
 export type Limit = {
   readonly name: string;
   readonly left: number;
@@ -37,8 +37,10 @@ export type Run = {
   } | null;
   /** Holds the last read's answer of each provider, null before the read and when the provider cannot be read. */
   readonly budgets: Readonly<Record<Provider, Budget | null>>;
-  /** Holds the whole percent left of Claude Code's current session, its 5-hour window, null before a reading and off a subscription. */
-  readonly claude: number | null;
+  /** Holds the account windows of Claude Code, the 5-hour window as `5h` or else the weekly window as `week`, none before a reading and off a subscription. */
+  readonly claude: readonly Limit[];
+  /** Holds the weekly limit of each model by its display name, none while the account has a 5-hour window or the read fails. */
+  readonly claudeModels: readonly Limit[];
 };
 
 type List = NonNullable<Run['list']>;
@@ -61,21 +63,17 @@ export type Event =
       readonly provider: Provider;
       readonly budget: Budget | null;
     }
-  | { readonly kind: 'claudeMeasured'; readonly left: number | null };
+  | { readonly kind: 'claudeMeasured'; readonly windows: readonly Limit[] }
+  | { readonly kind: 'claudeModelsRead'; readonly models: readonly Limit[] };
 
-/** How a part of the line reads, plain for the progress, quiet for the Claude usage and the usage of a provider, alarm below the minimum of the provider. */
+/** How a part of the line reads, plain for the progress, quiet for a usage, alarm below the minimum of the provider. */
 export type Tone = 'plain' | 'quiet' | 'alarm';
 
-/** The usage left of a provider under its label, each limit that reported it as a reading such as `5h 62%`, alarm when any limit is below the minimum. */
-export type ProviderUsage = {
+/** The usage left of the Claude account or of a provider under its label, each limit that reported it as a reading such as `5h 62%`, alarm when any limit is below the minimum. */
+export type Usage = {
   readonly label: string;
   readonly readings: readonly [string, ...string[]];
   readonly tone: Exclude<Tone, 'plain'>;
-};
-
-/** The Claude usage left of the current session as its window, such as `5h 77%`. */
-export type ClaudeUsage = {
-  readonly window: string;
 };
 
 /** What the band shows of the list. */
@@ -88,22 +86,15 @@ export type Progress = {
   readonly title: string | null;
 };
 
-/** What the band shows for a run on every surface, before a surface lays it out, any of the Claude usage, the progress and the usages of the providers in the order of `PROVIDERS` but never none. */
+/** What the band shows for a run on every surface, before a surface lays it out, the progress and the usages, the Claude usage first and then each provider in the order of `PROVIDERS`, but never neither. */
 export type Band =
   | {
-      readonly claude: ClaudeUsage;
-      readonly progress: Progress | null;
-      readonly usages: readonly ProviderUsage[];
-    }
-  | {
-      readonly claude: null;
       readonly progress: Progress;
-      readonly usages: readonly ProviderUsage[];
+      readonly usages: readonly Usage[];
     }
   | {
-      readonly claude: null;
       readonly progress: null;
-      readonly usages: readonly [ProviderUsage, ...ProviderUsage[]];
+      readonly usages: readonly [Usage, ...Usage[]];
     };
 
 export type Segment = {
@@ -117,7 +108,8 @@ export type BandLine = readonly [Segment, ...Segment[]];
 export const INITIAL_RUN: Run = {
   list: null,
   budgets: { codex: null, antigravity: null },
-  claude: null,
+  claude: [],
+  claudeModels: [],
 };
 
 /** The fewest columns between the progress and the usages at the right edge. */
@@ -162,56 +154,42 @@ export function step(run: Run, event: Event): Run {
         budgets: { ...run.budgets, [event.provider]: event.budget },
       };
     case 'claudeMeasured':
-      return { ...run, claude: event.left };
+      return { ...run, claude: event.windows };
+    case 'claudeModelsRead':
+      return { ...run, claudeModels: event.models };
     default:
       return unreachable(event);
   }
 }
 
-/** Reads what the band shows for the run, null when it has no Claude usage, no list and no usage of a provider. */
+/** Reads what the band shows for the run, null when it has no list and no usage. */
 export function bandOf(run: Run): Band | null {
-  const claude = run.claude === null ? null : { window: `5h ${run.claude}%` };
   const progress = run.list === null ? null : progressOf(run.list);
-  const usages = providerUsages(run.budgets);
-
-  if (claude !== null) {
-    return { claude, progress, usages };
-  }
+  const usages = [...claudeUsages(run), ...providerUsages(run.budgets)];
 
   if (progress !== null) {
-    return { claude: null, progress, usages };
+    return { progress, usages };
   }
 
   const [first, ...rest] = usages;
 
   return first === undefined
     ? null
-    : { claude: null, progress: null, usages: [first, ...rest] };
+    : { progress: null, usages: [first, ...rest] };
 }
 
-/** Lays out the band in characters at the given width, the terminal's one line, the usages of the providers at the right edge and the Claude usage at the left edge, which gives way only once it and the head of the progress no longer fit the columns together. */
+/** Lays out the band in characters at the given width, the terminal's one line, the progress at the left edge and the usages at the right edge, which give way from the last one first. */
 export function bandLine(band: Band, columns: number): BandLine {
-  if (band.progress === null && band.claude === null) {
+  if (band.progress === null) {
     const [first, ...following] = band.usages;
 
     return usagesAlone(usageText(first), following.map(usageText), columns);
   }
 
-  const usages = band.usages.map(usageText);
-
-  if (band.progress === null) {
-    return fitted(claudeText(band.claude, ''), '', usages, columns);
-  }
-
   const head = plain(headOf(band.progress));
   const title = band.progress.title ?? '';
-  const claude = band.claude === null ? null : claudeText(band.claude, ' · ');
 
-  if (claude === null || width(claude.text) + width(head.text) > columns) {
-    return fitted(head, title, usages, columns);
-  }
-
-  return [claude, ...fitted(head, title, usages, columns - width(claude.text))];
+  return fitted(head, title, band.usages.map(usageText), columns);
 }
 
 /** Reads the one JSON line of the `--usage` script of a provider, null when it is no usage report of that provider. */
@@ -226,6 +204,26 @@ export function parseUsage(provider: Provider, stdout: string): Budget | null {
   }
 
   return isRecord(value) ? PROVIDER_SPECS[provider].budgetOf(value) : null;
+}
+
+/** Reads the weekly limit of each model from the body of Claude's usage endpoint, none when it is no usage body. */
+export function parseModelLimits(body: string): Limit[] {
+  let value: unknown;
+
+  try {
+    value = JSON.parse(body);
+  } catch {
+    return [];
+  }
+
+  return isRecord(value) && Array.isArray(value.limits)
+    ? value.limits.flatMap(modelLimit)
+    : [];
+}
+
+/** Turns the percent of a window used into the whole percent left, rounded down and held to 0 to 100. */
+export function leftOf(percentUsed: number): number {
+  return Math.min(100, Math.max(0, Math.floor(100 - percentUsed)));
 }
 
 /** The JSON object of a `--usage` line, whose fields are checked before they are trusted. */
@@ -287,6 +285,25 @@ function shortName(group: string): string {
     );
 
   return words.length === 0 ? 'Gemini' : words.join(' ');
+}
+
+/** Names a weekly limit that is scoped to a model by the display name of the model, leaving out any other limit. */
+function modelLimit(entry: unknown): Limit[] {
+  if (
+    !isRecord(entry) ||
+    entry.kind !== 'weekly_scoped' ||
+    typeof entry.percent !== 'number' ||
+    !isRecord(entry.scope) ||
+    !isRecord(entry.scope.model)
+  ) {
+    return [];
+  }
+
+  const name = entry.scope.model.display_name;
+
+  return typeof name === 'string' && name !== ''
+    ? [{ name, left: leftOf(entry.percent) }]
+    : [];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -395,7 +412,7 @@ function singleLine(title: string): string {
 }
 
 /** Words the usage of each provider that has a budget, in the order of `PROVIDERS`, alarm when any limit has less left than the minimum of the provider. */
-function providerUsages(budgets: Run['budgets']): ProviderUsage[] {
+function providerUsages(budgets: Run['budgets']): Usage[] {
   return PROVIDERS.flatMap(provider => {
     const budget = budgets[provider];
 
@@ -403,9 +420,7 @@ function providerUsages(budgets: Run['budgets']): ProviderUsage[] {
       return [];
     }
 
-    const [first, ...rest] = budget.limits.map(
-      ({ name, left }) => `${name} ${left}%`,
-    );
+    const [first, ...rest] = budget.limits.map(readingOf);
 
     return [
       {
@@ -417,18 +432,27 @@ function providerUsages(budgets: Run['budgets']): ProviderUsage[] {
   });
 }
 
+/** Words the windows and the model limits of the account as the Claude usage, none with none of them. */
+function claudeUsages({ claude, claudeModels }: Run): Usage[] {
+  const [first, ...rest] = [...claude, ...claudeModels].map(readingOf);
+
+  return first === undefined
+    ? []
+    : [{ label: 'Claude', readings: [first, ...rest], tone: 'quiet' }];
+}
+
+/** Writes a limit as its name and the percent left, such as `5h 62%`. */
+function readingOf({ name, left }: Limit): string {
+  return `${name} ${left}%`;
+}
+
 /** Writes the usage as one text, with `(below minimum)` after it in the alarm tone. */
-function usageText({ label, readings, tone }: ProviderUsage): Segment {
+function usageText({ label, readings, tone }: Usage): Segment {
   const text = `${label} ${readings.join(' · ')}`;
 
   return tone === 'alarm'
     ? { text: `${text} (below minimum)`, tone: 'alarm' }
     : { text, tone: 'quiet' };
-}
-
-/** Writes the Claude usage as one text with the separator from the progress after it. */
-function claudeText(usage: ClaudeUsage, separator: string): Segment {
-  return { text: `Claude ${usage.window}${separator}`, tone: 'quiet' };
 }
 
 /** Writes the part of the progress that is never cut, the count with `done` or with the dot before the title. */

@@ -36,9 +36,18 @@ const AGY_LOW_USAGE = '{"groups":{"Gemini Models":12},"belowMinimum":true}\n';
 const AGY_GROUPS_USAGE =
   '{"groups":{"Gemini Models":91,"Gemini 4 Argon":40},"belowMinimum":false}\n';
 
+const CLAUDE_5H = 'Claude 5h 77%';
+
 const CODEX = 'Codex 5h 62% · week 81%';
 
 const AGY = 'Antigravity week 91%';
+
+/** A reading of an account with no 5-hour window, 67% of its week left. */
+const WEEKLY = [{ kind: 'seven_day', percentUsed: 33 }];
+
+/** The body of the usage endpoint with the weekly limit of the Fable model, 43% used. */
+const MODELS_BODY =
+  '{"five_hour":null,"seven_day":{"utilization":33.0},"limits":[{"kind":"weekly_all","percent":33,"scope":null},{"kind":"weekly_scoped","percent":43,"scope":{"model":{"id":null,"display_name":"Fable"},"surface":null}}]}';
 
 /** A reading of the current session with 77.5% left, which the band rounds down to 77%. */
 const SESSION = [
@@ -426,16 +435,16 @@ test('no list and a failed read leave the terminal to the engine and the apps wi
   }
 });
 
-test('the session start with a reading and no list draws the Claude usage alone at the left edge', async ($, on) => {
+test('the session start with a reading and no list draws the Claude usage alone at the right edge', async ($, on) => {
   answerSession(on, SESSION);
   answerEngine(on, 'not json');
   await startSession($);
   await settled();
 
-  expect(await drawn($)).toBe('Claude 5h 77%');
+  expect(await drawn($)).toBe(atEdge('', CLAUDE_5H));
 });
 
-test('the Claude usage comes first, then the progress and the Codex usage at the right edge', async ($, on) => {
+test('the progress stands at the left edge, the Claude usage and the Codex usage at the right edge', async ($, on) => {
   answerSession(on, SESSION);
   answerEngine(on, USAGE);
   await startSession($);
@@ -443,7 +452,7 @@ test('the Claude usage comes first, then the progress and the Codex usage at the
   await settled();
 
   expect(await drawn($)).toBe(
-    atEdge('Claude 5h 77% · 1/3 · Write the parser', CODEX),
+    atEdge('1/3 · Write the parser', CLAUDE_5H, CODEX),
   );
 
   const ui = await $.ui.mount({
@@ -453,26 +462,124 @@ test('the Claude usage comes first, then the progress and the Codex usage at the
     props: PROPS,
   });
 
-  const claude = await ui.find({ type: 'Text', text: /^Claude 5h 77% · $/ });
+  const claude = await ui.find({ type: 'Text', text: /^ +Claude 5h 77%$/ });
 
   expect(claude?.props.dimColor).toBe(true);
 });
 
-test('a measurement draws its new reading, 0% past the window, and hides the usage without a 5-hour window', async ($, on) => {
+test('a measurement draws its new reading, 0% past the window, and the weekly window once the 5-hour window is gone', async ($, on) => {
   answerSession(on, SESSION);
   answerEngine(on, 'not json');
+
+  const { fetches } = answerModels(on, { status: 500, text: '' });
+
   await startSession($);
   await settled();
-  expect(await drawn($)).toBe('Claude 5h 77%');
+  expect(await drawn($)).toBe(atEdge('', CLAUDE_5H));
 
   await measure($, [{ kind: 'five_hour', percentUsed: 60 }]);
-  expect(await drawn($)).toBe('Claude 5h 40%');
+  expect(await drawn($)).toBe(atEdge('', 'Claude 5h 40%'));
 
   await measure($, [{ kind: 'five_hour', percentUsed: 104.5 }]);
-  expect(await drawn($)).toBe('Claude 5h 0%');
+  expect(await drawn($)).toBe(atEdge('', 'Claude 5h 0%'));
+  expect(fetches).toEqual([]);
 
   await measure($, [{ kind: 'seven_day', percentUsed: 40 }]);
+  expect(await drawn($)).toBe(atEdge('', 'Claude week 60%'));
+  expect(fetches.length).toBe(1);
+
+  await measure($, []);
   expect(await drawn($)).toBe('ENGINE');
+});
+
+test('an account with no 5-hour window draws its weekly window alone when it has no first-party login', async ($, on) => {
+  answerSession(on, WEEKLY);
+  answerEngine(on, 'not json');
+
+  const { logins, fetches } = answerModels(on, null);
+
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('', 'Claude week 67%'));
+  expect(logins.length).toBe(1);
+  expect(fetches).toEqual([]);
+});
+
+test('an account with no 5-hour window draws its weekly window and the weekly limit of each model, asked for with the login of the session', async ($, on) => {
+  answerSession(on, WEEKLY);
+  answerEngine(on, USAGE);
+
+  const { fetches } = answerModels(on, { status: 200, text: MODELS_BODY });
+
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  expect(fetches).toEqual([
+    {
+      url: 'https://api.anthropic.com/api/oauth/usage',
+      init: {
+        auth: 'handle-1',
+        headers: { 'anthropic-beta': 'oauth-2025-04-20' },
+      },
+    },
+  ]);
+
+  expect(await drawn($)).toBe(
+    atEdge('1/3 · Write the parser', 'Claude week 67% · Fable 57%', CODEX),
+  );
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const [, , claude] = elementsOf(await drawnTree($, surface));
+
+    expect(elementsOf(claude).map(cellOf)).toEqual([
+      { size: 'caption', dimColor: true, text: 'Claude' },
+      { size: 'caption', tabular: true, text: 'week 67%' },
+      { size: 'caption', dimColor: true, text: '·' },
+      { size: 'caption', tabular: true, text: 'Fable 57%' },
+    ]);
+  }
+});
+
+/** The answers of the endpoint that give no model limit, each of which leaves the weekly window alone. */
+const FAILED_ANSWERS = [
+  { name: 'a refused request', status: 401, text: MODELS_BODY },
+  { name: 'a body that is no JSON', status: 200, text: 'not json' },
+  {
+    name: 'a body with no model limit',
+    status: 200,
+    text: '{"limits":[{"kind":"weekly_scoped"}]}',
+  },
+];
+
+for (const { name, status, text } of FAILED_ANSWERS) {
+  test(`${name} from the endpoint leaves the weekly window`, async ($, on) => {
+    answerSession(on, WEEKLY);
+    answerEngine(on, 'not json');
+    answerModels(on, { status, text });
+    await startSession($);
+    await settled();
+
+    expect(await drawn($)).toBe(atEdge('', 'Claude week 67%'));
+  });
+}
+
+test('an account with a 5-hour window keeps it as it is and never asks the endpoint', async ($, on) => {
+  answerSession(on, SESSION);
+  answerEngine(on, 'not json');
+
+  const { logins, fetches } = answerModels(on, {
+    status: 200,
+    text: MODELS_BODY,
+  });
+
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('', CLAUDE_5H));
+  expect(logins).toEqual([]);
+  expect(fetches).toEqual([]);
 });
 
 test('the session start with no reading draws no Claude usage', async ($, on) => {
@@ -485,7 +592,7 @@ test('the session start with no reading draws no Claude usage', async ($, on) =>
   expect(await drawn($)).toBe(atEdge('1/3 · Write the parser', CODEX));
 });
 
-test('desktop and mobile draw the Claude caption first in the row', async ($, on) => {
+test('desktop and mobile draw the Claude caption first of the captions at the right end', async ($, on) => {
   answerSession(on, SESSION);
   answerEngine(on, USAGE);
   await startSession($);
@@ -494,31 +601,29 @@ test('desktop and mobile draw the Claude caption first in the row', async ($, on
 
   for (const surface of GRAPHICAL_SURFACES) {
     const tree = await drawnTree($, surface);
-    const [claude, ...rest] = elementsOf(tree);
+    const [count, title, claude, ...captions] = elementsOf(tree);
 
     expect({
       row: tree.props,
-      claude: claude?.props,
-      cells: elementsOf(claude).map(cellOf),
-      rest: rest.map(part => cellOf(part).text),
+      before: [count, title].map(part => cellOf(part).text),
+      claude: { props: claude?.props, cells: elementsOf(claude).map(cellOf) },
+      captions: captions.map(part => cellOf(part).text),
     }).toEqual({
       row: { flexDirection: 'row', alignItems: 'center', gap: 'sm' },
+      before: ['1/3', 'Write the parser'],
       claude: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 'xs',
-        flexShrink: 0,
+        props: CAPTION,
+        cells: [
+          { size: 'caption', dimColor: true, text: 'Claude' },
+          { size: 'caption', tabular: true, text: '5h 77%' },
+        ],
       },
-      cells: [
-        { size: 'caption', dimColor: true, text: 'Claude' },
-        { size: 'caption', tabular: true, text: '5h 77%' },
-      ],
-      rest: ['1/3', 'Write the parser', 'Codex5h 62%·week 81%'],
+      captions: ['Codex5h 62%·week 81%'],
     });
   }
 });
 
-test('desktop and mobile with no list draw the Claude caption at the left end and the Codex caption at the right end', async ($, on) => {
+test('desktop and mobile with no list draw the Claude caption and the Codex caption at the right end', async ($, on) => {
   answerSession(on, SESSION);
   answerEngine(on, USAGE);
   await startSession($);
@@ -756,7 +861,7 @@ test('desktop and mobile draw the Antigravity caption next to the Codex caption,
   }
 });
 
-test('desktop and mobile with no list draw the Claude caption at the left end and both captions at the right end', async ($, on) => {
+test('desktop and mobile with no list draw the Claude caption, the Codex caption and the Antigravity caption at the right end', async ($, on) => {
   answerSession(on, SESSION);
   answerProviders(on, [USAGE], [AGY_USAGE]);
   await startSession($);
@@ -764,12 +869,10 @@ test('desktop and mobile with no list draw the Claude caption at the left end an
 
   for (const surface of GRAPHICAL_SURFACES) {
     const tree = await drawnTree($, surface);
-    const [claude, ...captions] = elementsOf(tree);
 
     expect({
       row: tree.props,
-      claude: claude?.props,
-      captions: captions.map(part => cellOf(part).text),
+      captions: elementsOf(tree).map(part => cellOf(part).text),
     }).toEqual({
       row: {
         flexDirection: 'row',
@@ -777,8 +880,7 @@ test('desktop and mobile with no list draw the Claude caption at the left end an
         justifyContent: 'flex-end',
         gap: 'sm',
       },
-      claude: { flexGrow: 1, minWidth: 0 },
-      captions: ['Codex5h 62%·week 81%', 'Antigravityweek 91%'],
+      captions: ['Claude5h 77%', 'Codex5h 62%·week 81%', 'Antigravityweek 91%'],
     });
   }
 });
@@ -796,6 +898,41 @@ function answerSession(on: On, rateLimits: SessionRateLimit[]): void {
   on('session.usage', () => ({
     value: { startedAt: 0, context: { window: 200_000 }, rateLimits },
   }));
+}
+
+/** Answers the plugin's request for the weekly limits per model with the given response, or with no first-party login for null, and returns each login handed out and each request made. */
+function answerModels(
+  on: On,
+  response: { status: number; text: string } | null,
+): { logins: unknown[]; fetches: { url: string; init: unknown }[] } {
+  const logins: unknown[] = [];
+  const fetches: { url: string; init: unknown }[] = [];
+
+  on('session.authorize', () => {
+    const login =
+      response === null
+        ? null
+        : { handle: 'handle-1', kind: 'bearer' as const };
+
+    logins.push(login);
+
+    return { value: login };
+  });
+
+  on('http.fetch', ($, e) => {
+    fetches.push({ url: e.url, init: e.init });
+
+    return {
+      value: {
+        status: response?.status ?? 0,
+        ok: response?.status === 200,
+        headers: {},
+        text: response?.text ?? '',
+      },
+    };
+  });
+
+  return { logins, fetches };
 }
 
 /** Raises the measurement the engine pushes after a turn with the given rate-limit windows and lets the redraw land. */

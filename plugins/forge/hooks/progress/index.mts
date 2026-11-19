@@ -1,4 +1,4 @@
-// Turns the main session's todo calls, provider calls, prompts and usage measurements into events of the run, reads the usage of each provider when the session starts, on each prompt and after each call of its subagent, reads the Claude usage when the session starts, and draws the run above the prompt.
+// Turns the main session's todo calls, provider calls, prompts and usage measurements into events of the run, reads the usage of each provider when the session starts, on each prompt and after each call of its subagent, reads the Claude usage when the session starts and when a measurement moves its windows, and draws the run above the prompt.
 // https://code.claude.com/docs/en/plugins/mods/events.md
 
 import type {
@@ -20,6 +20,8 @@ import {
   bandLine,
   bandOf,
   INITIAL_RUN,
+  leftOf,
+  parseModelLimits,
   parseUsage,
   PROVIDERS,
   step,
@@ -28,11 +30,12 @@ import type {
   Band,
   Budget,
   Event,
+  Limit,
   Progress,
   Provider,
-  ProviderUsage,
   Run,
   Tone,
+  Usage,
 } from './run.mts';
 
 /** The run of the session, written only by `dispatch`. */
@@ -46,6 +49,9 @@ const SCRIPTS: Record<Provider, string> = {
   codex: 'codex-model.mts',
   antigravity: 'antigravity-model.mts',
 };
+
+/** The endpoint that reports the weekly limit per model, which the engine's rate-limit reading leaves out. */
+const USAGE_URL = 'https://api.anthropic.com/api/oauth/usage';
 
 /** Names the origins of a prompt the person sent, so a task notification never dismisses a finished list. */
 const PERSON_ORIGINS: ReadonlySet<PromptOrigin['kind']> = new Set([
@@ -62,7 +68,7 @@ const TONES: Record<Tone, TextProps> = {
 };
 
 /** Colors the readings of a usage caption, which stay in the text color unless below the minimum of the provider. */
-const READING_TONES: Record<ProviderUsage['tone'], TextProps> = {
+const READING_TONES: Record<Usage['tone'], TextProps> = {
   quiet: {},
   alarm: { color: 'error' },
 };
@@ -130,7 +136,9 @@ export const register: Register = on => {
   });
 
   on('session.measure', ($, e, next) => {
-    dispatch($, { kind: 'claudeMeasured', left: sessionLeft(e.rateLimits) });
+    if (e.changed.includes('rateLimits')) {
+      void readClaude($, e.rateLimits);
+    }
 
     return next(e);
   });
@@ -177,7 +185,7 @@ export function progressBand(
     : graphicalBand($.ui.resolve(e), band);
 }
 
-/** Draws the band as one line of characters cut to the columns, the Claude usage at the left edge and the usages of the providers padded to the right edge. */
+/** Draws the band as one line of characters cut to the columns, the progress at the left edge and the usages padded to the right edge. */
 function terminalBand(
   { Text }: Pick<ElementTable, 'Text'>,
   band: Band,
@@ -190,40 +198,20 @@ function terminalBand(
   return Text({ wrap: 'truncate-end', children });
 }
 
-/** Draws the band as a row of the Claude usage as a caption at the left end, the progress and a caption for the usage of each provider at the right end. */
+/** Draws the band as a row of the progress and a caption for each usage at the right end, the Claude caption first. */
 function graphicalBand(
   { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
   band: Band,
 ): RenderElement {
-  const claude =
-    band.claude === null
-      ? []
-      : [
-          usageCaption(
-            { Box, Text },
-            {
-              label: 'Claude',
-              readings: [band.claude.window],
-              tone: 'quiet',
-            },
-          ),
-        ];
-
   const usages = band.usages.map(usage => usageCaption({ Box, Text }, usage));
 
   if (band.progress === null) {
-    // The Claude caption takes the free width, which pushes the captions of the providers to the right end.
     return Box({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'flex-end',
       gap: 'sm',
-      children: [
-        ...claude.map(caption =>
-          Box({ flexGrow: 1, minWidth: 0, children: [caption] }),
-        ),
-        ...usages,
-      ],
+      children: usages,
     });
   }
 
@@ -231,11 +219,7 @@ function graphicalBand(
     flexDirection: 'row',
     alignItems: 'center',
     gap: 'sm',
-    children: [
-      ...claude,
-      ...progressParts({ Box, Text }, band.progress),
-      ...usages,
-    ],
+    children: [...progressParts({ Box, Text }, band.progress), ...usages],
   });
 }
 
@@ -281,10 +265,10 @@ function progressParts(
   return [progress, titleBox];
 }
 
-/** Draws the label such as `Codex` and each reading as small text, the readings and `below minimum` in the error color in the alarm tone. */
+/** Draws the label such as `Claude` and each reading as small text, the readings and `below minimum` in the error color in the alarm tone. */
 function usageCaption(
   { Box, Text }: Pick<ElementTable, 'Box' | 'Text'>,
-  { label, readings, tone }: ProviderUsage,
+  { label, readings, tone }: Usage,
 ): RenderElement {
   const separator = Text({ size: 'caption', dimColor: true, children: ['·'] });
   const parts = readings.flatMap((reading, index) => [
@@ -366,18 +350,55 @@ async function readSessionUsage($: EngineInterface): Promise<void> {
     () => [],
   );
 
-  dispatch($, { kind: 'claudeMeasured', left: sessionLeft(rateLimits) });
+  await readClaude($, rateLimits);
 }
 
-/** Parses the rate-limit windows into the whole percent left of the current session's 5-hour window, rounded down and held to 0 to 100, null with no reading of it. */
-function sessionLeft(rateLimits: readonly SessionRateLimit[]): number | null {
-  const session = rateLimits.find(limit => limit.kind === 'five_hour');
+/** Applies the account windows of a reading at once, then the weekly limit per model, which only an account with no 5-hour window has. */
+async function readClaude(
+  $: EngineInterface,
+  rateLimits: readonly SessionRateLimit[],
+): Promise<void> {
+  const windows = claudeWindows(rateLimits);
 
-  if (session === undefined) {
-    return null;
+  dispatch($, { kind: 'claudeMeasured', windows });
+
+  const models = windows[0]?.name === 'week' ? await readModelLimits($) : [];
+
+  dispatch($, { kind: 'claudeModelsRead', models });
+}
+
+/** Parses the rate-limit windows into the 5-hour window as `5h` or else the weekly window as `week`, each with the whole percent left, none with no reading of either. */
+function claudeWindows(rateLimits: readonly SessionRateLimit[]): Limit[] {
+  const session = rateLimits.find(limit => limit.kind === 'five_hour');
+  const week = rateLimits.find(limit => limit.kind === 'seven_day');
+
+  if (session !== undefined) {
+    return [{ name: '5h', left: leftOf(session.percentUsed) }];
   }
 
-  return Math.min(100, Math.max(0, Math.floor(100 - session.percentUsed)));
+  return week === undefined
+    ? []
+    : [{ name: 'week', left: leftOf(week.percentUsed) }];
+}
+
+/** Reads the weekly limit per model from the usage endpoint with the session's own login, none when there is no first-party login or the read fails. */
+async function readModelLimits($: EngineInterface): Promise<Limit[]> {
+  try {
+    const auth = await $.session.authorize();
+
+    if (auth === null) {
+      return [];
+    }
+
+    const response = await $.http.fetch(USAGE_URL, {
+      auth: auth.handle,
+      headers: { 'anthropic-beta': 'oauth-2025-04-20' },
+    });
+
+    return response.ok ? parseModelLimits(response.text) : [];
+  } catch {
+    return [];
+  }
 }
 
 /** Asks the script of the provider for its usage left with `--usage`, null when Node, the CLI of the provider or the sign-in is missing or the read fails. */

@@ -494,7 +494,7 @@ test('the trigger stands under the progress band in the one row of the plugin', 
   expect({
     row: row.props,
     parts: row.children?.map(part => part.type),
-    progress: (await ui.find({ type: 'Text' }))?.text,
+    progress: (await ui.find({ type: 'Text' }))?.text?.trim(),
     trigger: (await ui.find({ key: 'trigger' }))?.props.label,
   }).toEqual({
     row: { flexDirection: 'column' },
