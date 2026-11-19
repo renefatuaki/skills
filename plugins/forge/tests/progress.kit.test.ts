@@ -492,6 +492,73 @@ test('a measurement draws its new reading, 0% past the window, and the weekly wi
   expect(await drawn($)).toBe('ENGINE');
 });
 
+test('a measurement that moved the context draws it first in the Claude usage, a later one that did not move it keeps it, and a compaction takes it away', async ($, on) => {
+  answerSession(on, SESSION);
+  answerEngine(on, 'not json');
+  await startSession($);
+  await settled();
+
+  await measure($, [{ kind: 'five_hour', percentUsed: 60 }], { percent: 34 });
+  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% · 5h 40%'));
+
+  await measure($, [{ kind: 'five_hour', percentUsed: 62 }]);
+  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% · 5h 38%'));
+
+  await measure($, [{ kind: 'five_hour', percentUsed: 62 }], {});
+  expect(await drawn($)).toBe(atEdge('', 'Claude 5h 38%'));
+});
+
+test('a measurement that moved the context draws it alone off a subscription', async ($, on) => {
+  answerSession(on, []);
+  answerEngine(on, 'not json');
+  await startSession($);
+  await settled();
+
+  await measure($, [], { percent: 34 });
+
+  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34%'));
+});
+
+test('the session start reads the context with the windows, so a resumed session shows it at once', async ($, on) => {
+  answerSession(on, SESSION, { percent: 34 });
+  answerEngine(on, 'not json');
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% · 5h 77%'));
+});
+
+test('a refused read of the session usage draws no context', async ($, on) => {
+  on('session.usage', () => {
+    throw new Error('refused');
+  });
+
+  answerEngine(on, USAGE);
+  await startSession($);
+  await settled();
+
+  expect(await drawn($)).toBe(atEdge('', CODEX));
+});
+
+test('desktop and mobile draw the context as the first reading of the Claude caption', async ($, on) => {
+  answerSession(on, SESSION, { percent: 34 });
+  answerEngine(on, USAGE);
+  await startSession($);
+  await $.tool.call({ tool: 'TodoWrite', todos: [...TODOS] });
+  await settled();
+
+  for (const surface of GRAPHICAL_SURFACES) {
+    const [, , claude] = elementsOf(await drawnTree($, surface));
+
+    expect(elementsOf(claude).map(cellOf)).toEqual([
+      { size: 'caption', dimColor: true, text: 'Claude' },
+      { size: 'caption', tabular: true, text: 'Context 34%' },
+      { size: 'caption', dimColor: true, text: '·' },
+      { size: 'caption', tabular: true, text: '5h 77%' },
+    ]);
+  }
+});
+
 test('an account with no 5-hour window draws its weekly window alone when it has no first-party login', async ($, on) => {
   answerSession(on, WEEKLY);
   answerEngine(on, 'not json');
@@ -893,10 +960,18 @@ const CAPTION = {
   flexShrink: 0,
 };
 
-/** Answers the plugin's read of the session's usage with the given rate-limit windows. */
-function answerSession(on: On, rateLimits: SessionRateLimit[]): void {
+/** Answers the plugin's read of the session's usage with the given rate-limit windows and context, which has no percent before the first response. */
+function answerSession(
+  on: On,
+  rateLimits: SessionRateLimit[],
+  context: { percent?: number } = {},
+): void {
   on('session.usage', () => ({
-    value: { startedAt: 0, context: { window: 200_000 }, rateLimits },
+    value: {
+      startedAt: 0,
+      context: { window: 200_000, ...context },
+      rateLimits,
+    },
   }));
 }
 
@@ -935,15 +1010,16 @@ function answerModels(
   return { logins, fetches };
 }
 
-/** Raises the measurement the engine pushes after a turn with the given rate-limit windows and lets the redraw land. */
+/** Raises the measurement the engine pushes after a turn with the given rate-limit windows and lets the redraw land, with the given context when the fill moved, which has no percent after a compaction. */
 async function measure(
   $: Engine,
   rateLimits: SessionRateLimit[],
+  context?: { percent?: number },
 ): Promise<void> {
   await $.session.measure({
-    context: { window: 200_000 },
+    context: { window: 200_000, ...context },
     rateLimits,
-    changed: ['rateLimits'],
+    changed: context === undefined ? ['rateLimits'] : ['rateLimits', 'context'],
   });
 
   await settled();
