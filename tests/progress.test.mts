@@ -115,7 +115,7 @@ const NO_CONTEXT: Event = { kind: 'contextMeasured', percent: null };
 
 const CLAUDE_5H = 'Claude 5h 77%';
 
-const CLAUDE_CONTEXT_5H = 'Claude Context 34% used · 5h 77%';
+const CLAUDE_CONTEXT_5H = 'Claude Context 34% · 5h 77%';
 
 const CLAUDE_WEEK = 'Claude week 67% · Fable 57%';
 
@@ -360,14 +360,14 @@ const CASES: {
   {
     name: 'the context stands alone in the Claude usage with no window',
     events: [CONTEXT],
-    expected: atEdgeOf('', COLUMNS, ['quiet', 'Claude Context 34% used']),
+    expected: atEdgeOf('', COLUMNS, ['quiet', 'Claude Context 34%']),
   },
   {
     name: 'the context stands before the weekly window and the model limit',
     events: [WEEK, FABLE, CONTEXT],
     expected: atEdgeOf('', COLUMNS, [
       'quiet',
-      'Claude Context 34% used · week 67% · Fable 57%',
+      'Claude Context 34% · week 67% · Fable 57%',
     ]),
   },
   {
@@ -378,12 +378,12 @@ const CASES: {
   {
     name: 'a measurement with no window keeps the context',
     events: [CLAUDE, CONTEXT, { kind: 'claudeMeasured', windows: [] }],
-    expected: atEdgeOf('', COLUMNS, ['quiet', 'Claude Context 34% used']),
+    expected: atEdgeOf('', COLUMNS, ['quiet', 'Claude Context 34%']),
   },
   {
     name: 'the context is the Claude usage beside the Codex usage and the list',
     events: [CONTEXT, OPEN, answer(USAGE)],
-    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', 'Claude Context 34% used'], ['quiet', CODEX])}`,
+    expected: `plain:${LEFT} | ${atEdgeOf(LEFT, COLUMNS, ['quiet', 'Claude Context 34%'], ['quiet', CODEX])}`,
   },
   {
     name: 'an account with no 5-hour window shows its weekly window at the right edge',

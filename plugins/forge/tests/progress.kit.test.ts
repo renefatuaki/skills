@@ -499,10 +499,10 @@ test('a measurement that moved the context draws it first in the Claude usage, a
   await settled();
 
   await measure($, [{ kind: 'five_hour', percentUsed: 60 }], { percent: 34 });
-  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% used · 5h 40%'));
+  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% · 5h 40%'));
 
   await measure($, [{ kind: 'five_hour', percentUsed: 62 }]);
-  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% used · 5h 38%'));
+  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% · 5h 38%'));
 
   await measure($, [{ kind: 'five_hour', percentUsed: 62 }], {});
   expect(await drawn($)).toBe(atEdge('', 'Claude 5h 38%'));
@@ -516,7 +516,7 @@ test('a measurement that moved the context draws it alone off a subscription', a
 
   await measure($, [], { percent: 34 });
 
-  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% used'));
+  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34%'));
 });
 
 test('the session start reads the context with the windows, so a resumed session shows it at once', async ($, on) => {
@@ -525,7 +525,7 @@ test('the session start reads the context with the windows, so a resumed session
   await startSession($);
   await settled();
 
-  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% used · 5h 77%'));
+  expect(await drawn($)).toBe(atEdge('', 'Claude Context 34% · 5h 77%'));
 });
 
 test('a refused read of the session usage draws no context', async ($, on) => {
@@ -552,7 +552,7 @@ test('desktop and mobile draw the context as the first reading of the Claude cap
 
     expect(elementsOf(claude).map(cellOf)).toEqual([
       { size: 'caption', dimColor: true, text: 'Claude' },
-      { size: 'caption', tabular: true, text: 'Context 34% used' },
+      { size: 'caption', tabular: true, text: 'Context 34%' },
       { size: 'caption', dimColor: true, text: '·' },
       { size: 'caption', tabular: true, text: '5h 77%' },
     ]);

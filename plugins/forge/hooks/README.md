@@ -63,8 +63,8 @@ On the terminal the band is one line.
 
 - The progress such as `5/8 · Write the parser` stands at the left edge.
 - The usages stand side by side at the right edge, three columns apart, the Claude usage first.
-- The Claude usage reads `Claude Context 34% used · 5h 77%`. The context reading comes first and shows the share of the context window the session has used, where every other reading shows the share left. With no context figure yet, in a fresh session or just after a compaction, the reading is left out and the usage reads `Claude 5h 77%`. Off a subscription it reads `Claude Context 34% used` alone.
-- An account with no 5-hour window reads `Claude Context 34% used · week 67% · Fable 57%` instead, the context before its weekly window and the weekly limit of each model.
+- The Claude usage reads `Claude Context 34% · 5h 77%`. The context reading comes first and shows the share of the context window the session has used, where every other reading shows the share left. With no context figure yet, in a fresh session or just after a compaction, the reading is left out and the usage reads `Claude 5h 77%`. Off a subscription it reads `Claude Context 34%` alone.
+- An account with no 5-hour window reads `Claude Context 34% · week 67% · Fable 57%` instead, the context before its weekly window and the weekly limit of each model.
 - The Codex usage such as `Codex 5h 62% · week 81%` follows it, then the Antigravity usage such as `Antigravity week 91%`.
 - A narrow line cuts the title first, then leaves out the Antigravity usage once the title would vanish, then the Codex usage by the same rule, and leaves out the Claude usage last.
 

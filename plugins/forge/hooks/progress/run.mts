@@ -72,7 +72,7 @@ export type Event =
 /** How a part of the line reads, plain for the progress, quiet for a usage, alarm below the minimum of the provider. */
 export type Tone = 'plain' | 'quiet' | 'alarm';
 
-/** The usage of the Claude account or of a provider under its label, each limit that reported it as a reading such as `5h 62%` and the Claude context fill as `Context 34% used`, alarm when any limit is below the minimum. */
+/** The usage of the Claude account or of a provider under its label, each limit that reported it as a reading such as `5h 62%` and the Claude context fill as `Context 34%`, alarm when any limit is below the minimum. */
 export type Usage = {
   readonly label: string;
   readonly readings: readonly [string, ...string[]];
@@ -441,7 +441,7 @@ function providerUsages(budgets: Run['budgets']): Usage[] {
 /** Words the context fill, the windows and the model limits of the account as the Claude usage, none with none of them. */
 function claudeUsages({ context, claude, claudeModels }: Run): Usage[] {
   const [first, ...rest] = [
-    ...(context === null ? [] : [`Context ${context}% used`]),
+    ...(context === null ? [] : [`Context ${context}%`]),
     ...[...claude, ...claudeModels].map(readingOf),
   ];
 
