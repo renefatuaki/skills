@@ -1,5 +1,15 @@
 # forge
 
+## 1.14.0
+
+### Minor Changes
+
+- fde2ff8: The progress band shows the weekly Claude limits for an account with no 5-hour window, such as `Claude week 67% · Fable 57%` on the Ultra plan, the weekly limit and the weekly limit of each model. An account with a 5-hour window keeps `Claude 5h 77%`. The Claude usage stands at the right edge as the first of the usages, before the Codex and the Antigravity usage, instead of at the left edge before the progress.
+
+### Patch Changes
+
+- db9e4c5: The trigger of the prompt optimizer is one glyph at the left end of the row above the prompt, so the progress band no longer moves when the trigger shows. The `chord` option is gone, and the README shows the key binding for Ghostty.
+
 ## 1.13.0
 
 ### Minor Changes
