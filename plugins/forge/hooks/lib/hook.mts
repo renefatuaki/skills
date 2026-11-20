@@ -51,6 +51,7 @@ export type HookInput = {
   agent_id?: unknown;
   tool_input?: {
     file_path?: unknown;
+    command?: unknown;
   };
 };
 

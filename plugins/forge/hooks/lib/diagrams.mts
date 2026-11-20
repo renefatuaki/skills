@@ -54,7 +54,7 @@ type Mermaid = {
 const DELIMITER_ROW = /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?$/;
 
 /** The directive that makes Mermaid draw every label as SVG text, as the diagrams skill writes it. Without it a flowchart, a state diagram and a class diagram draw HTML labels, which Safari and Chrome cut off at a page zoom other than 100 %. */
-const SVG_LABELS = '%%{init: {"htmlLabels": false}}%%';
+export const SVG_LABELS = '%%{init: {"htmlLabels": false}}%%';
 
 /** Matches the keyword of a type that draws HTML labels without the directive. */
 const HTML_LABEL_KEYWORD =
@@ -91,6 +91,11 @@ export const linkedDiagrams: RuleSet = {
     'Diagrams that link a changed file (diagrams skill). Check that each one still shows what the code does, and update it when it does not',
   check: checkLinked,
 };
+
+/** Counts the diagrams in a Markdown text that draw HTML labels, for a text that reaches GitHub without a file. */
+export function countHtmlLabelDiagrams(markdown: string): number {
+  return diagramsOf(markdown).filter(drawsHtmlLabels).length;
+}
 
 /** Builds the Mermaid of the checkout once and parses every diagram of each changed Markdown file. */
 async function checkSyntax(changes: Changes): Promise<Finding[]> {
