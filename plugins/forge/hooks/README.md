@@ -10,6 +10,7 @@ flowchart TD
   hooksJson -->|"when a session starts"| sessionContext["Hand Claude the transcript of the session and the root of the plugin"]
   hooksJson -->|"before an Edit or a Write"| loadCommentRules["Deny the edit of a source file until the comment rules are in the context of the agent"]
   hooksJson -->|"before a Bash command"| checkDiagramLabels["Deny a gh command whose text holds a diagram that draws HTML labels"]
+  hooksJson -->|"before a Bash command"| checkPullRequestAuthor["Deny a gh command that opens a pull request without the token of the GitHub App"]
   hooksJson -->|"when a prompt starts, before an Edit or a Write, and when a turn or a subagent stops"| checkTurn["Note the turn and its edits, and check what it changed when it stops"]
   hooksJson -->|"when Claude Code loads the plugin"| module["Register the hooks of the progress band and of the prompt optimizer, and join what the two draw into the one row above the prompt"]
   module -->|"when a session starts, on a todo or task call, a Codex call, an Antigravity call, a prompt, a usage measurement, a context measurement and /clear"| progress["Turn what happens in the main session into events of the run and draw the run above the prompt"]
@@ -28,6 +29,8 @@ flowchart TD
   loadCommentRules --> hook
   checkDiagramLabels --> hook
   checkDiagramLabels --> diagrams
+  checkPullRequestAuthor --> hook
+  checkPullRequestAuthor --> githubApp["Find the folder of the configuration of the GitHub App"]
   sessionContext --> hook
   progress --> run["Fold each event into the run, read what the band shows and lay out its terminal line"]
   progress -->|"when a session starts, on each prompt and after a Codex call"| codexModel["Report the Codex usage left and whether either window is below the minimum"]
@@ -40,6 +43,8 @@ flowchart TD
 | `sessionContext` | [`session-context.mts`](session-context.mts) |
 | `loadCommentRules` | [`load-comment-rules.mts`](load-comment-rules.mts) |
 | `checkDiagramLabels` | [`check-diagram-labels.mts`](check-diagram-labels.mts) |
+| `checkPullRequestAuthor` | [`check-pull-request-author.mts`](check-pull-request-author.mts) |
+| `githubApp` | [`../skills/github/pull-request/scripts/github-app.mts`](../skills/github/pull-request/scripts/github-app.mts) |
 | `checkTurn` | [`check-turn.mts`](check-turn.mts) |
 | `changes` | [`lib/changes.mts`](lib/changes.mts) |
 | `comments` | [`lib/comments.mts`](lib/comments.mts) |
@@ -55,7 +60,7 @@ flowchart TD
 | `antigravity` | [`../skills/workflow/engineering/scripts/antigravity-model.mts`](../skills/workflow/engineering/scripts/antigravity-model.mts) |
 | `promptOptimizer` | [`prompt-optimizer/README.md`](prompt-optimizer/README.md) |
 
-The session hook informs. `loadCommentRules` denies the edit of a source file once, until the transcript of the agent holds the comment rules and the guide of the language, and stays silent when it cannot read the transcript. `checkDiagramLabels` denies a `gh` command whose text, such as the body of a pull request, an issue or a comment, holds a `flowchart`, a `stateDiagram-v2` or a `classDiagram` without the line `%%{init: {"htmlLabels": false}}%%`, because that text reaches GitHub without a file the turn hook could check. The turn hook blocks the end of a turn once when a file the turn changed breaks a rule, and stays silent on the stop after it. A hook that has nothing to report prints nothing.
+The session hook informs. `loadCommentRules` denies the edit of a source file once, until the transcript of the agent holds the comment rules and the guide of the language, and stays silent when it cannot read the transcript. `checkDiagramLabels` denies a `gh` command whose text, such as the body of a pull request, an issue or a comment, holds a `flowchart`, a `stateDiagram-v2` or a `classDiagram` without the line `%%{init: {"htmlLabels": false}}%%`, because that text reaches GitHub without a file the turn hook could check. `checkPullRequestAuthor` denies a `gh pr create` that no `GH_TOKEN` assignment precedes when `~/.config/forge/github-app.json` exists, because the pull request would carry the user as its author and the user could not approve it. The turn hook blocks the end of a turn once when a file the turn changed breaks a rule, and stays silent on the stop after it. A hook that has nothing to report prints nothing.
 
 `module.mts` is the hooks module of the plugin, named under `modules` in `hooks.json`, which takes one module per plugin. It runs inside Claude Code with no Node and registers the hooks of `progress/` and of `prompt-optimizer/`. A hooks module takes each event once and a plugin has one row above the prompt. So `module.mts` itself hooks the prompt and the band, hands the prompt to both parts and puts the trigger of the prompt optimizer at the left end of the row, before the progress band.
 
