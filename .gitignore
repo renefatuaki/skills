@@ -7,3 +7,5 @@ node_modules
 # Claude Code local state
 .claude
 
+# Claude Code writes this next to a plugin it loads, pointing at the types in .claude-plugin/types, which exist only on this machine
+/plugins/*/tsconfig.json
