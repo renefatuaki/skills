@@ -28,6 +28,8 @@ permissions: {}
 jobs:
   check:
     name: Check
+    # A lower layer of a stack runs no checks, the top layer holds every commit of the stack.
+    if: ${{ !startsWith(github.head_ref, 'stack/') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read # check out the repository
