@@ -1,0 +1,9 @@
+// Checks the Node scripts of the plugin in the editor with the settings of the repository. Claude Code writes a tsconfig.json of its own here when the folder has none, one that extends .claude-plugin/types and reports false errors in those scripts.
+{
+  // Specify a file or files whose settings this configuration inherits.
+  "extends": "../../tsconfig.json",
+  // Specifies an array of filenames or patterns to include in the program.
+  "include": [
+    "**/*.mts"
+  ]
+}
