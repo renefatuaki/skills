@@ -28,7 +28,7 @@
     "husky": "^9.1.7",
     "markdownlint": "^0.42.1",
     "mermaid": "11.15.0",
-    "oxfmt": "^0.78.0",
+    "oxfmt": "^0.79.0",
     "oxlint": "^1.93.0",
     "typescript": "^7.0.2"
   },
