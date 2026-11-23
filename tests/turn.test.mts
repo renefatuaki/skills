@@ -86,7 +86,10 @@ const FLOW = [
 ].join('\n');
 
 const INTRO =
-  'The forge Stop hook checked every file this turn changed. Fix each line below, then end the turn.';
+  'The forge Stop hook checked every file this turn changed. Fix each line below, then continue the task where you stopped, and end the turn only when the task is done.';
+
+const EDIT_INTRO =
+  'The forge hook checked the file you just edited, old lines included. Fix each line below now, while the file is open, then continue the task.';
 
 const COMMENTS = 'Comment rules (code-comments skill):';
 const DOCS = 'Documentation rules (project-docs skill):';
@@ -118,6 +121,7 @@ runAlias();
 runJournal();
 await runRuleSetFailure();
 runDeadline();
+runEditFindings();
 
 console.log(
   failures === 0
@@ -684,6 +688,102 @@ function runDeadline(): void {
   );
 }
 
+/** Checks the findings that reach Claude right after an Edit, a Write or a MultiEdit, old lines included, and that the stop stays the backstop. */
+function runEditFindings(): void {
+  const repo = makeRepo('after-edit', {
+    'old.ts': BAD_TS,
+    'clean.ts': GOOD_TS,
+    'src/linked.ts': GOOD_TS,
+    'src/old.ts': GOOD_TS,
+    'docs/README.md': README,
+  });
+
+  hook(prompt('e1', repo));
+  hook(edit('e1', repo, join(repo, 'old.ts')));
+  write(
+    join(repo, 'old.ts'),
+    `export const value = 2;\n\n// Uses a dash — here.\n`,
+  );
+
+  expect(
+    'a finding on an old line of the edited file reaches Claude right after the edit',
+    edited('e1', repo, join(repo, 'old.ts')),
+    [EDIT_INTRO, '', COMMENTS, `old.ts:3 ${DASH}`].join('\n'),
+  );
+
+  expect(
+    'the edit of a file without a finding stays silent',
+    edited('e1', repo, join(repo, 'clean.ts')),
+    '',
+  );
+
+  write(join(repo, 'docs/guide.md'), BAD_DOC);
+
+  expect(
+    'the documentation rules run on the edited file',
+    edited('e1', repo, join(repo, 'docs/guide.md')),
+    [
+      EDIT_INTRO,
+      '',
+      DOCS,
+      'docs/guide.md:1 unlinked Link this file from the README table.',
+      `docs/guide.md:3 ${DASH}`,
+    ].join('\n'),
+  );
+
+  write(join(repo, 'src/linked.ts'), `${GOOD_TS}export const more = 3;\n`);
+
+  expect(
+    'a diagram that links the edited file waits for the stop',
+    edited('e1', repo, join(repo, 'src/linked.ts')),
+    '',
+  );
+
+  expect(
+    'the stop stays the backstop and names the old file again',
+    stop('e1', repo),
+    [
+      INTRO,
+      '',
+      COMMENTS,
+      `old.ts:3 ${DASH}`,
+      '',
+      DOCS,
+      'docs/guide.md:1 unlinked Link this file from the README table.',
+      `docs/guide.md:3 ${DASH}`,
+      '',
+      LINKED,
+      'docs/README.md:5 linked src/linked.ts',
+    ].join('\n'),
+  );
+
+  expect(
+    'a file the deadline cuts short stays silent after the edit',
+    edited('e1', repo, join(repo, 'old.ts')),
+    '',
+    { FORGE_CHECK_BUDGET_MS: '0' },
+  );
+
+  check(
+    'the findings come as additional context of PostToolUse',
+    JSON.parse(rawOutput(edited('e1', repo, join(repo, 'old.ts')))) as unknown,
+    {
+      hookSpecificOutput: {
+        hookEventName: 'PostToolUse',
+        additionalContext: [EDIT_INTRO, '', COMMENTS, `old.ts:3 ${DASH}`].join(
+          '\n',
+        ),
+      },
+    },
+  );
+
+  expect(
+    'a PostToolUse input without a file stays silent',
+    { hook_event_name: 'PostToolUse', session_id: 'e1', cwd: repo },
+    '',
+  );
+}
+
 /** Returns the input of UserPromptSubmit. */
 function prompt(session: string, cwd: string): Record<string, unknown> {
   return {
@@ -708,6 +808,22 @@ function edit(
     tool_name: 'Write',
     tool_input: { file_path: path },
     ...(agent === undefined ? {} : { agent_id: agent }),
+  };
+}
+
+/** Returns the input of PostToolUse for a Write, which fires after the file changed. */
+function edited(
+  session: string,
+  cwd: string,
+  path: string,
+): Record<string, unknown> {
+  return {
+    hook_event_name: 'PostToolUse',
+    session_id: session,
+    cwd,
+    tool_name: 'Write',
+    tool_input: { file_path: path },
+    tool_response: { filePath: path, type: 'update' },
   };
 }
 
@@ -828,8 +944,36 @@ function write(path: string, content: string): void {
   writeFileSync(path, content);
 }
 
-/** Runs the hook as Claude Code would, with the journals of this run, and returns the reason it blocks with, empty for silence. */
+/** Runs the hook as Claude Code would, with the journals of this run, and returns the reason it blocks with or the context it adds, empty for silence. */
 function hook(
+  input: Record<string, unknown>,
+  env: Record<string, string> = {},
+): string {
+  const stdout = rawOutput(input, env);
+
+  if (stdout === '') {
+    return '';
+  }
+
+  const output: {
+    decision?: string;
+    reason?: string;
+    hookSpecificOutput?: { hookEventName: string; additionalContext: string };
+  } = JSON.parse(stdout);
+
+  if (output.decision === 'block') {
+    return output.reason ?? '';
+  }
+
+  if (output.hookSpecificOutput?.hookEventName === 'PostToolUse') {
+    return output.hookSpecificOutput.additionalContext;
+  }
+
+  throw new Error(`hook printed ${stdout}`);
+}
+
+/** Runs the hook as Claude Code would, with the journals of this run, and returns what it prints. */
+function rawOutput(
   input: Record<string, unknown>,
   env: Record<string, string> = {},
 ): string {
@@ -843,19 +987,7 @@ function hook(
     throw new Error(`hook exited with ${result.status}: ${result.stderr}`);
   }
 
-  if (result.stdout === '') {
-    return '';
-  }
-
-  const output: { decision: string; reason: string } = JSON.parse(
-    result.stdout,
-  );
-
-  if (output.decision !== 'block') {
-    throw new Error(`hook printed ${result.stdout}`);
-  }
-
-  return output.reason;
+  return result.stdout;
 }
 
 /** Blocks until the clock enters the next second, so writes before it fall before the start of the turn the next prompt opens. */
