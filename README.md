@@ -90,7 +90,7 @@ The skills of the plugin live in one folder per category.
 | [`docs`](plugins/forge/skills/docs) | diagrams, project-docs, unslop, technical-writing | write documentation and prose |
 | [`clean-code`](plugins/forge/skills/clean-code) | clean-code, code-comments, trim-edge-cases, typescript-best-practices | write readable code and keep cases that never occur out of it |
 | [`git`](plugins/forge/skills/git) | commit, tidy-history | write commits and tidy the history of a branch |
-| [`github`](plugins/forge/skills/github) | issue, project, pull-request, pull-request-review, review-queue, next-steps, cleanup-merged, templates, today-issues, loop-on-ci | plan and ship work on GitHub |
+| [`github`](plugins/forge/skills/github) | issue, project, pull-request, pull-request-review, release, review-queue, next-steps, cleanup-merged, templates, today-issues, loop-on-ci | plan and ship work on GitHub |
 | [`tooling`](plugins/forge/skills/tooling) | package-manager | run the package manager of the repository |
 
 A skill with `disable-model-invocation: true` in its frontmatter starts only through its slash command. The engineering skill and its playbooks read such a skill from its `SKILL.md` instead.

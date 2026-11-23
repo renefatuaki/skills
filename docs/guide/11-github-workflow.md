@@ -108,6 +108,14 @@ GitHub closes an issue by the `Closes` keyword of a PR only when the PR merges i
 
 A worktree with uncommitted changes to tracked files and a branch with commits the PR does not hold stay, and the reply says why, together with the issues the PR only refers to. When a folder outlives its worktree on files git cannot delete, the reply hands you one `! rm -rf` line to run.
 
+## Release dev to the default branch
+
+```text
+/release
+```
+
+The [`release`](../../plugins/forge/skills/github/release/SKILL.md) skill opens one PR from `dev` to the default branch, or updates the open one. Run it in a repository, or in a folder of repositories to release each one whose `dev` is ahead. Name repositories to release only those, such as `/release api db`. It ships `dev` as it is and pushes nothing. The description lists the merged PRs it ships and closes their issues, because GitHub closes an issue only once its PR reaches the default branch. It names every workflow or deploy the merge starts, with a link to its runs. The test plan holds only what production shows for the first time, such as the deploy run, and never a step the shipped PRs already ran. Your GitHub App opens it like any other PR, so you approve and merge it.
+
 ## Plan a day of tickets
 
 ```text
