@@ -111,6 +111,10 @@ Write the reply clean as you draft it. A cleanup pass after drafting does not re
 - **Frame impact for the consumer and the maintainer.** Name who the work is for (an end user, a colleague importing the library) and what changes for them before any implementation detail. Then what the next engineer who owns this code inherits. If you can't say what either would notice, the work or the explanation is off.
 - **Never fabricate a link, citation, or transcript reference.** Link only artifacts you produced or read this session.
 - **Every claim carries its evidence or its label in the same sentence.** Measured, inferred, or guess. A prediction or an unseen cause is a guess. Never hand the human a check you could run.
+- **Open decisions go out as questions.** Ask every open decision at the end of a reply in the same turn through the AskUserQuestion tool, a round of the grilling skill included. Never list them in prose. Each question holds one decision, with the recommended option first, marked "(Recommended)". More than four decisions take several calls.
+- **Facts before the question.** Write the facts and research the decisions need as text in the same message, before the AskUserQuestion call. Each question then opens with one line of context.
+- **Options in plain words.** Each option says in one plain sentence what changes for the user. Explain a term of art in a few words, such as "SKU, an ID for the app that only you see". A number in an option comes only from a measurement shown earlier in the turn.
+- **A default over a forced choice.** When the options do not exclude each other, offer one as the default and say that the other stays possible on request.
 
 Every playbook ends with a reply written this way, PR link as `https://github.com/<owner>/<repo>/pull/<number>`. Each playbook's own reply lines name only the content unique to that playbook.
 
