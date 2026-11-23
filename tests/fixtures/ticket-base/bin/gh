@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Stands in for gh and answers `gh repo view` and the Ticket and Board queries of the ticket-base script from the board FAKE_GH_DATA holds, one page of board items per array entry.
+// Stands in for gh and answers `gh repo view` and the Ticket and Board queries of the ticket-base script from the board FAKE_GH_DATA holds, one page of board items per array entry and the files of the default branch that the case sets.
 
 const { readFileSync } = require('node:fs');
 
@@ -17,6 +17,12 @@ if (command === 'repo') {
       checkout: {
         defaultBranchRef: { name: 'main' },
         dev: data.dev ? { name: 'dev' } : null,
+        claude: null,
+        agents: null,
+        dependabot: null,
+        workflows: null,
+        pullRequests: { nodes: [] },
+        ...data.trunkFiles,
       },
       ticket: { issue: data.issue },
     });
