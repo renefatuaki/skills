@@ -15,11 +15,12 @@ Use when waiting for CI results, CI has failed, or when proactively monitoring b
 
 ## Workflow
 
-1. Determine current branch: `git branch --show-current`
-2. Resolve the PR: `gh pr view --json number,url,headRefName`
-3. Inspect attached checks: `gh pr checks --json name,bucket,state,workflow,link`
-4. If checks are pending, watch: `gh pr checks --watch --fail-fast`
-5. If a GitHub Actions check failed, fetch logs with `gh run view <run-id> --log-failed`; otherwise, return the check link and concise next step.
+1. Take the PR number and the head SHA from the brief. When the brief names neither, read them once: `gh pr view --json number,headRefOid,url`.
+2. Inspect attached checks: `gh pr checks <number> --json name,bucket,state,workflow,link`
+3. If checks are pending, watch in the foreground with the Bash timeout at 600000: `gh pr checks <number> --watch --fail-fast --interval 30`. When the call ends with checks still pending, read the head SHA with `gh pr view <number> --json headRefOid`. Run the watch again while it equals the SHA of step 1. When it differs, stop and report that the head changed, with both SHAs.
+4. If a GitHub Actions check failed, fetch logs with `gh run view <run-id> --log-failed`; otherwise, return the check link and concise next step.
+
+Never use `run_in_background`, Monitor or `sleep`.
 
 ## Output
 
