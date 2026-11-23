@@ -40,4 +40,4 @@ Done when every comment in the touched symbol is one content line, punctuated, f
 
 A PreToolUse hook denies the first edit of a code file until the rules and the guide of its language are in your context, and hands them to you in the denial. Repeat the edit with its comments following them.
 
-When a turn ends, a Stop hook scans every file the turn changed, however it changed, for em-dashes, semicolons, comment blocks longer than two content lines, and `TODO`/`FIXME` without a link. When it reports `path:line rule`, fix each reported line, then end the turn. Silence means the mechanical rules pass, the rules above still apply.
+Right after each Edit or Write, and again when a turn ends, a hook scans the file, or every file the turn changed, however it changed, for em-dashes, semicolons, comment blocks longer than two content lines, and `TODO`/`FIXME` without a link. The scan reads old lines too. When it reports `path:line rule`, fix each reported line, then continue the task where you stopped. Silence means the mechanical rules pass, the rules above still apply.

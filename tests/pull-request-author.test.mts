@@ -23,7 +23,18 @@ const tokenScript = join(
   'app-token.mts',
 );
 
-const REASON = `This opens the pull request under the user's login, so the user cannot approve it. Open it as the user's GitHub App. Run the pull-request skill, or put GH_TOKEN="$(node ${tokenScript})" before gh pr create.`;
+const appScript = join(
+  root,
+  'plugins',
+  'forge',
+  'skills',
+  'github',
+  'pull-request',
+  'scripts',
+  'gh-as-app.mts',
+);
+
+const REASON = `This opens the pull request under the user's login, so the user cannot approve it. Open it as the user's GitHub App. Run the pull-request skill, or run node ${appScript} pr create in place of gh pr create.`;
 
 const CASES: {
   name: string;
@@ -44,6 +55,21 @@ const CASES: {
   {
     name: 'pull request after the token was unset is denied',
     command: 'unset GH_TOKEN; gh pr create --fill',
+    expected: REASON,
+  },
+  {
+    name: 'pull request through the gh-as-app script is silent',
+    command: `node ${appScript} pr create --base dev --title "fix: typo" --body-file - <<'EOF'\nFixes it.\nEOF`,
+    expected: null,
+  },
+  {
+    name: 'pull request through the gh-as-app script with a repository is silent',
+    command: `cd /tmp && node ${appScript} pr create --repo owner/name --fill`,
+    expected: null,
+  },
+  {
+    name: 'bare pull request after a call of the gh-as-app script is denied',
+    command: `node ${appScript} pr view 12 && gh pr create --fill`,
     expected: REASON,
   },
   {
