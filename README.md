@@ -86,7 +86,7 @@ The skills of the plugin live in one folder per category.
 | [`workflow`](plugins/forge/skills/workflow) | engineering, how, why, architect, arena, interrogate, swarm, blast-radius, figure-it-out, tdd, show-me-your-work | the frame and the tools a playbook runs |
 | [`principles`](plugins/forge/skills/principles) | 24 principles, such as prove-it-works | the rules a playbook names for each decision |
 | [`verification`](plugins/forge/skills/verification) | control-ui, control-cli, verify-this, create-verification-skill, maintain-verification-skill, create-formal-verification-skill, maintain-formal-verification-skill, benchmark-checklist | drive the running application and check a claim |
-| [`meta`](plugins/forge/skills/meta) | reflect, correct, recall, automate-me, teach, bro, sharpen, in-your-own-words, setup-models | learn from past sessions, explain, sharpen a prompt, and configure the models |
+| [`meta`](plugins/forge/skills/meta) | reflect, correct, recall, automate-me, teach, bro, sharpen, in-your-own-words, setup-models, clipboard | learn from past sessions, explain, sharpen a prompt, configure the models, and hand a text to paste to the clipboard |
 | [`docs`](plugins/forge/skills/docs) | diagrams, project-docs, unslop, technical-writing | write documentation and prose |
 | [`clean-code`](plugins/forge/skills/clean-code) | clean-code, code-comments, trim-edge-cases, typescript-best-practices | write readable code and keep cases that never occur out of it |
 | [`git`](plugins/forge/skills/git) | commit, tidy-history | write commits and tidy the history of a branch |
