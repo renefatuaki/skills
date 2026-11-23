@@ -7,7 +7,12 @@ import { readFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { deny, type HookInput, readHookInput } from './lib/hook.mts';
+import {
+  deny,
+  type HookInput,
+  readHookInput,
+  transcriptOf,
+} from './lib/hook.mts';
 import { LANGUAGES } from './lib/languages.mts';
 
 /** A document of the code-comments skill the agent needs and the marker that shows it in the transcript. */
@@ -63,32 +68,6 @@ function main(): void {
       'The code-comments rules apply to every code edit. They follow below. Repeat the edit with its comments following them.',
       ...missing.flatMap(document => ['', `${document.path}:`, document.body]),
     ].join('\n'),
-  );
-}
-
-/** The transcript of the agent that makes the call, which for a subagent is its own file below the session folder. */
-function transcriptOf(input: HookInput): string | null {
-  const { transcript_path, session_id, agent_id } = input;
-
-  if (typeof transcript_path !== 'string') {
-    return null;
-  }
-
-  if (agent_id === undefined) {
-    return transcript_path;
-  }
-
-  if (typeof agent_id !== 'string' || typeof session_id !== 'string') {
-    return null;
-  }
-
-  const name = agent_id.startsWith('agent-') ? agent_id : `agent-${agent_id}`;
-
-  return join(
-    dirname(transcript_path),
-    session_id,
-    'subagents',
-    `${name}.jsonl`,
   );
 }
 

@@ -11,6 +11,7 @@ flowchart TD
   hooksJson -->|"before an Edit or a Write"| loadCommentRules["Deny the edit of a source file until the comment rules are in the context of the agent"]
   hooksJson -->|"before a Bash command"| checkDiagramLabels["Deny a gh command whose text holds a diagram that draws HTML labels"]
   hooksJson -->|"before a Bash command"| checkPullRequestAuthor["Deny a gh command that opens a pull request without the token of the GitHub App"]
+  hooksJson -->|"before an AskUserQuestion call"| checkQuestionText["Deny a question that follows no text of the message that asks it"]
   hooksJson -->|"when a prompt starts, before and after an Edit or a Write, and when a turn or a subagent stops"| checkTurn["Note the turn and its edits, check the file an edit just wrote, and check what the turn changed when it stops"]
   hooksJson -->|"when Claude Code loads the plugin"| module["Register the hooks of the progress band and of the prompt optimizer, and join what the two draw into the one row above the prompt"]
   module -->|"when a session starts, on a todo or task call, a Codex call, an Antigravity call, a prompt, a usage measurement, a context measurement and /clear"| progress["Turn what happens in the main session into events of the run and draw the run above the prompt"]
@@ -30,6 +31,7 @@ flowchart TD
   checkDiagramLabels --> hook
   checkDiagramLabels --> diagrams
   checkPullRequestAuthor --> hook
+  checkQuestionText --> hook
   checkPullRequestAuthor --> githubApp["Find the folder of the configuration of the GitHub App"]
   sessionContext --> hook
   progress --> run["Fold each event into the run, read what the band shows and lay out its terminal line"]
@@ -45,6 +47,7 @@ flowchart TD
 | `checkDiagramLabels` | [`check-diagram-labels.mts`](check-diagram-labels.mts) |
 | `checkPullRequestAuthor` | [`check-pull-request-author.mts`](check-pull-request-author.mts) |
 | `githubApp` | [`../skills/github/pull-request/scripts/github-app.mts`](../skills/github/pull-request/scripts/github-app.mts) |
+| `checkQuestionText` | [`check-question-text.mts`](check-question-text.mts) |
 | `checkTurn` | [`check-turn.mts`](check-turn.mts) |
 | `changes` | [`lib/changes.mts`](lib/changes.mts) |
 | `comments` | [`lib/comments.mts`](lib/comments.mts) |
@@ -60,7 +63,7 @@ flowchart TD
 | `antigravity` | [`../skills/workflow/engineering/scripts/antigravity-model.mts`](../skills/workflow/engineering/scripts/antigravity-model.mts) |
 | `promptOptimizer` | [`prompt-optimizer/README.md`](prompt-optimizer/README.md) |
 
-The session hook informs. `loadCommentRules` denies the edit of a source file once, until the transcript of the agent holds the comment rules and the guide of the language, and stays silent when it cannot read the transcript. `checkDiagramLabels` denies a `gh` command whose text, such as the body of a pull request, an issue or a comment, holds a `flowchart`, a `stateDiagram-v2` or a `classDiagram` without the line `%%{init: {"htmlLabels": false}}%%`, because that text reaches GitHub without a file the turn hook could check. `checkPullRequestAuthor` denies a `gh pr create` that no `GH_TOKEN` assignment precedes when `~/.config/forge/github-app.json` exists, and names the `gh-as-app.mts` script that runs it as the app, because the pull request would carry the user as its author and the user could not approve it. The turn hook hands Claude the findings for a file right after an Edit, a Write or a MultiEdit as additional context, old lines included, so Claude fixes them while the file is open. It runs the rule sets of the stop except the diagrams that link a changed file, which wait for the stop. It blocks the end of a turn once when a file the turn changed breaks a rule, and Claude then fixes the lines and continues the task where it stopped. It stays silent on the stop after it. A hook that has nothing to report prints nothing.
+The session hook informs. `loadCommentRules` denies the edit of a source file once, until the transcript of the agent holds the comment rules and the guide of the language, and stays silent when it cannot read the transcript. `checkDiagramLabels` denies a `gh` command whose text, such as the body of a pull request, an issue or a comment, holds a `flowchart`, a `stateDiagram-v2` or a `classDiagram` without the line `%%{init: {"htmlLabels": false}}%%`, because that text reaches GitHub without a file the turn hook could check. `checkPullRequestAuthor` denies a `gh pr create` that no `GH_TOKEN` assignment precedes when `~/.config/forge/github-app.json` exists, and names the `gh-as-app.mts` script that runs it as the app, because the pull request would carry the user as its author and the user could not approve it. `checkQuestionText` denies an `AskUserQuestion` call when the assistant output since the last tool result or user message holds no non-empty text block, because the facts and research a decision needs belong in the message before the question and the user cannot see thinking. Claude Code writes the assistant records of a message after PreToolUse has started, so the hook polls the transcript for up to 3 seconds until the record of the call shows, and stays silent when it cannot read the transcript or never finds the call. The turn hook hands Claude the findings for a file right after an Edit, a Write or a MultiEdit as additional context, old lines included, so Claude fixes them while the file is open. It runs the rule sets of the stop except the diagrams that link a changed file, which wait for the stop. It blocks the end of a turn once when a file the turn changed breaks a rule, and Claude then fixes the lines and continues the task where it stopped. It stays silent on the stop after it. A hook that has nothing to report prints nothing.
 
 `module.mts` is the hooks module of the plugin, named under `modules` in `hooks.json`, which takes one module per plugin. It runs inside Claude Code with no Node and registers the hooks of `progress/` and of `prompt-optimizer/`. A hooks module takes each event once and a plugin has one row above the prompt. So `module.mts` itself hooks the prompt and the band, hands the prompt to both parts and puts the trigger of the prompt optimizer at the left end of the row, before the progress band.
 
