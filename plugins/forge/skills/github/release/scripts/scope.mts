@@ -61,11 +61,10 @@ function selectFolders(
   }
 
   return names.flatMap(name => {
-    const exact = folders.filter(folder => basename(folder) === name);
-    const selected =
-      exact.length > 0
-        ? exact
-        : folders.filter(folder => basename(folder).endsWith(`-${name}`));
+    const selected = folders.filter(
+      folder =>
+        basename(folder) === name || basename(folder).endsWith(`-${name}`),
+    );
 
     if (selected.length === 0) {
       throw new Error(`No repository named "${name}" in scope.`);

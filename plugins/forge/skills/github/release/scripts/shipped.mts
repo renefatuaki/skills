@@ -58,13 +58,11 @@ export function releaseIssues(
 /** Reads the issues a description closes, leaving out the comments a template keeps, which can hold an example such as `Closes #123`. */
 export function closedIssues(body: string, repository: string): string[] {
   const text = body.replace(HTML_COMMENT, '');
-  const issues = [...text.matchAll(CLOSING_REFERENCE)].map(
+
+  return [...text.matchAll(CLOSING_REFERENCE)].map(
     ([, nameWithOwner, number]) =>
-      nameWithOwner === undefined ||
-      nameWithOwner.toLowerCase() === repository.toLowerCase()
+      nameWithOwner === undefined || nameWithOwner === repository
         ? `#${number}`
         : `${nameWithOwner}#${number}`,
   );
-
-  return [...new Set(issues)];
 }

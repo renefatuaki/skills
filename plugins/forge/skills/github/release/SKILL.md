@@ -17,7 +17,7 @@ Opens one release pull request per repository, from `dev` to the default branch,
    node ${CLAUDE_SKILL_DIR}/scripts/releases.mts [repository …]
    ```
 
-   Inside a repository it reads that repository. Elsewhere it reads every checkout one level below the working directory. A name selects the folder of that name, or the one whose name ends with `-<name>`. It prints JSON with two lists:
+   Inside a repository it reads that repository. Elsewhere it reads every checkout one level below the working directory. A name selects each folder of that name or whose name ends with `-<name>`. It prints JSON with two lists:
    - `releases`, one per repository whose `dev` is ahead of its default branch. Each holds its `path`, its `repository` as `<owner>/<repo>`, its `defaultBranch`, the open release `pullRequest` or null, the `shipped` pull requests whose merge commit `dev` holds beyond the default branch, and all their `issues`. Each shipped pull request holds the `issues` its description closes and its `openSteps`, the numbers of its unticked test steps.
    - `skipped`, every other repository with its `reason`.
 
