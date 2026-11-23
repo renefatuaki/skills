@@ -117,7 +117,7 @@ function printUsage(): void {
       '  node scripts/antigravity-companion.mts setup [--enable-review-gate|--disable-review-gate] [--json]',
       '  node scripts/antigravity-companion.mts review [--wait|--background] [--base <ref>] [--scope <auto|working-tree|branch>] [--model <model>] [--effort <effort>] [--timeout <minutes>]',
       '  node scripts/antigravity-companion.mts adversarial-review [--wait|--background] [--base <ref>] [--scope <auto|working-tree|branch>] [--model <model>] [--effort <effort>] [--timeout <minutes>] [focus text]',
-      '  node scripts/antigravity-companion.mts task [--background] [--write] [--resume-last|--resume|--fresh] [--model <flash|pro|argon|carbon|gemini-...>] [--effort <low|medium|high|xhigh|max>] [--timeout <minutes>] [--prompt-file <path>] [prompt]',
+      '  node scripts/antigravity-companion.mts task [--background] [--write] [--resume-last|--resume|--fresh] [--model <flash|hydrogen|argon|neon|carbon|gemini-...>] [--effort <low|medium|high|xhigh|max>] [--timeout <minutes>] [--prompt-file <path>] [prompt]',
       '  node scripts/antigravity-companion.mts status [job-id] [--wait] [--timeout-ms <ms>] [--all] [--json]',
       '  node scripts/antigravity-companion.mts result [job-id] [--json]',
       '  node scripts/antigravity-companion.mts cancel [job-id] [--json]',

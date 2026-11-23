@@ -41,15 +41,17 @@ Antigravity is an opt-in third family next to Claude and Codex. It runs through 
 
 With the Claude Code sandbox on, take the companion of the plugin out of the sandbox, as the plugin's [README](../../plugins/antigravity/README.md#sandbox) shows. The sandbox denies writes under `~/.claude`, where the companion keeps its jobs, so without the entry every Antigravity slot falls back to Claude.
 
-Then set a role to `antigravity:<model>/<effort>`, such as `antigravity:pro/high`, or pick it in `/setup-models`. The models are `flash`, `pro`, `argon`, and `carbon`, ascending by strength. `flash`, `pro`, and `argon` run as Gemini Flash, Gemini Pro, and Gemini Argon. No official list names `carbon` yet, so most accounts list no such model. The efforts are the same as for Claude. A Gemini model offers only some of them, so a slot runs the nearest effort its model offers and says so. `argon` at `low` runs `medium`. An Antigravity entry is allowed wherever a Codex entry is, the runners of `/arena` and `/architect` included. To hand one task to Antigravity yourself, run `/antigravity:rescue`, and its README lists the other commands.
+Then set a role to `antigravity:<model>/<effort>`, such as `antigravity:neon/high`, or pick it in `/setup-models`. The models are `flash`, `hydrogen`, `argon`, `neon`, and `carbon`, ascending by strength. They run as Gemini Flash, Gemini Hydrogen, Gemini Argon, Gemini Neon, and Gemini Carbon. The efforts are the same as for Claude. A Gemini model offers only some of them, so a slot runs the nearest effort its model offers and says so. Only `hydrogen` and `neon` offer `xhigh`, so `flash` at `xhigh` runs `high`. An Antigravity entry is allowed wherever a Codex entry is, the runners of `/arena` and `/architect` included. To hand one task to Antigravity yourself, run `/antigravity:rescue`, and its README lists the other commands.
 
-Your Google plan decides which models the `agy` CLI lists for you, as [Antigravity models](https://antigravity.google/docs/models.md) says. A model your plan does not include runs on the Claude model of the same rank instead.
+Your Google plan decides which models the `agy` CLI lists for you, as [Antigravity models](https://antigravity.google/docs/models.md) says. A model your plan does not include runs on the Claude model of the same rank instead. `carbon` is the exception. Without it the slot runs the next smaller Gemini model your plan includes, such as `neon` on Google AI Pro.
 
 | Model | Free and Google AI Plus | Google AI Pro | Google AI Ultra | Enterprise |
 | --- | --- | --- | --- | --- |
 | `flash` (Gemini 3.8 Flash) | yes | yes | yes | yes |
+| `hydrogen` (Gemini 4 Hydrogen) | no | yes, paid and not on trial | yes | yes |
 | `argon` (Gemini 4 Argon) | no | yes, paid or on trial with an eligible premium device | yes | yes |
-| `pro` (Gemini 3.1 Pro) | no | no | no | yes |
+| `neon` (Gemini 4 Neon) | no | yes, paid or on trial with an eligible premium device | yes | yes |
+| `carbon` (Gemini 4 Carbon) | no | no | yes | yes |
 
 Before a run, a slot reads your quota with `/usage` of `agy`. When less than the minimum is left, the slot runs on the Claude model instead. `/setup-models` asks for the minimum and writes it as `antigravity minimum: <percent>%`. Without the line the minimum is 20%. Your AI credits can pay for a run past the quota, and `/usage` does not report them, so set `0%` if you want the slot to run anyway.
 

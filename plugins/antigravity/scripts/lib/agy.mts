@@ -14,7 +14,7 @@ import {
 import type { BinaryStatus, ProgressReporter } from './types.mts';
 
 /** The model names the companion resolves to a slug of `agy models`. */
-const MODEL_NAMES = ['flash', 'pro', 'argon', 'carbon'];
+const MODEL_NAMES = ['flash', 'hydrogen', 'argon', 'neon', 'carbon'];
 
 /** The efforts a slug ends in and `--effort` takes, from the lightest to the heaviest. */
 const EFFORT_LADDER = ['low', 'medium', 'high', 'xhigh', 'max'];

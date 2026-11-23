@@ -132,7 +132,10 @@ describe('job log', () => {
   it('logs the command line of the run with the prompt cut to its length', () => {
     const sandbox = makeSandbox();
 
-    runCompanion(['task', '--write', '--model', 'pro', 'a prompt'], sandbox);
+    runCompanion(
+      ['task', '--write', '--model', 'hydrogen', 'a prompt'],
+      sandbox,
+    );
 
     const report = JSON.parse(
       runCompanion(['status', '--json'], sandbox).stdout,
@@ -142,7 +145,7 @@ describe('job log', () => {
 
     assert.match(
       log,
-      /Command: agy -p '<prompt, 8 chars>' --output-format json --model gemini-3\.1-pro-high --mode accept-edits --sandbox --settings '\{"permissions":\{"allow":\["command\(\*\)"\]\}\}' --print-timeout 8m/,
+      /Command: agy -p '<prompt, 8 chars>' --output-format json --model gemini-4-hydrogen-high --mode accept-edits --sandbox --settings '\{"permissions":\{"allow":\["command\(\*\)"\]\}\}' --print-timeout 8m/,
     );
   });
 });
@@ -176,15 +179,20 @@ describe('model and effort resolution', () => {
   });
 
   it('targets high without --effort', () => {
-    const { call } = resolved(['--model', 'pro']);
+    const { call } = resolved(['--model', 'hydrogen']);
 
-    assert.equal(flagValue(call, '--model'), 'gemini-3.1-pro-high');
+    assert.equal(flagValue(call, '--model'), 'gemini-4-hydrogen-high');
   });
 
   it('lets a tie go to the lower effort', () => {
-    const { result, call } = resolved(['--model', 'pro', '--effort', 'medium']);
+    const { result, call } = resolved([
+      '--model',
+      'hydrogen',
+      '--effort',
+      'medium',
+    ]);
 
-    assert.equal(flagValue(call, '--model'), 'gemini-3.1-pro-low');
+    assert.equal(flagValue(call, '--model'), 'gemini-4-hydrogen-low');
     assert.match(result.stderr, /effort medium/);
   });
 
@@ -192,6 +200,20 @@ describe('model and effort resolution', () => {
     const { call } = resolved(['--model', 'argon', '--effort', 'medium']);
 
     assert.equal(flagValue(call, '--model'), 'gemini-4-argon-medium');
+  });
+
+  it('takes xhigh when the model lists it', () => {
+    const { call } = resolved(['--model', 'neon', '--effort', 'xhigh']);
+
+    assert.equal(flagValue(call, '--model'), 'gemini-4-neon-xhigh');
+  });
+
+  it('rejects the retired name pro before any run', () => {
+    const { result, sandbox } = resolved(['--model', 'pro']);
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Unsupported model "pro"/);
+    assert.equal(readRuns(sandbox).length, 0);
   });
 
   it('fails for a model the account does not list and names the plan', () => {
@@ -608,7 +630,7 @@ describe('setup', () => {
     assert.equal(result.status, 0);
     assert.match(result.stdout, /^# Antigravity Setup\n\nStatus: ready/);
     assert.match(result.stdout, /- agy: 1\.4\.99/);
-    assert.match(result.stdout, /- auth: signed in, 15 model\(s\) listed/);
+    assert.match(result.stdout, /- auth: signed in, 17 model\(s\) listed/);
     assert.match(result.stdout, /- models: gemini-4-argon-high, /);
     assert.match(result.stdout, /- usage, Gemini Models: weekly 92% left/);
     assert.match(result.stdout, /- review gate: disabled/);
