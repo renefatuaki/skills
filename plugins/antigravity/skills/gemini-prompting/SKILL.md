@@ -75,9 +75,9 @@ Common failure modes to avoid live in [references/gemini-prompt-antipatterns.md]
 
 ## Sources
 
-- [Prompt design strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies)
-- [Gemini 3 developer guide](https://ai.google.dev/gemini-api/docs/gemini-3)
-- [What's new in Gemini 4 Argon](https://ai.google.dev/gemini-api/docs/latest-model)
+- [Prompt design strategies](https://aistudio.google.com/docs/prompting-strategies)
+- [What's new in Gemini 3.6 and 3.5 Flash-Lite](https://aistudio.google.com/docs/whats-new-gemini-3.6)
+- [Latest Gemini models](https://aistudio.google.com/docs/latest-model)
 - [Thinking prompting guide](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/thinking/prompting-guide)
 - [Antigravity CLI headless mode](https://antigravity.google/docs/cli/headless)
 - [Antigravity CLI best practices](https://antigravity.google/docs/cli/best-practices)

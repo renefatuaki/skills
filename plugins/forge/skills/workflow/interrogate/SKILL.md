@@ -60,7 +60,7 @@ You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator
 > [The stated intent paragraph from Step 2]
 
 ### Reviewers
-- Reviewer [label]: [model and effort, such as `opus/xhigh`, `codex:astra/xhigh` or `antigravity:pro/high`, or `opus/xhigh (codex fallback: <reason>)`], [N findings] (one bullet per reviewer)
+- Reviewer [label]: [model and effort, such as `opus/xhigh`, `codex:astra/xhigh` or `antigravity:neon/high`, or `opus/xhigh (codex fallback: <reason>)`], [N findings] (one bullet per reviewer)
 
 ### Act On
 [Each: description, which models raised it, why it matters.]

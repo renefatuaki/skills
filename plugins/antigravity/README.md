@@ -60,7 +60,7 @@ Write your home folder in place of `~`, because Claude Code matches the text of 
 | `/antigravity:cancel` | cancels a background job and stops its `agy` process |
 | `/antigravity:setup` | checks `agy` and its sign-in, and turns the stop-time review gate on or off with `--enable-review-gate` or `--disable-review-gate` |
 
-`--model` takes `flash`, `pro`, `argon` or `carbon`, which resolve to the newest slug of that model that `agy models` lists, or a full `gemini-...` slug. `--effort` takes `low`, `medium`, `high`, `xhigh` or `max`. Without them `agy` uses its own defaults.
+`--model` takes `flash`, `hydrogen`, `argon`, `neon` or `carbon`, which resolve to the newest slug of that model that `agy models` lists, or a full `gemini-...` slug. `--effort` takes `low`, `medium`, `high`, `xhigh` or `max`. Without them `agy` uses its own defaults.
 
 There is no transfer command, because `agy` cannot import a Claude Code session.
 

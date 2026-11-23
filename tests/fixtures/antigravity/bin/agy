@@ -18,7 +18,14 @@ if (args[0] === 'models') {
   }
 
   console.error('Fetching available models...');
-  process.stdout.write(listText);
+  process.stdout.write(
+    kind === 'without-gemini'
+      ? listText
+          .split('\n')
+          .filter(line => !line.startsWith('gemini-'))
+          .join('\n')
+      : listText,
+  );
   process.exit(0);
 }
 
@@ -46,6 +53,12 @@ const usageGroups = {
   below: [geminiGroup(0.15), otherGroup],
   exactly: [geminiGroup(0.2), otherGroup],
   'argon-group': [geminiGroup(0.92), group('Gemini Argon', 'Gemini Argon', [bucket('weekly', 0.1)]), otherGroup],
+  // Names each model with its version, as `/usage` of agy 1.5 does.
+  versioned: [
+    group('Gemini Models', 'Gemini 4 Neon, Gemini 4 Argon, Orchestrator (Neon), Gemini 3.8 Flash', [bucket('weekly', 0.92)]),
+    group('Gemini 4 Hydrogen', 'Gemini 4 Hydrogen', [bucket('weekly', 0.1)]),
+    otherGroup,
+  ],
   plain: [group('Gemini Models', '', [bucket('weekly', 0.1)]), otherGroup],
   buckets: [group('Gemini Models', 'Gemini Flash, Gemini Pro', [bucket('daily', 0.9), bucket('weekly', 0.1)]), otherGroup],
   'no-gemini': [otherGroup],
