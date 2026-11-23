@@ -211,6 +211,11 @@ export function turnChanges(
   };
 }
 
+/** Places the one file an Edit, a Write or a MultiEdit just wrote under the root of its rules. */
+export function editChanges(cwd: string, file: string): Changes[] {
+  return groupByRuleRoot(cwd, [file]);
+}
+
 /** Lists what a subagent with isolation changed in its own worktree, nothing for a subagent that works in a checkout the main session owns. A worktree the deadline cuts short is skipped. */
 export function agentChanges(
   session: SessionId,
