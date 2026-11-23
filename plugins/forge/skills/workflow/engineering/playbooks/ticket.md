@@ -22,7 +22,7 @@ A run is in **auto** mode when the prompt says so, such as `/engineering <issue-
    ```
 
    A worktree is finished when the pull request is `MERGED` or `CLOSED`, or the upstream reads `[gone]`. It is clean when `status` prints nothing and the branch tip equals the pull request's `headRefOid`. A worktree that is not finished stays. For a finished one, the first case that matches applies.
-   - **Merged and clean.** Remove the worktree with `git worktree remove <path>` and delete its branch with `git branch -D <branch>`.
+   - **Merged and clean.** Remove the worktree with `git worktree remove <path>`, a command of its own, never chained with another. Delete its branch with `git branch -D <branch>` only once `gh pr view <branch> --json state --jq .state` prints `MERGED`. When a permission rule or auto mode denies a command, never retry it or a variant of it. The reply opens with one `! <command>` line for the user to paste, which runs from any folder and covers every branch and path at once.
    - **Closed, gone or dirty.** Never remove it. The reply names it with its state and its changes.
 4. **Find the ticket.** The ticket is the issue number or URL in the prompt. A request without one goes to the `issue` skill first, which creates the ticket, and this playbook continues with it. Read it with every field the next steps need.
 
