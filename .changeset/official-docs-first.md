@@ -1,0 +1,5 @@
+---
+"forge": minor
+---
+
+Designs and code now follow the official documentation first. In about 19 sessions the user had to ask whether a design was best practice, why a name differed from the reference, or why a change added so many files. Before its sketch, `architect` reads the official documentation, the platform guidelines and the official example or template of each framework, library, service and platform the problem touches, at its latest stable version. One runner sketches the shape the docs recommend, and candidates rank first by how closely they follow the docs, then by interface depth, then by the new files and lines a reviewer must read. The code delegates of the Ticket and Feature playbooks follow the documented approach of each API they use, never from memory. The pull request links the pages they followed and names each deviation with its reason under Tradeoffs. `interrogate` checks whether a change deviates from the documented approach of a framework or library without a stated reason.

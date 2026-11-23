@@ -40,6 +40,8 @@ export type StepRow = {
   readonly openSteps: readonly number[];
   /** The number of the listed pull request above that this one waits on, null for none. */
   readonly waitsOn: number | null;
+  /** The repository of a workspace the pull request belongs to, named in its line when set. */
+  readonly repository?: string;
 };
 
 /** Asks GraphQL for the open pull requests with every field the next action and the review order need. */
@@ -84,6 +86,17 @@ const ACTION_VERBS: Readonly<Record<Action, string>> = {
   merge: 'Merge',
 };
 
+/** Who does each action, the agent or only the user, who reviews and merges. */
+const ACTION_OWNERS: Readonly<Record<Action, 'agent' | 'you'>> = {
+  finish: 'agent',
+  conflicts: 'agent',
+  checks: 'agent',
+  changes: 'agent',
+  review: 'you',
+  pending: 'agent',
+  merge: 'you',
+};
+
 const TEST_PLAN_HEADING = /^##\s+Test plan\s*$/i;
 
 const SECTION_HEADING = /^##\s/;
@@ -125,15 +138,17 @@ export function nextAction(status: PullRequestStatus): Action {
   return rule?.[0] ?? 'merge';
 }
 
-/** Lays out the rows as a numbered Markdown list, one line per pull request. */
+/** Lays out the rows as a numbered Markdown list, one line per pull request, each marked with who does it. */
 export function stepList(rows: readonly StepRow[]): string {
   return rows
     .map((row, index) => {
+      const number = `#${row.number}`;
+      const named = row.title === '' ? number : `${number} ${row.title}`;
       const label =
-        row.title === '' ? `#${row.number}` : `#${row.number} ${row.title}`;
+        row.repository === undefined ? named : `${row.repository} ${named}`;
 
       const parts = [
-        `${index + 1}. ${ACTION_VERBS[row.action]} [${linkText(label)}](${row.url}).`,
+        `${index + 1}. (${ACTION_OWNERS[row.action]}) ${ACTION_VERBS[row.action]} [${linkText(label)}](${row.url}).`,
       ];
 
       if (row.action === 'review' && row.openSteps.length > 0) {
