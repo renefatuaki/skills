@@ -49,6 +49,7 @@ export type HookInput = {
   session_id?: unknown;
   transcript_path?: unknown;
   agent_id?: unknown;
+  tool_use_id?: unknown;
   tool_input?: {
     file_path?: unknown;
     command?: unknown;
@@ -144,6 +145,32 @@ export function realPathOf(path: string): string {
 export function isHidden(segments: string[]): boolean {
   return segments.some(
     segment => segment.startsWith('.') || segment === 'node_modules',
+  );
+}
+
+/** The transcript of the agent that makes the call, which for a subagent is its own file below the session folder. */
+export function transcriptOf(input: HookInput): string | null {
+  const { transcript_path, session_id, agent_id } = input;
+
+  if (typeof transcript_path !== 'string') {
+    return null;
+  }
+
+  if (agent_id === undefined) {
+    return transcript_path;
+  }
+
+  if (typeof agent_id !== 'string' || typeof session_id !== 'string') {
+    return null;
+  }
+
+  const name = agent_id.startsWith('agent-') ? agent_id : `agent-${agent_id}`;
+
+  return join(
+    dirname(transcript_path),
+    session_id,
+    'subagents',
+    `${name}.jsonl`,
   );
 }
 
