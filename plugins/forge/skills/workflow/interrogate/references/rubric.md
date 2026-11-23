@@ -37,6 +37,7 @@ Does the code fit well into the system it's part of?
 
 - Boundary discipline: is validation at system boundaries, or scattered through business logic? Validate data once where it enters the system, then trust it internally.
 - Abstraction level: is the code mixing high-level orchestration with low-level detail?
+- Does the change deviate from the documented approach of a framework or library it uses without a stated reason?
 - Coupling: does this change introduce dependencies that will make future changes harder?
 - Data model fit: do the data structures match the actual access patterns?
 - Bolted-on vs. integrated: if the new requirement had been known from the start, would the code look like this, or does the change feel patched onto the existing design?
