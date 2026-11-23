@@ -1,7 +1,7 @@
 ---
 name: pull-request-review
 description: pull-request-review, the rules for testing a pull request in the running application. Use whenever the user wants a pull request tested or accepted by its test plan, or asks which pull requests wait for their review. Use it before every `gh pr review` you run, even when the user did not name the pull-request-review skill.
-allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/mark-steps.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts *)
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/mark-steps.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/gh-as-app.mts *)
 disable-model-invocation: true
 argument-hint: "[pr-number | pr-url]"
 ---
@@ -67,7 +67,7 @@ Rules for every pull request you test. This skill runs the test plan of a pull r
    Post with `--request-changes` in place of `--comment` when a step failed and the pull request is someone else's. On the user's own pull request, where `author.login` equals `gh api user --jq .login`, it stays `--comment`, because GitHub accepts neither an approval nor a request for changes from the author. A pull request of the user's app, where `author.login` equals what `node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts --login` prints, also stays `--comment`, posted with the app's token, so the user's own review on GitHub stays the user's click.
 
    ```sh
-   GH_TOKEN="$(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts)" gh pr review <number> --comment --body-file - <<'EOF'
+   node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/gh-as-app.mts pr review <number> --comment --body-file - <<'EOF'
    <review>
    EOF
    ```

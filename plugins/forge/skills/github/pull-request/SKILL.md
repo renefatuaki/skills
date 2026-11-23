@@ -1,6 +1,7 @@
 ---
 name: pull-request
 description: pull-request, the rules for every GitHub pull request. Use whenever the user wants to open a pull request, wants a pull request template, or when a task ends with opening one. Use it before every `gh pr create` you run, even when the user did not name the pull-request skill.
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/gh-as-app.mts *), Bash(node ${CLAUDE_SKILL_DIR}/scripts/app-token.mts *)
 argument-hint: "[base] [#issue] [reviewer]"
 ---
 
@@ -10,10 +11,10 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
 1. **Ensure `gh`.** Run `gh auth status` and do nothing else until it reports a logged-in account. If `gh` is missing, install it after confirmation, following GitHub's [installation guide](https://raw.githubusercontent.com/cli/cli/trunk/README.md#installation). If nobody is logged in, ask the user to run `! gh auth login`, wait for them, then run `gh auth status` again. If the user declines, stop and say what is missing. Then run `node ${CLAUDE_SKILL_DIR}/scripts/app-token.mts --login`, with Node 24 or newer, which runs TypeScript directly. `${CLAUDE_SKILL_DIR}` is the folder of this file. Write it out in the command, because the shell does not know it. It prints the login of the user's GitHub App, such as `app/<slug>`, which opens every pull request, so the user can approve it. No output means no app is configured. Then stop and say that `~/.config/forge/github-app.json` with `clientId` and `privateKey` is missing. When it fails, stop and quote its error. Never open a pull request under the user's login.
 
-   **As the app.** Every `gh pr` command of this skill that writes to the pull request, the reviewer included, runs with the app's token. The push, `gh stack`, the projects and the reads stay with the user's login, because GitHub gives an app no access to the projects of a user.
+   **As the app.** Every `gh pr` command of this skill that writes to the pull request, the reviewer included, runs through the `gh-as-app.mts` script, in place of `gh`. The script creates the app's token for the repository of the current directory, or of a `--repo` argument, and runs `gh` with it and with the remaining arguments. Write `${CLAUDE_SKILL_DIR}` out in the command. The push, `gh stack`, the projects and the reads stay with the user's login, because GitHub gives an app no access to the projects of a user.
 
    ```sh
-   GH_TOKEN="$(node ${CLAUDE_SKILL_DIR}/scripts/app-token.mts)" gh pr <command> …
+   node ${CLAUDE_SKILL_DIR}/scripts/gh-as-app.mts pr <command> …
    ```
 2. **Ensure the template.** Read [templates](../templates/SKILL.md) and follow it for the pull request template. Its reply folds into this skill's reply. If the user asked only for a template, this is the end. The body of this pull request follows the asset of the templates skill.
 3. **Read the branch.** When `gh pr view --json number,url,state,title,body,baseRefName` finds an open pull request for the branch, steps 4 to 7 revise it in place of opening one. The base is the branch the user or the calling playbook named, otherwise the `baseRefName` of that open pull request, otherwise `dev` when the remote has it and the current branch is another one. A remote without `dev` that the repository still names, in a workflow trigger on `dev`, a dependabot `target-branch`, its `CLAUDE.md` or `AGENTS.md`, or the base of its recent pull requests, stops the run. Report the missing `dev` and never fall back to the default branch. Otherwise the default branch. Run `git fetch origin <base>`, then read `git status --porcelain`, `git log origin/<base>..HEAD` and `git diff origin/<base>...HEAD`. Stop and say why when the current branch is the base or has no commit beyond it. Uncommitted changes stay out of the pull request.
@@ -49,7 +50,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    ```sh
    git push --set-upstream origin <branch>
 
-   gh pr create \
+   node ${CLAUDE_SKILL_DIR}/scripts/gh-as-app.mts pr create \
      --base <base> \
      --title "<title>" \
      --assignee <assignee> \
@@ -66,14 +67,14 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    For a pull request that already exists, push the same way and write the title and the body back in place of creating. Add the reviewers and projects it lacks the same way. GitHub tells nobody about an edited description, so when the test plan changed, add a comment that names the steps that are new, changed or gone.
 
    ```sh
-   gh pr edit <number> \
+   node ${CLAUDE_SKILL_DIR}/scripts/gh-as-app.mts pr edit <number> \
      --title "<title>" \
      --add-reviewer <reviewer> \
      --body-file - <<'EOF'
    <body>
    EOF
 
-   gh pr comment <number> --body-file - <<'EOF'
+   node ${CLAUDE_SKILL_DIR}/scripts/gh-as-app.mts pr comment <number> --body-file - <<'EOF'
    <changes to the test plan>
    EOF
    ```
@@ -172,7 +173,7 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
    - **Checks.** A lower layer of a stack has no checks, so this runs only for the top layer, whose checks cover the whole stack. Spawn the `forge:ci-watcher` agent with the number and the head SHA of this pull request in its brief and wait for its report, which says whether every check passed and quotes the failure when one did not. When a check failed, read [loop-on-ci](../loop-on-ci/SKILL.md) and follow it on this pull request until every check passes. Commit each fix with the `commit` skill, in the layer whose commit causes the failure, and run the local check of step 6 again before every push. Where loop-on-ci says main, it means the base of step 3, merged without a rebase. When two fixes for the same failure did not turn it green, stop the loop, and step 8 names the failure.
    - **Test steps.** When the test plan holds a step you can run yourself, read [pull-request-review](../pull-request-review/SKILL.md) and follow it on this pull request, without its step 6, which hands steps to a person, and without the confirmation its step 8 asks for after a failed step, because on the app's pull request the result is only a comment. It runs those steps, ticks the passed ones and posts its result. Only a step that step 5 marks `(needs a person: <reason>)` stays for the reviewer. An unattended session runs every other step too.
 
-   After the run, every unticked step that did not fail ends its checkbox line with `(needs a person: <reason>)`. `needs a person` without a reason does not count. Add the missing ones with `gh pr edit`, until the command below prints only the failed steps.
+   After the run, every unticked step that did not fail ends its checkbox line with `(needs a person: <reason>)`. `needs a person` without a reason does not count. Add the missing ones with `pr edit` through the script of step 1, until the command below prints only the failed steps.
 
    ```sh
    gh pr view <number> --json body --jq .body \
