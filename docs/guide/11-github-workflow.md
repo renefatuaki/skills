@@ -93,6 +93,14 @@ A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CON
 
 The [`pull-request-review`](../../plugins/forge/skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with its reason in parentheses. Then it posts the result as a comment or a request for changes. A passed step marked `(criterion <n>)` ticks that criterion in the issue, for the criteria no test could prove. The approval stays your own click on GitHub.
 
+## Release dev to the default branch
+
+```text
+/release
+```
+
+The [`release`](../../plugins/forge/skills/github/release/SKILL.md) skill opens one PR from `dev` to the default branch, or updates the open one. Run it in a repository, or in a folder of repositories to release each one whose `dev` is ahead. Name repositories to release only those, such as `/release api db`. It ships `dev` as it is and pushes nothing. The description lists the merged PRs it ships and closes their issues, because GitHub closes an issue only once its PR reaches the default branch. It names every workflow or deploy the merge starts, with a link to its runs. The test plan holds only what production shows for the first time, such as the deploy run, and never a step the shipped PRs already ran. Your GitHub App opens it like any other PR, so you approve and merge it.
+
 ## Plan a day of tickets
 
 ```text
