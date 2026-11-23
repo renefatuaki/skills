@@ -40,10 +40,11 @@ type Issue = {
   linkedBranches: { nodes: unknown[] };
 };
 
-/** The board of a case: the checkout's repository, whether it has a dev branch, the ticket, and the item pages of its project. */
+/** The board of a case: the checkout's repository, whether it has a dev branch, the files and pull requests of its default branch, the ticket, and the item pages of its project. */
 type Board = {
   repository: string;
   dev: boolean;
+  trunkFiles?: Record<string, unknown>;
   issue: unknown;
   boards: Record<string, unknown[][]>;
 };
@@ -70,6 +71,75 @@ const CASES: {
     name: 'a repository without dev starts on the default branch',
     board: { ...board({}), dev: false },
     expected: ok({ start: 'trunk', base: 'main' }),
+  },
+  {
+    name: 'a repository without dev that names it in a workflow trigger stops',
+    board: withoutDev({
+      workflows: {
+        entries: [{ object: text('on:\n  push:\n    branches: [dev]') }],
+      },
+    }),
+    expected: ok({ start: 'missing-dev', namedBy: ['a workflow'] }),
+  },
+  {
+    name: 'a repository without dev that names it as a dependabot target stops',
+    board: withoutDev({
+      dependabot: text('updates:\n  - target-branch: "dev"'),
+    }),
+    expected: ok({
+      start: 'missing-dev',
+      namedBy: ['.github/dependabot.yml'],
+    }),
+  },
+  {
+    name: 'a repository without dev that names it in CLAUDE.md stops',
+    board: withoutDev({
+      claude: text(
+        'Pull requests in this repository target `dev`, never main.',
+      ),
+    }),
+    expected: ok({ start: 'missing-dev', namedBy: ['CLAUDE.md'] }),
+  },
+  {
+    name: 'a repository without dev that names it in AGENTS.md stops',
+    board: withoutDev({ agents: text('Base every branch on dev.') }),
+    expected: ok({ start: 'missing-dev', namedBy: ['AGENTS.md'] }),
+  },
+  {
+    name: 'a repository without dev whose recent pull request has the base dev stops',
+    board: withoutDev({
+      pullRequests: {
+        nodes: [{ baseRefName: 'main' }, { baseRefName: 'dev' }],
+      },
+    }),
+    expected: ok({ start: 'missing-dev', namedBy: ['a recent pull request'] }),
+  },
+  {
+    name: 'a repository without dev lists every place that names it',
+    board: withoutDev({
+      claude: text('Open pull requests against dev.'),
+      pullRequests: { nodes: [{ baseRefName: 'dev' }] },
+    }),
+    expected: ok({
+      start: 'missing-dev',
+      namedBy: ['CLAUDE.md', 'a recent pull request'],
+    }),
+  },
+  {
+    name: 'a repository without dev whose files mention dev only as a script starts on the default branch',
+    board: withoutDev({
+      claude: text('Run `pnpm dev` to start the dev server.'),
+      pullRequests: { nodes: [{ baseRefName: 'main' }] },
+    }),
+    expected: ok({ start: 'trunk', base: 'main' }),
+  },
+  {
+    name: 'a repository with dev that names it starts on dev',
+    board: {
+      ...board({}),
+      trunkFiles: { claude: text('Pull requests target dev.') },
+    },
+    expected: ok({ start: 'trunk', base: 'dev' }),
   },
   {
     name: 'a ticket In Progress in the same repository without a pull request holds the ticket back',
@@ -309,6 +379,14 @@ function run(args: string[], data: Board): Result {
     status: result.status,
     message: result.stderr,
   };
+}
+
+function withoutDev(trunkFiles: Record<string, unknown>): Board {
+  return { ...board({}), dev: false, trunkFiles };
+}
+
+function text(content: string) {
+  return { text: content };
 }
 
 function ok(decision: unknown): Result {
