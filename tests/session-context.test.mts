@@ -10,6 +10,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const script = join(root, 'plugins', 'forge', 'hooks', 'session-context.mts');
 const pluginRoot = '/plugins/forge';
 
+const CLIPBOARD_LINE =
+  'When you write a text the user will paste outside this session, such as an email, a chat message, a prompt for another tool, a post or a comment, run the forge:clipboard skill instead of writing the text out in the reply.';
+
 const ROOT_LINE =
   'plugin root: /plugins/forge. Skills of this plugin with disable-model-invocation are user-invocable only. When a skill, playbook, or principle names another skill of this plugin (such as the **how** skill or principle-prove-it-works), read /plugins/forge/skills/<category>/<name>/SKILL.md and follow it instead of calling the Skill tool. A principle such as **prove-it-works** lives in skills/principles/prove-it-works.';
 
@@ -34,6 +37,7 @@ const CASES: { name: string; input: string; expected: Output }[] = [
       lines: [
         'session: session_id=abc123 transcript_path=/home/user/.claude/projects/repo/abc123.jsonl',
         ROOT_LINE,
+        CLIPBOARD_LINE,
       ],
     },
   },
@@ -42,7 +46,11 @@ const CASES: { name: string; input: string; expected: Output }[] = [
     input: 'not json',
     expected: {
       hookEventName: 'SessionStart',
-      lines: ['session: session_id=unknown transcript_path=unknown', ROOT_LINE],
+      lines: [
+        'session: session_id=unknown transcript_path=unknown',
+        ROOT_LINE,
+        CLIPBOARD_LINE,
+      ],
     },
   },
 ];

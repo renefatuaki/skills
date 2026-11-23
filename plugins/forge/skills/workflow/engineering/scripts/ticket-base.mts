@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Decides where the Ticket playbook of the engineering skill starts a ticket in the repository of the current checkout: on the trunk, stacked on the top pull request of its open blockers and of the tickets it collides with, or not yet. Prints the decision as JSON.
+// Decides where the Ticket playbook of the engineering skill starts a ticket in the repository of the current checkout: on the trunk, stacked on the top pull request of its open blockers and of the tickets it collides with, or not yet. Stops when the remote lacks the dev branch that the repository names. Prints the decision as JSON.
 
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -26,9 +26,10 @@ type Predecessor = { url: string; branches: LinkedBranch[] };
 /** An open pull request of a predecessor, a layer the ticket stacks on. */
 type Layer = { issue: string; pullRequest: number; head: string; base: string };
 
-/** Where the ticket starts: on the trunk, on the top of the one stack listed bottom to top, not before the listed predecessors have an open pull request, or not while the open pull requests form several stacks with these tops. */
+/** Where the ticket starts: on the trunk, on the top of the one stack listed bottom to top, not before the listed predecessors have an open pull request, not while the open pull requests form several stacks with these tops, or not while the remote lacks the dev branch that the listed places of the repository name. */
 type Decision =
   | { start: 'trunk'; base: string }
+  | { start: 'missing-dev'; namedBy: string[] }
   | { start: 'stacked'; base: string; layers: Layer[] }
   | { start: 'wait'; issues: string[] }
   | { start: 'split'; tops: Layer[] };
@@ -41,6 +42,17 @@ type BranchNode = {
 };
 
 type LabelNode = { name: string };
+
+type BlobNode = { text?: string } | null;
+
+/** The places of the default branch that can name the dev branch, as the Ticket query reads them. */
+type TrunkFiles = {
+  claude: BlobNode;
+  agents: BlobNode;
+  dependabot: BlobNode;
+  workflows: { entries?: { object: BlobNode }[] } | null;
+  pullRequests: { nodes: { baseRefName: string }[] };
+};
 
 /** A page of a project's items, whose content is an issue, a pull request or a draft. */
 type BoardPage = {
@@ -62,6 +74,12 @@ const ACTIVE_STATUSES = new Set(['In Progress', 'In Review']);
 
 const APP_LABEL = 'app: ';
 
+const DEV = 'dev';
+
+/** A line that names the dev branch, as a workflow trigger, a dependabot `target-branch` or a sentence of CLAUDE.md or AGENTS.md about branches, bases and pull requests, or as an entry of a branch list. */
+const DEV_BRANCH_LINE =
+  /^(?=.*\bdev\b)(?=.*\b(?:branch|branches|base|target|pull requests?|PRs?)\b)|^\s*-\s*['"]?dev['"]?\s*$/im;
+
 const BRANCHES = `linkedBranches(first: 10) {
   nodes {
     ref {
@@ -77,6 +95,15 @@ const TICKET_QUERY = `query Ticket($owner: String!, $repo: String!, $number: Int
   checkout: repository(owner: $checkoutOwner, name: $checkoutRepo) {
     defaultBranchRef { name }
     dev: ref(qualifiedName: "refs/heads/dev") { name }
+    claude: object(expression: "HEAD:CLAUDE.md") { ... on Blob { text } }
+    agents: object(expression: "HEAD:AGENTS.md") { ... on Blob { text } }
+    dependabot: object(expression: "HEAD:.github/dependabot.yml") { ... on Blob { text } }
+    workflows: object(expression: "HEAD:.github/workflows") {
+      ... on Tree { entries { object { ... on Blob { text } } } }
+    }
+    pullRequests(last: 20, orderBy: { field: CREATED_AT, direction: ASC }) {
+      nodes { baseRefName }
+    }
   }
   ticket: repository(owner: $owner, name: $repo) {
     issue(number: $number) {
@@ -127,16 +154,25 @@ const checkout = gh([
 // https://docs.github.com/en/graphql/reference/objects.md#issue
 const ticket = readTicket(positionals[0], checkout);
 
-// 3. Read the tickets of those projects that collide with the ticket.
-const colliding = ticket.projectIds.flatMap(projectId =>
-  readCollidingTickets(projectId, ticket.url, ticket.apps, checkout),
-);
+if (ticket.devNamedBy.length > 0) {
+  const decision: Decision = {
+    start: 'missing-dev',
+    namedBy: ticket.devNamedBy,
+  };
 
-console.log(
-  JSON.stringify(
-    decide([...ticket.blockers, ...colliding], checkout, ticket.trunk),
-  ),
-);
+  console.log(JSON.stringify(decision));
+} else {
+  // 3. Read the tickets of those projects that collide with the ticket.
+  const colliding = ticket.projectIds.flatMap(projectId =>
+    readCollidingTickets(projectId, ticket.url, ticket.apps, checkout),
+  );
+
+  console.log(
+    JSON.stringify(
+      decide([...ticket.blockers, ...colliding], checkout, ticket.trunk),
+    ),
+  );
+}
 
 /** Stacks the ticket on its predecessors' open pull requests, counts a merged one as done since its issue closes only on the default branch, and waits for any without either. */
 function decide(
@@ -206,13 +242,14 @@ function stackBelow(top: Layer, layers: Layer[]): Layer[] {
   return stack;
 }
 
-/** Reads the trunk of the checkout and the issue with its apps, open blockers and projects. */
+/** Reads the trunk of the checkout and the issue with its apps, open blockers and projects. The trunk is dev when the remote has it. Without dev, `devNamedBy` lists the places of the repository that still name it. */
 function readTicket(
   issueUrl: string,
   repository: string,
 ): {
   url: string;
   trunk: string;
+  devNamedBy: string[];
   apps: string[];
   blockers: Predecessor[];
   projectIds: string[];
@@ -232,6 +269,7 @@ function readTicket(
   return {
     url: issue.url,
     trunk: checkout.dev?.name ?? checkout.defaultBranchRef.name,
+    devNamedBy: checkout.dev ? [] : placesNamingDev(checkout),
     apps: apps(issue.labels.nodes),
     blockers: issue.blockedBy.nodes
       .filter((blocker: { state: string }) => blocker.state === 'OPEN')
@@ -248,6 +286,30 @@ function readTicket(
       (item: { project: { id: string } }) => item.project.id,
     ),
   };
+}
+
+/** Lists the places of the default branch that name the dev branch. */
+function placesNamingDev(trunk: TrunkFiles): string[] {
+  const workflows = (trunk.workflows?.entries ?? []).map(entry => entry.object);
+
+  const sources: [string, BlobNode[]][] = [
+    ['CLAUDE.md', [trunk.claude]],
+    ['AGENTS.md', [trunk.agents]],
+    ['.github/dependabot.yml', [trunk.dependabot]],
+    ['a workflow', workflows],
+  ];
+
+  const places = sources
+    .filter(([, blobs]) =>
+      blobs.some(blob => DEV_BRANCH_LINE.test(blob?.text ?? '')),
+    )
+    .map(([place]) => place);
+
+  if (trunk.pullRequests.nodes.some(pr => pr.baseRefName === DEV)) {
+    places.push('a recent pull request');
+  }
+
+  return places;
 }
 
 /**

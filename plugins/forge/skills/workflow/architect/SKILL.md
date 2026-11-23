@@ -28,6 +28,8 @@ Skip Phase A only when the work is genuinely greenfield with no surrounding syst
 
 ## Phase B: Sketch
 
+Read the official documentation, the platform guidelines and the official example or template of each framework, library, service and platform the problem touches, at its latest stable version. Add the links of the pages you read to the grounding artifacts. When the docs recommend a shape for the problem, one runner's brief asks for that shape, with the names and structure the docs use.
+
 Run the **arena** skill with the design-sketch task and the Phase A grounding artifacts. Pass `references/runner-prompt.md` as each runner's prompt.
 
 Take the runners from the `architect runners` line in `~/.claude/rules/models.md`, in place of the `arena runners` line. If the rule or that line is missing, use `opus/xhigh` and `codex:astra/xhigh`. Entries and output locations follow the runner rules in the **arena** skill's Phase A.
@@ -36,7 +38,7 @@ Design it twice. Require at least two structurally distinct candidates before sy
 
 Screen every candidate against [`references/design-red-flags.md`](references/design-red-flags.md) before synthesis. Assume the next contributor is an agent that sees only the files it opened, copies the nearest example, and takes the shortest path that compiles. Prefer the design where a change that looks right from one file is right for the whole repo.
 
-Compare viable candidates on interface depth. Prefer the design that hides more complexity behind a smaller, simpler public surface. A rich interface can keep call chains short by concentrating capability instead of scattering it across layers.
+Rank viable candidates first by how closely they follow the docs, then by interface depth, then by how many new files and lines a reviewer must read. Prefer the design that hides more complexity behind a smaller, simpler public surface. A rich interface can keep call chains short by concentrating capability instead of scattering it across layers. The arena rubric holds these three criteria in this order.
 
 Arena returns one synthesized design package. Its synthesis decision fills the rationale's "Synthesis decision" section.
 
@@ -78,4 +80,4 @@ When you scrap:
 
 ## Outputs
 
-The caller's usage is written first and the type sketch derived from it. One file with new types and signatures for small changes. Module map plus type definitions for larger work. The rationale ships alongside, shaped per `references/rationale-template.md`, including the usage sketch and the synthesis decision.
+The caller's usage is written first and the type sketch derived from it. One file with new types and signatures for small changes. Module map plus type definitions for larger work. The rationale ships alongside, shaped per `references/rationale-template.md`, including the usage sketch, the synthesis decision and each deviation from the docs with its reason.

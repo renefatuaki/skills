@@ -8,7 +8,7 @@ Rebuilds the history of the branch checked out in the session's worktree, so a r
 
 ## Steps
 
-1. **Find the base.** The base is the branch the user or the calling skill named, otherwise the `baseRefName` of the open pull request that `gh pr view --json number,baseRefName` finds for the branch, otherwise `dev` when the remote has it and the current branch is another one, otherwise the default branch. Run `git fetch origin <base>`. `<fork>` is `git merge-base origin/<base> HEAD`. Stop and say why when the current branch is the base or has no commit beyond it.
+1. **Find the base.** The base is the branch the user or the calling skill named, otherwise the `baseRefName` of the open pull request that `gh pr view --json number,baseRefName` finds for the branch, otherwise `dev` when the remote has it and the current branch is another one. A remote without `dev` that the repository still names, in a workflow trigger on `dev`, a dependabot `target-branch`, its `CLAUDE.md` or `AGENTS.md`, or the base of its recent pull requests, stops the run. Report the missing `dev` and never fall back to the default branch. Otherwise the default branch. Run `git fetch origin <base>`. `<fork>` is `git merge-base origin/<base> HEAD`. Stop and say why when the current branch is the base or has no commit beyond it.
 2. **Check that the branch may be rewritten.** Stop and say why when one of these holds.
    - The stage is not empty, so `git diff --cached --quiet` fails.
    - A person has reviewed the open pull request, so the command prints more than 0, unless the user asks for the tidy anyway. Reviews of apps do not count.
