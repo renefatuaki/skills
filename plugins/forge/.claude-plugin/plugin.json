@@ -28,6 +28,7 @@
     "./skills/docs/unslop",
     "./skills/git/commit",
     "./skills/git/tidy-history",
+    "./skills/github/cleanup-merged",
     "./skills/github/issue",
     "./skills/github/loop-on-ci",
     "./skills/github/next-steps",

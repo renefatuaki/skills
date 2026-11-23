@@ -93,6 +93,21 @@ A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CON
 
 The [`pull-request-review`](../../plugins/forge/skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with its reason in parentheses. Then it posts the result as a comment or a request for changes. A passed step marked `(criterion <n>)` ticks that criterion in the issue, for the criteria no test could prove. The approval stays your own click on GitHub.
 
+## Clean up after the merge
+
+```text
+/cleanup-merged
+```
+
+GitHub closes an issue by the `Closes` keyword of a PR only when the PR merges into the default branch, so a ticket merged into `dev` stays open. The [`cleanup-merged`](../../plugins/forge/skills/github/cleanup-merged/SKILL.md) skill finds your merged PRs by itself, in the repository of the current folder or, in a workspace of sibling repositories, in every repository one level below it.
+
+1. It ticks the criteria that ticked steps of the PR's test plan prove, closes the issue and sets it to Done on the board.
+2. It closes an epic once its last sub-issue is closed.
+3. It removes the worktree of the PR's branch, the local branch and the branch on GitHub.
+4. It fast-forwards the main checkout when it is on `dev` or the default branch.
+
+A worktree with uncommitted changes to tracked files and a branch with commits the PR does not hold stay, and the reply says why, together with the issues the PR only refers to. When a folder outlives its worktree on files git cannot delete, the reply hands you one `! rm -rf` line to run.
+
 ## Plan a day of tickets
 
 ```text
