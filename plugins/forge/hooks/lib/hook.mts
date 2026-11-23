@@ -18,10 +18,11 @@ import type { Changes } from './changes.mts';
 /** A session id that is safe as a file name. Only asSessionId makes one, so the path of a journal can never leave its folder. */
 export type SessionId = string & { readonly __sessionId: true };
 
-/** What one hook event asks of the turn hook, parsed from the input of UserPromptSubmit, PreToolUse, Stop or SubagentStop. */
+/** What one hook event asks of the turn hook, parsed from the input of UserPromptSubmit, PreToolUse, PostToolUse, Stop or SubagentStop. */
 export type TurnEvent =
   | { kind: 'prompt'; session: SessionId; cwd: string }
   | { kind: 'edit'; session: SessionId; agent: string | null; path: string }
+  | { kind: 'edited'; cwd: string; path: string }
   | { kind: 'stop'; session: SessionId; cwd: string; continuing: boolean }
   | {
       kind: 'subagent-stop';
@@ -87,7 +88,7 @@ export function readHookInput(): unknown {
   }
 }
 
-/** Parses the input of the four events the turn hook handles, null for any other input and for an id that is unsafe as a file name. */
+/** Parses the input of the five events the turn hook handles, null for any other input and for an id that is unsafe as a file name. */
 export function parseTurnEvent(input: unknown): TurnEvent | null {
   // 1. Read the fields of the event, the working directory falling back to the one of the process.
   const fields = input as TurnInput;
@@ -115,6 +116,10 @@ export function parseTurnEvent(input: unknown): TurnEvent | null {
     case 'PreToolUse':
       return typeof filePath === 'string'
         ? { kind: 'edit', session, agent, path: realFileOf(cwd, filePath) }
+        : null;
+    case 'PostToolUse':
+      return typeof filePath === 'string'
+        ? { kind: 'edited', cwd, path: realFileOf(cwd, filePath) }
         : null;
     case 'Stop':
       return { kind: 'stop', session, cwd, continuing };
@@ -199,10 +204,14 @@ export function deny(reason: string): void {
 }
 
 /**
- * Hands the lines to Claude as additional context of the session start.
+ * Hands the lines to Claude as additional context of the session start or of the tool call that just ran.
  * @see {@link https://code.claude.com/docs/en/hooks.md#sessionstart-decision-control | Claude Code, SessionStart decision control}
+ * @see {@link https://code.claude.com/docs/en/hooks.md#posttooluse-decision-control | Claude Code, PostToolUse decision control}
  */
-export function addContext(event: 'SessionStart', lines: string[]): void {
+export function addContext(
+  event: 'SessionStart' | 'PostToolUse',
+  lines: string[],
+): void {
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
