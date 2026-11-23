@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Denies a gh command that opens a pull request without the token of the user's GitHub App, because the pull request would then carry the user as its author and the user could not approve it.
+// Denies a gh command that opens a pull request without the token of the user's GitHub App or the gh-as-app script, because the pull request would then carry the user as its author and the user could not approve it.
 // https://code.claude.com/docs/en/hooks.md#pretooluse
 
 import { existsSync } from 'node:fs';
@@ -19,14 +19,14 @@ const CREATE_CALL = /(^|[\s;&|(])gh\s+pr\s+create(\s|$)/;
 /** Matches an assignment of the token gh authenticates with. */
 const TOKEN_ASSIGNMENT = /\bGH_TOKEN=\S/;
 
-const TOKEN_SCRIPT = join(
+const APP_SCRIPT = join(
   dirname(fileURLToPath(import.meta.url)),
   '..',
   'skills',
   'github',
   'pull-request',
   'scripts',
-  'app-token.mts',
+  'gh-as-app.mts',
 );
 
 main();
@@ -50,6 +50,6 @@ function main(): void {
   }
 
   deny(
-    `This opens the pull request under the user's login, so the user cannot approve it. Open it as the user's GitHub App. Run the pull-request skill, or put GH_TOKEN="$(node ${TOKEN_SCRIPT})" before gh pr create.`,
+    `This opens the pull request under the user's login, so the user cannot approve it. Open it as the user's GitHub App. Run the pull-request skill, or run node ${APP_SCRIPT} pr create in place of gh pr create.`,
   );
 }

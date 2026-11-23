@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+
+// Stands in for gh with the repositories of the JSON file FAKE_GH_STATE names, keyed by owner/name, and deletes a branch of the bare origin when the API is asked to.
+
+const { execFileSync } = require('node:child_process');
+const { readFileSync } = require('node:fs');
+
+const state = JSON.parse(readFileSync(process.env.FAKE_GH_STATE, 'utf8'));
+const args = process.argv.slice(2);
+const [command, action] = args;
+const repository = state[args[args.indexOf('--repo') + 1]];
+
+if (command === 'repo' && action === 'view') {
+  const [nameWithOwner, found] = Object.entries(state).find(
+    ([, candidate]) => candidate.path === process.cwd(),
+  );
+
+  reply({ nameWithOwner, defaultBranchRef: { name: found.defaultBranch } });
+} else if (command === 'pr' && action === 'list') {
+  const isOpen = args[args.indexOf('--state') + 1] === 'open';
+
+  reply(isOpen ? repository.open : repository.merged);
+} else if (command === 'issue' && action === 'list') {
+  const [owner, name] = args[args.indexOf('--repo') + 1].split('/');
+
+  reply(
+    (repository?.openIssues ?? []).map(number => ({
+      url: `https://github.com/${owner}/${name}/issues/${number}`,
+    })),
+  );
+} else if (command === 'api' && args.includes('DELETE')) {
+  const [, nameWithOwner, branch] = /^repos\/([^/]+\/[^/]+)\/git\/refs\/heads\/(.+)$/.exec(args.at(-1));
+
+  execFileSync('git', ['--git-dir', state[nameWithOwner].origin, 'update-ref', '-d', `refs/heads/${branch}`]);
+} else {
+  process.stderr.write(`unknown command: gh ${args.join(' ')}\n`);
+  process.exit(1);
+}
+
+function reply(payload) {
+  process.stdout.write(JSON.stringify(payload));
+}
