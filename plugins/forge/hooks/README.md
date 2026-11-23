@@ -7,7 +7,7 @@ What happens when a session starts, while a turn runs, while Claude works throug
 flowchart TD
   accTitle: What happens when a session starts, while a turn runs, while Claude works through a todo list, and when the key of the prompt optimizer is pressed?
   hooksJson["Start every hook of the event"]
-  hooksJson -->|"when a session starts"| sessionContext["Hand Claude the transcript of the session and the root of the plugin"]
+  hooksJson -->|"when a session starts"| sessionContext["Hand Claude the transcript of the session, the root of the plugin and the rule for a text to paste"]
   hooksJson -->|"before an Edit or a Write"| loadCommentRules["Deny the edit of a source file until the comment rules are in the context of the agent"]
   hooksJson -->|"before a Bash command"| checkDiagramLabels["Deny a gh command whose text holds a diagram that draws HTML labels"]
   hooksJson -->|"before a Bash command"| checkPullRequestAuthor["Deny a gh command that opens a pull request without the token of the GitHub App"]
