@@ -3,7 +3,7 @@ name: release
 description: release, opens the release pull request from dev to the default branch, in the current repository or in every repository of a workspace folder. Use when the user runs /release, optionally naming the repositories.
 disable-model-invocation: true
 argument-hint: "[repository …]"
-allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/releases.mts), Bash(node ${CLAUDE_SKILL_DIR}/scripts/releases.mts *)
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/releases.mts), Bash(node ${CLAUDE_SKILL_DIR}/scripts/releases.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/gh-as-app.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts *)
 ---
 
 Opens one release pull request per repository, from `dev` to the default branch, or brings the open one up to date. It ships `dev` as it is, without tidying its history, splitting it into a stack or trimming it. It pushes nothing, merges nothing and keeps the branch flow as it is. The user's GitHub App opens every pull request with the user as reviewer, so the user can approve it.
@@ -59,10 +59,10 @@ Opens one release pull request per repository, from `dev` to the default branch,
    - Content comes only from the repository, the shipped pull requests, their issues and the conversation.
    - The person running the session is the author, so the body carries no line naming an AI and no session link.
    - An open release pull request is revised from what it says. Read its title and body first, then bring every section up to date with the release and keep what still holds, whoever wrote it.
-6. **Open the pull request**, ready for review and without asking. The assignee and the reviewer are the user's login from `gh api user --jq .login`. Run it from the repository's `path` in one Bash call, with the app's token and the body from a quoted heredoc.
+6. **Open the pull request**, ready for review and without asking. The assignee and the reviewer are the user's login from `gh api user --jq .login`. Run it from the repository's `path` in one Bash call, through the `gh-as-app.mts` script of the pull-request skill, which runs `gh` as the app, with the body from a quoted heredoc.
 
    ```sh
-   cd <path> && GH_TOKEN="$(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts)" gh pr create \
+   cd <path> && node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/gh-as-app.mts pr create \
      --repo <owner>/<repo> \
      --head dev \
      --base <default-branch> \
@@ -74,10 +74,10 @@ Opens one release pull request per repository, from `dev` to the default branch,
    EOF
    ```
 
-   For an open `pullRequest`, write the title and the body back in place of creating one, and request the user's review when it lacks it. GitHub tells nobody about an edited description, so when the test plan changed, add a comment that names the steps that are new, changed or gone. Both run with the app's token too.
+   For an open `pullRequest`, write the title and the body back in place of creating one, and request the user's review when it lacks it. GitHub tells nobody about an edited description, so when the test plan changed, add a comment that names the steps that are new, changed or gone. Both run through the script too.
 
    ```sh
-   cd <path> && GH_TOKEN="$(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts)" gh pr edit <number> \
+   cd <path> && node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/gh-as-app.mts pr edit <number> \
      --repo <owner>/<repo> \
      --title "<title>" \
      --add-reviewer <login> \
@@ -85,7 +85,7 @@ Opens one release pull request per repository, from `dev` to the default branch,
    <body>
    EOF
 
-   cd <path> && GH_TOKEN="$(node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/app-token.mts)" gh pr comment <number> \
+   cd <path> && node ${CLAUDE_SKILL_DIR}/../pull-request/scripts/gh-as-app.mts pr comment <number> \
      --repo <owner>/<repo> \
      --body-file - <<'EOF'
    <changes to the test plan>
