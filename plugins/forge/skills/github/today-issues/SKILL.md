@@ -1,12 +1,11 @@
 ---
 name: today-issues
-description: today-issues, the plan for today's tickets of a GitHub Project. Use whenever the user asks what to work on today, which ticket comes next, or which tickets can run in parallel.
+description: today-issues, the plan for today's tickets of a GitHub Project. Use whenever the user asks, in any language, which ticket comes next, what to work on today, which tickets can run in parallel, or which can run overnight or unattended, even when they do not name the skill.
 allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/read-board.mts *), Bash(node ${CLAUDE_SKILL_DIR}/../issue/scripts/tick-criteria.mts *)
-disable-model-invocation: true
 argument-hint: "[project-number] [budgets | auto] [sizes]"
 ---
 
-The plan for one day of work on a GitHub Project. This skill reads the open tickets of the board, asks the user for today's three budgets and the Sizes to run, ranks the tickets, groups them into tracks that run side by side, and shows one table per track in the format of [assets/plan.md](assets/plan.md). It only reads, except for the finished epics it closes on the user's word. The board is the state, so every run plans from what the board says now. A ticket of the plan starts with `/engineering <issue-url>`, which works it through the Ticket playbook of the engineering skill. In an auto run it starts with `/engineering <issue-url> auto`, so the session asks nothing.
+The plan for one day of work on a GitHub Project. This skill reads the open tickets of the board, asks the user for today's three budgets and the Sizes to run, ranks the tickets, groups them into tracks that run side by side, and shows one table per track in the format of [assets/plan.md](assets/plan.md). It only reads, except for the finished epics it closes on the user's word. The board is the state, so every run plans from what the board says now. A ticket of the plan starts with `/engineering <issue-url>`, which works it through the Ticket playbook of the engineering skill. In an auto run it starts with `/engineering <issue-url> auto`, so the session asks nothing. When you invoked this skill yourself, and not the user with `/today-issues`, ask with the AskUserQuestion tool before you start a ticket's session, change the board or close an issue. Reading the board and showing the plan need no such question.
 
 ## Steps
 
@@ -18,7 +17,7 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    ```
 
    It prints every open issue of the project that is not Done and is assigned to the user or to nobody, from every repository the project holds. `blockedBy` holds open blockers only, and `pullRequests` the open pull requests that close the issue.
-3. **Ask the budgets.** Read the time with `date` and tell the user the time and how many tickets wait in each Status. Then ask all four questions in one call of the AskUserQuestion tool. The time shapes the options you offer, so a late start gets shorter ones. A question the user's request already answers is not asked. The answers alone are the budgets.
+3. **Ask the budgets.** Read the time with `date` and tell the user the time and how many tickets wait in each Status. Then ask all four questions in one call of the AskUserQuestion tool. The time shapes the options you offer, so a late start gets shorter ones. A question the user's request already answers is not asked. A request for tickets that run overnight or unattended answers Questions with None (auto) and Sizes with XS and S. The answers alone are the budgets.
    - **Total.** How long sessions may run today, as a duration.
    - **Questions.** How long the user answers the questions of running sessions, as a duration. One option is "None (auto)", which makes the run an auto run.
    - **Review.** How long the user reviews pull requests, as a duration.
@@ -57,6 +56,8 @@ The plan for one day of work on a GitHub Project. This skill reads the open tick
    An auto run asks the user nothing, so its tickets cost no questions. A candidate with an open decision or with work only the user can do goes to Not today with its cause, and so does every candidate it blocks. A ticket In Review stays.
    - **Open decision.** A label such as `question`. A section such as Open questions or To decide that still holds an entry without an answer. An unchecked task item that asks to decide, choose or confirm. A criterion that can be read two ways, two criteria that contradict each other, or several approaches that lead to a result the user would see differently.
    - **Work only the user can do.** A step the run cannot finish without that needs a credential, a secret or an account the agent lacks, a payment, a physical device, a store listing, access to production such as a deploy or its data, or another person. A check the body leaves to the review does not count.
+
+   An overnight or unattended run keeps only tickets an auto run can finish. A candidate goes to Not today with its cause when its Size is neither XS nor S, when it has an open blocker, or when a criteria section its template asks for is missing or empty. A ticket In Review stays.
 6. **Rank.** The ranking orders units. A candidate that belongs to no epic is a unit of its own. An epic with its candidate sub-issues is one unit, so they stay together. The rules apply in order, and a rule decides only between units that every rule before it ranks the same.
    1. In Review, because a review releases finished work.
    2. Priority Critical.
