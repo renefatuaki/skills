@@ -120,7 +120,9 @@ The [`today-issues`](../../plugins/forge/skills/github/today-issues/SKILL.md) sk
 /engineering https://github.com/<owner>/<repo>/issues/42
 ```
 
-In an auto run, add `auto`. The session then asks nothing. A ticket that needs your decision ends as Blocked, with the question in a comment on the issue. Work the ticket does not name gets no new issue right away. An agent on Fable first decides whether the work is needed and whether it belongs in this branch. Work that is not needed is dropped, work that belongs to the ticket lands in the branch, and only the rest becomes a new issue.
+Work the ticket does not name gets no new issue right away. An agent on Fable first decides whether the work is needed and whether it belongs in this branch. Work that is not needed is dropped, and small work in code the ticket already changes lands in the branch as its own commit. Only work the ticket lists under Out of scope, or work in another repository, becomes a new issue. For the rest, the session asks you before it opens the pull request whether each piece joins it.
+
+In an auto run, add `auto`. The session then asks nothing. A ticket that needs your decision ends as Blocked, with the question in a comment on the issue. Work it would have asked you about waits in the pull request for your call.
 
 ```text
 /engineering https://github.com/<owner>/<repo>/issues/42 auto
