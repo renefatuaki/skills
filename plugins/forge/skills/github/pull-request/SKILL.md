@@ -140,6 +140,8 @@ Rules for every GitHub pull request you create. A pull request carries a test pl
 
      Exit code 3 is a conflict, which `gh stack rebase --abort` undoes. A worktree with uncommitted changes makes the rebase refuse before it changes anything. Either way the layers above stay as they were.
 
+     When a permission rule or auto mode denies a command, never retry it or a variant of it. The reply opens with one `! <command>` line for the user to paste, which runs from any folder and covers every branch and path at once. Then wait for the user.
+
    **Before and after.** When the diff changes what the application shows, post one comment with every changed screen before and after, in the format of [assets/before-after.md](assets/before-after.md). When you are unsure, capture.
    - **Capture** the base and the head, each in its own worktree with the application running. Drop every pair whose images are identical.
      - A web application gets `desktop` at the viewport the prerequisites name, otherwise 1280x800, and `mobile` at 360x800. Use the `control-ui` skill, or `playwright screenshot --channel chrome --viewport-size <width>,<height> <url> <file>` through the one-off runner of the `package-manager` skill. Chrome's own `--headless --screenshot` renders a page at least 500 pixels wide and never shows the mobile view.

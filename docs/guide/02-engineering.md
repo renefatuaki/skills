@@ -117,7 +117,7 @@ Worktrees accumulate. When disk gets tight, ask:
 /engineering what's eating my disk? prune the worktrees that are safe to prune.
 ```
 
-The [Worktree cleanup playbook](../../plugins/forge/skills/workflow/engineering/playbooks/worktree-cleanup.md) classifies every worktree by merge state, uncommitted work, and which chats still touch it. It deletes only what that evidence clears and pauses for your call on anything holding uncommitted work.
+The [Worktree cleanup playbook](../../plugins/forge/skills/workflow/engineering/playbooks/worktree-cleanup.md) classifies every worktree by merge state, uncommitted work, and which chats still touch it. It deletes only what that evidence clears and pauses for your call on anything holding uncommitted work. It never runs `rm -rf`. A folder that survives the removal comes to you as one `!` line to paste.
 
 ## Leave it running
 
