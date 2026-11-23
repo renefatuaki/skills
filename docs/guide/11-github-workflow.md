@@ -91,7 +91,7 @@ A relative `privateKey` resolves against `~/.config/forge`, or against `$XDG_CON
 /pull-request-review 42
 ```
 
-The [`pull-request-review`](../../plugins/forge/skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with its reason in parentheses. Then it posts the result as a comment or a request for changes. A passed step marked `(criterion <n>)` ticks that criterion in the issue, for the criteria no test could prove. The approval stays your own click on GitHub.
+The [`pull-request-review`](../../plugins/forge/skills/github/pull-request-review/SKILL.md) skill checks the PR out and runs its test plan against the running app. It drives every step itself, VoiceOver included, which it reads from the accessibility tree. It hands you only the steps that need a physical device, an account it cannot get or another person, each with what it tried and its reason in parentheses. It also runs the steps that need a key from `.env` or the Keychain, a test account, a one-time code or a small paid call on the project's key. Then it posts the result as a comment or a request for changes. A passed step marked `(criterion <n>)` ticks that criterion in the issue, for the criteria no test could prove. The approval stays your own click on GitHub.
 
 ## Plan a day of tickets
 
