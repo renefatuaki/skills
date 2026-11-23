@@ -64,7 +64,7 @@ One row per copied file. Cuts are changes beyond the Claude Code names and the m
 
 | Upstream path | Path here | Cuts |
 | --- | --- | --- |
-| `cursor-team-kit/agents/ci-watcher.md` | `plugins/forge/agents/ci-watcher.md` | Frontmatter `model: fast` becomes `model: haiku` and `is_background: true` becomes `background: true`, the Claude Code keys, as the port writes them. |
+| `cursor-team-kit/agents/ci-watcher.md` | `plugins/forge/agents/ci-watcher.md` | Frontmatter `model: fast` becomes `model: haiku` and `is_background: true` becomes `background: true`, the Claude Code keys, as the port writes them. The workflow takes the PR number and the head SHA from the brief or reads them once, watches with `gh pr checks <number> --watch --fail-fast --interval 30` in the foreground at a Bash timeout of 600000, repeats it while the head SHA is unchanged, stops and reports when it changes, and never uses `run_in_background`, Monitor or `sleep`. |
 | `cursor-team-kit/skills/control-cli/SKILL.md` | `plugins/forge/skills/verification/control-cli/SKILL.md` | none |
 | `cursor-team-kit/skills/control-ui/SKILL.md` | `plugins/forge/skills/verification/control-ui/SKILL.md` | none |
 | `cursor-team-kit/skills/loop-on-ci/SKILL.md` | `plugins/forge/skills/github/loop-on-ci/SKILL.md` | none |
