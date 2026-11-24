@@ -6,6 +6,7 @@ You are producing one candidate design in architect's parallel exploration. Read
 
 Apply the following discipline. The orchestrator compares candidates on these axes to pick a base.
 
+- Docs first. Before you sketch, read the documentation pages the grounding names and the official documentation of any library your design adds. Use the names, file layout and structure they use. When your brief asks for the shape the docs recommend, sketch that shape. Name each deviation from the docs with its reason in the rationale.
 - Caller's usage first. Write the README-style usage and two or three real call sites before the types, then derive the type sketch from them. The usage is the spec. The two must agree, so reconcile the sketch to the usage, not the reverse.
 - Data structures first. Get the core types right and the code becomes obvious. Trace each dominant access pattern through the proposed structure. If the answer is "we'll add a map / index / cache later," the structure is wrong.
 - Interface depth. Compare the capability hidden behind the public surface relative to the size of that surface. Prefer a simple interface that pulls complexity into the callee, even when the implementation becomes less simple. Do not put transport or wire types on the public API. Parse into domain types behind the interface.

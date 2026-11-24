@@ -1,6 +1,6 @@
 ---
 description: Delegate investigation, an explicit fix request, or follow-up rescue work to the Antigravity rescue subagent
-argument-hint: "[--background|--wait] [--resume|--fresh] [--model <flash|pro|argon|carbon|gemini-...>] [--effort <low|medium|high|xhigh|max>] [--timeout <minutes>] [what Antigravity should investigate, solve, or continue]"
+argument-hint: "[--background|--wait] [--resume|--fresh] [--model <flash|hydrogen|argon|neon|carbon|gemini-...>] [--effort <low|medium|high|xhigh|max>] [--timeout <minutes>] [what Antigravity should investigate, solve, or continue]"
 allowed-tools: Bash(node:*), AskUserQuestion, Agent
 ---
 
@@ -43,7 +43,7 @@ Operating rules:
 - Do not paraphrase, summarize, rewrite, or add commentary before or after it.
 - Do not ask the subagent to inspect files, monitor progress, poll `/antigravity:status`, fetch `/antigravity:result`, call `/antigravity:cancel`, summarize output, or do follow-up work of its own.
 - Leave `--effort` unset unless the user explicitly asks for a specific reasoning effort.
-- Leave the model unset unless the user explicitly asks for one. Pass `flash`, `pro`, `argon`, `carbon`, or a full `gemini-...` slug through unchanged.
+- Leave the model unset unless the user explicitly asks for one. Pass `flash`, `hydrogen`, `argon`, `neon`, `carbon`, or a full `gemini-...` slug through unchanged.
 - Leave `--resume` and `--fresh` in the forwarded request. The subagent handles that routing when it builds the `task` command.
 - If the helper reports that Antigravity is missing or unauthenticated, stop and tell the user to run `/antigravity:setup`.
 - If the user did not supply a request, ask what Antigravity should investigate or fix.

@@ -55,7 +55,10 @@ type Candidate = {
   effort: string;
 };
 
-const NAMES = ['flash', 'pro', 'argon', 'carbon'];
+const NAMES = ['flash', 'hydrogen', 'argon', 'neon', 'carbon'];
+
+/** The model names that run the next smaller model the account lists when it lists none of them, so the slot stays with Gemini. */
+const STEPS_DOWN = ['carbon'];
 
 /** The efforts a slug ends in, from the lightest to the heaviest. */
 const LADDER = ['low', 'medium', 'high', 'xhigh', 'max'];
@@ -105,9 +108,11 @@ if (isUsage) {
 }
 
 // 3. Resolve the slug the CLI lists for the name and the effort, and print it once the usage allows a run.
-const slug = resolveSlug(listModels(), name, effort);
+const listed = listModels();
+const runName = listedName(listed, name);
+const slug = resolveSlug(listed, runName, effort);
 
-checkUsage(name);
+checkUsage(runName);
 
 console.log(slug);
 
@@ -172,20 +177,40 @@ function listModels(): string[] {
   return result.stdout.split('\n').map(line => line.trim().split(/\s+/)[0]);
 }
 
+/** Returns the model name, or for a name of STEPS_DOWN that the account does not list the next smaller model it lists, and notes the step on stderr. */
+function listedName(listed: string[], modelName: string): string {
+  if (
+    !STEPS_DOWN.includes(modelName) ||
+    candidatesOf(listed, modelName).length > 0
+  ) {
+    return modelName;
+  }
+
+  const smaller = NAMES.slice(0, NAMES.indexOf(modelName))
+    .reverse()
+    .find(smallerName => candidatesOf(listed, smallerName).length > 0);
+
+  if (smaller === undefined) {
+    return modelName;
+  }
+
+  console.error(
+    `The Antigravity CLI lists no model named ${modelName}, so it runs ${smaller}.`,
+  );
+
+  return smaller;
+}
+
 /**
- * Returns the slug of the newest version of the model, with the effort asked for or the nearest effort that version lists, and notes the difference on stderr.
+ * Returns the listed slugs of the model of the form `gemini-<version>-<model>-<effort>`.
  * @see {@link https://antigravity.google/docs/cli/headless.md | Headless mode}
  */
-function resolveSlug(
-  listed: string[],
-  modelName: string,
-  wanted: string,
-): string {
+function candidatesOf(listed: string[], modelName: string): Candidate[] {
   const slugPattern = new RegExp(
     `^(gemini-(\\d+(?:\\.\\d+)*)-${modelName})-(${LADDER.join('|')})$`,
   );
 
-  const candidates: Candidate[] = listed.flatMap(listedId => {
+  return listed.flatMap(listedId => {
     const match = slugPattern.exec(listedId);
 
     return match === null
@@ -199,6 +224,15 @@ function resolveSlug(
           },
         ];
   });
+}
+
+/** Returns the slug of the newest version of the model, with the effort asked for or the nearest effort that version lists, and notes the difference on stderr. */
+function resolveSlug(
+  listed: string[],
+  modelName: string,
+  wanted: string,
+): string {
+  const candidates = candidatesOf(listed, modelName);
 
   if (candidates.length === 0) {
     fail(
@@ -287,12 +321,13 @@ function groupsOf(groups: UsageGroup[], modelName: string): UsageGroup[] {
   return listing.length > 0 ? listing : groups.filter(isGeminiGroup);
 }
 
-/** Tells whether the description of a group lists `Gemini <Model>` for one of the models. */
+/** Tells whether the description of a group lists `Gemini <Model>` or `Gemini <version> <Model>` for one of the models. */
 function lists(group: UsageGroup, modelNames: string[]): boolean {
   return modelNames.some(modelName =>
-    new RegExp(`\\bGemini\\s+${modelName}\\b`, 'i').test(
-      group.description ?? '',
-    ),
+    new RegExp(
+      `\\bGemini(?:\\s+\\d+(?:\\.\\d+)*)?\\s+${modelName}\\b`,
+      'i',
+    ).test(group.description ?? ''),
   );
 }
 

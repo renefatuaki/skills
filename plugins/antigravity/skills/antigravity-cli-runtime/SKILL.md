@@ -25,7 +25,7 @@ Execution rules:
 - That prompt drafting is the only Claude-side work allowed. Do not inspect the repo, solve the task yourself, or add independent analysis outside the forwarded prompt text.
 - Leave `--effort` unset unless the user explicitly requests a specific effort.
 - Leave model unset by default. Add `--model` only when the user explicitly asks for one.
-- Pass `flash`, `pro`, `argon`, `carbon`, or a full `gemini-...` slug to `--model` unchanged.
+- Pass `flash`, `hydrogen`, `argon`, `neon`, `carbon`, or a full `gemini-...` slug to `--model` unchanged.
 - Default to a write-capable Antigravity run by adding `--write` unless the user explicitly asks for read-only behavior or only wants review, diagnosis, or research without edits.
 
 Command selection:
@@ -38,7 +38,7 @@ Command selection:
 - If the forwarded request includes `--fresh`, strip that token from the task text and do not add `--resume-last`.
 - `--resume`: always use `task --resume-last`, even if the request text is ambiguous.
 - `--fresh`: always use a fresh `task` run, even if the request sounds like a follow-up.
-- `--model`: accepted values are `flash`, `pro`, `argon`, `carbon`, or a full slug that `agy models` lists, such as `gemini-3.8-flash-high`. The companion resolves a short name to the newest slug of that model. A full slug carries its own effort, so the companion ignores `--effort` next to it.
+- `--model`: accepted values are `flash`, `hydrogen`, `argon`, `neon`, `carbon`, or a full slug that `agy models` lists, such as `gemini-3.8-flash-high`. The companion resolves a short name to the newest slug of that model. A full slug carries its own effort, so the companion ignores `--effort` next to it.
 - `--effort`: accepted values are `low`, `medium`, `high`, `xhigh`, `max`.
 - `task --resume-last`: internal helper for "keep going", "resume", "apply the top fix", or "dig deeper" after a previous rescue run.
 

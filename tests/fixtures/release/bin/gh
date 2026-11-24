@@ -1,0 +1,34 @@
+#!/usr/bin/env node
+
+// Stands in for gh and answers `gh repo view` and `gh pr list` of the release script from the repositories FAKE_GH_DATA holds, with the merged pull requests filtered by their merge date as GitHub's search does.
+
+const { basename } = require('node:path');
+
+const data = JSON.parse(process.env.FAKE_GH_DATA);
+const args = process.argv.slice(2);
+
+if (args[0] === 'repo') {
+  process.stdout.write(`${data.folders[basename(process.cwd())]}\n`);
+} else if (args[0] === 'pr') {
+  const pullRequests = data.pullRequests[option('--repo')];
+
+  if (option('--state') === 'open') {
+    reply(pullRequests.open);
+  } else {
+    const since = Date.parse(option('--search').replace('merged:>=', ''));
+
+    reply(
+      pullRequests.merged
+        .filter(pullRequest => Date.parse(pullRequest.mergedAt) >= since)
+        .map(({ mergedAt, ...fields }) => fields),
+    );
+  }
+}
+
+function option(name) {
+  return args[args.indexOf(name) + 1];
+}
+
+function reply(payload) {
+  process.stdout.write(JSON.stringify(payload));
+}

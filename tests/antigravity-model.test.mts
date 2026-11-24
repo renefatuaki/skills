@@ -113,21 +113,32 @@ const CASES: Case[] = [
   },
   {
     name: 'the lower effort of two at the same distance',
-    args: ['pro', 'medium'],
+    args: ['hydrogen', 'medium'],
     expected: {
-      stdout: 'gemini-3.1-pro-low',
+      stdout: 'gemini-4-hydrogen-low',
       status: 0,
-      message: 'so it runs gemini-3.1-pro-low.',
+      message: 'so it runs gemini-4-hydrogen-low.',
     },
   },
   {
     name: 'a slug on a line aligned with spaces',
-    args: ['pro', 'high'],
-    expected: { stdout: 'gemini-3.1-pro-high', status: 0, message: '' },
+    args: ['hydrogen', 'high'],
+    expected: { stdout: 'gemini-4-hydrogen-high', status: 0, message: '' },
   },
   {
-    name: 'a model the CLI lists only as an id without an effort',
+    name: 'the next smaller Gemini model for carbon, which the CLI lists only as an id without an effort',
+    args: ['carbon', 'xhigh'],
+    expected: {
+      stdout: 'gemini-4-neon-xhigh',
+      status: 0,
+      message:
+        'The Antigravity CLI lists no model named carbon, so it runs neon.',
+    },
+  },
+  {
+    name: 'carbon on an account that lists no smaller Gemini model',
     args: ['carbon', 'high'],
+    env: { FAKE_AGY_CASE: 'without-gemini' },
     expected: {
       stdout: '',
       status: 1,
@@ -136,8 +147,28 @@ const CASES: Case[] = [
     },
   },
   {
+    name: 'no smaller model for a name other than carbon',
+    args: ['neon', 'high'],
+    env: { FAKE_AGY_CASE: 'without-gemini' },
+    expected: {
+      stdout: '',
+      status: 1,
+      message: 'lists no model named neon.',
+    },
+  },
+  {
+    name: 'the effort xhigh, when the model lists it',
+    args: ['neon', 'xhigh'],
+    expected: { stdout: 'gemini-4-neon-xhigh', status: 0, message: '' },
+  },
+  {
     name: 'a name that is no Antigravity model',
     args: ['ultra', 'high'],
+    expected: { stdout: '', status: 1, message: USAGE_MESSAGE },
+  },
+  {
+    name: 'the retired name pro',
+    args: ['pro', 'high'],
     expected: { stdout: '', status: 1, message: USAGE_MESSAGE },
   },
   {
@@ -293,6 +324,23 @@ const CASES: Case[] = [
     },
   },
   {
+    name: 'a group whose description names the model with its version',
+    args: ['argon', 'high'],
+    env: { FAKE_AGY_USAGE: 'versioned' },
+    expected: { stdout: 'gemini-4-argon-high', status: 0, message: '' },
+  },
+  {
+    name: 'a group of its own whose description names the model with its version, below the minimum',
+    args: ['hydrogen', 'high'],
+    env: { FAKE_AGY_USAGE: 'versioned' },
+    expected: {
+      stdout: '',
+      status: 1,
+      message:
+        '10 % left of its weekly limit for Gemini 4 Hydrogen, below the minimum of 20 %.',
+    },
+  },
+  {
     name: 'a Gemini group by its name, when no description lists the model',
     args: ['flash', 'high'],
     env: { FAKE_AGY_USAGE: 'plain' },
@@ -304,7 +352,7 @@ const CASES: Case[] = [
   },
   {
     name: 'the tightest of several limits of a group',
-    args: ['pro', 'high'],
+    args: ['hydrogen', 'high'],
     env: { FAKE_AGY_USAGE: 'buckets' },
     expected: {
       stdout: '',

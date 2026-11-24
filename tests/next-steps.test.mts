@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
 // Picks the next action for each case's pull request, reads the open steps of test plans, then parses answers of the GraphQL query and lays out the numbered list.
+// Finds the repositories of a workspace and names them in the list.
+
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   nextAction,
@@ -12,6 +18,10 @@ import type {
   Action,
   PullRequestStatus,
 } from '../plugins/forge/skills/github/next-steps/scripts/steps.mts';
+import {
+  isInsideRepository,
+  workspaceRepositories,
+} from '../plugins/forge/skills/github/next-steps/scripts/workspace.mts';
 
 const ACTION_CASES: {
   name: string;
@@ -122,9 +132,9 @@ const LIST_CASES: { name: string; stdout: string; expected: string | null }[] =
       name: 'a stack and a conflict are listed in review order with their actions',
       stdout: ANSWER,
       expected: [
-        '1. Merge [#10 Bottom of the stack](https://github.com/o/r/pull/10).',
-        '2. Review [#11 Top of the stack](https://github.com/o/r/pull/11). Open test steps 2, 3. After #10.',
-        '3. Resolve the conflicts of [#12 Fix \\[the\\] login](https://github.com/o/r/pull/12).',
+        '1. (you) Merge [#10 Bottom of the stack](https://github.com/o/r/pull/10).',
+        '2. (you) Review [#11 Top of the stack](https://github.com/o/r/pull/11). Open test steps 2, 3. After #10.',
+        '3. (agent) Resolve the conflicts of [#12 Fix \\[the\\] login](https://github.com/o/r/pull/12).',
       ].join('\n'),
     },
     {
@@ -141,6 +151,26 @@ const LIST_CASES: { name: string; stdout: string; expected: string | null }[] =
     },
   ];
 
+const WORKSPACE = mkdtempSync(join(tmpdir(), 'next-steps-'));
+const API = join(realpathSync(WORKSPACE), 'api');
+const WEB = join(realpathSync(WORKSPACE), 'web');
+
+initRepository(API);
+initRepository(WEB);
+initRepository(join(WORKSPACE, 'plain', 'nested'));
+mkdirSync(join(WORKSPACE, 'empty'));
+writeFileSync(join(WORKSPACE, 'notes.md'), 'Not a repository.');
+execFileSync('git', [
+  '-C',
+  WEB,
+  'worktree',
+  'add',
+  '-q',
+  join(WORKSPACE, 'a-ticket'),
+  '-b',
+  'ticket',
+]);
+
 let failures = 0;
 
 for (const { name, status, expected } of ACTION_CASES) {
@@ -156,6 +186,39 @@ for (const { name, stdout, expected } of LIST_CASES) {
 
   failures += report(name, rows === null ? null : stepList(rows), expected);
 }
+
+failures += report(
+  'a workspace without a git repository of its own is no repository',
+  isInsideRepository(WORKSPACE),
+  false,
+);
+
+failures += report('a checkout is a repository', isInsideRepository(API), true);
+
+failures += report(
+  'the repositories one level below are listed by name, ticket worktrees fold into their repository and other folders are left out',
+  workspaceRepositories(WORKSPACE),
+  [
+    { name: 'api', directory: API },
+    { name: 'web', directory: WEB },
+  ],
+);
+
+failures += report(
+  'a pull request of a workspace names its repository and who does it',
+  stepList([
+    {
+      number: 7,
+      title: 'Fix the scan',
+      url: 'https://github.com/o/web/pull/7',
+      action: 'checks',
+      openSteps: [],
+      waitsOn: null,
+      repository: 'web',
+    },
+  ]),
+  '1. (agent) Fix the checks of [web #7 Fix the scan](https://github.com/o/web/pull/7).',
+);
 
 console.log(failures === 0 ? 'All cases pass.' : `${failures} case(s) failed.`);
 
@@ -219,4 +282,23 @@ function answer(nodes: unknown[]): string {
   return JSON.stringify({
     data: { repository: { pullRequests: { nodes } } },
   });
+}
+
+/** Creates a git repository with one commit in a new directory. */
+function initRepository(directory: string): void {
+  mkdirSync(directory, { recursive: true });
+  execFileSync('git', ['-C', directory, 'init', '-q']);
+  execFileSync('git', [
+    '-C',
+    directory,
+    '-c',
+    'user.name=test',
+    '-c',
+    'user.email=test@example.com',
+    'commit',
+    '-q',
+    '--allow-empty',
+    '-m',
+    'init',
+  ]);
 }

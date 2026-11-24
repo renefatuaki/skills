@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
-// Notes when a turn starts and which files its Edits and Writes are about to touch, then blocks the end of the turn once when a file it changed breaks a rule.
+// Notes when a turn starts and which files its Edits and Writes are about to touch, hands Claude the findings for a file right after it is edited, and blocks the end of the turn once when a file it changed breaks a rule.
 // https://code.claude.com/docs/en/hooks.md
 
 import {
   agentChanges,
+  type Changes,
   type Discovery,
+  editChanges,
   noteEdit,
   noteTurnStart,
   turnChanges,
@@ -14,6 +16,7 @@ import { comments } from './lib/comments.mts';
 import { diagramSyntax, linkedDiagrams, svgLabels } from './lib/diagrams.mts';
 import { docs } from './lib/docs.mts';
 import {
+  addContext,
   blockStop,
   checkSafely,
   FAILED,
@@ -48,9 +51,18 @@ const RULE_SETS: RuleSet[] = [
   linkedDiagrams,
 ];
 
+/** The rule sets that run right after an edit. A diagram that links the file is a note for the end of the turn, when the code is final, so it stays with the stop. */
+const EDIT_RULE_SETS: RuleSet[] = RULE_SETS.filter(
+  ruleSet => ruleSet !== linkedDiagrams,
+);
+
 /** Opens the reason, which Claude reads as its instruction for the rest of the turn. */
 const INTRO =
-  'The forge Stop hook checked every file this turn changed. Fix each line below, then end the turn.';
+  'The forge Stop hook checked every file this turn changed. Fix each line below, then continue the task where you stopped, and end the turn only when the task is done.';
+
+/** Opens the context that follows an edit. */
+const EDIT_INTRO =
+  'The forge hook checked the file you just edited, old lines included. Fix each line below now, while the file is open, then continue the task.';
 
 /** The time a stop gets to check files, which leaves the rest of the 30 seconds the host allows to print the reason. */
 const DEFAULT_BUDGET_MS = 25_000;
@@ -73,6 +85,9 @@ async function main(): Promise<void> {
       break;
     case 'edit':
       noteEdit(event.session, event.agent, event.path);
+      break;
+    case 'edited':
+      await reportOnEdit(event.cwd, editChanges(event.cwd, event.path));
       break;
     case 'stop':
       // A stop that a hook already blocked once stays silent, so a fix that breaks a rule again can never trap the turn.
@@ -108,10 +123,38 @@ async function blockOnFindings(
   cwd: string,
   { changes, skipped }: Discovery,
 ): Promise<void> {
-  // 1. Give every root the deadline, and run each rule set over all of them. Each rule set builds its linter or parser once per root, and one that throws costs only its own findings.
+  const report = reportOf(await runRuleSets(RULE_SETS, changes), skipped);
+
+  if (
+    report.sections.length === 0 &&
+    report.failures.length === 0 &&
+    report.unchecked.length === 0 &&
+    report.skipped.length === 0
+  ) {
+    return;
+  }
+
+  // Block with the reason, which names what could not run and what was left unchecked last.
+  blockStop(reasonOf(cwd, report, INTRO));
+}
+
+/** Runs the rule sets over the file just edited and hands the findings to Claude as context, silent when there is none. A rule set that threw or a file the deadline cut short stays unreported, because the stop checks again. */
+async function reportOnEdit(cwd: string, changes: Changes[]): Promise<void> {
+  const report = reportOf(await runRuleSets(EDIT_RULE_SETS, changes), []);
+
+  if (report.sections.length > 0) {
+    addContext('PostToolUse', [reasonOf(cwd, report, EDIT_INTRO)]);
+  }
+}
+
+/** Runs each rule set over all roots, giving every root the deadline. Each rule set builds its linter or parser once per root, and one that throws costs only its own findings. */
+async function runRuleSets(
+  ruleSets: RuleSet[],
+  changes: Changes[],
+): Promise<Section[]> {
   const sections: Section[] = [];
 
-  for (const ruleSet of RULE_SETS) {
+  for (const ruleSet of ruleSets) {
     const findings: Finding[] = [];
 
     for (const root of changes) {
@@ -121,9 +164,14 @@ async function blockOnFindings(
     sections.push({ heading: ruleSet.heading, findings });
   }
 
-  // 2. Separate the rule sets that threw and the files a rule set never started from the findings, and keep the sections that hold findings.
+  return sections;
+}
+
+/** Separates the rule sets that threw and the files a rule set never started from the findings, and keeps the sections that hold findings. */
+function reportOf(sections: Section[], skipped: string[]): Report {
   const all = sections.flatMap(section => section.findings);
-  const report: Report = {
+
+  return {
     sections: sections
       .map(({ heading, findings }) => ({
         heading,
@@ -146,18 +194,6 @@ async function blockOnFindings(
     ],
     skipped,
   };
-
-  if (
-    report.sections.length === 0 &&
-    report.failures.length === 0 &&
-    report.unchecked.length === 0 &&
-    report.skipped.length === 0
-  ) {
-    return;
-  }
-
-  // 3. Block with the reason, which names what could not run and what was left unchecked last.
-  blockStop(reasonOf(cwd, report));
 }
 
 /** Reads the time a stop may spend on its checks from the environment, which a test sets to run into the deadline. An empty setting keeps the default. */
@@ -179,6 +215,7 @@ function isNote(finding: Finding): boolean {
 function reasonOf(
   cwd: string,
   { sections, failures, unchecked, skipped }: Report,
+  intro: string,
 ): string {
   const blocks = sections.map(({ heading, findings }) => [
     `${heading}:`,
@@ -202,7 +239,7 @@ function reasonOf(
     blocks.push([`Not checked in time: ${late.join(', and ')}.`]);
   }
 
-  return [INTRO, ...blocks.map(block => ['', ...block].join('\n'))].join('\n');
+  return [intro, ...blocks.map(block => ['', ...block].join('\n'))].join('\n');
 }
 
 /** Writes the number with its noun, in the plural unless it is one. */

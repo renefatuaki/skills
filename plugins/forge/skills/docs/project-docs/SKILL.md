@@ -65,4 +65,4 @@ pnpm add -D markdownlint
 
 ## Hook feedback
 
-When a turn ends, a Stop hook scans every documentation file the turn changed for em-dashes, semicolons, relative links without a target, a missing opening sentence, and a file under `docs/` that the README does not link. In a project that has markdownlint and its configuration, the hook also reports what markdownlint finds. When it reports `path:line rule`, fix each reported line, then end the turn. Silence means the mechanical rules pass, the rules above still apply.
+Right after each Edit or Write, and again when a turn ends, a hook scans the documentation file, or every one the turn changed, for em-dashes, semicolons, relative links without a target, a missing opening sentence, and a file under `docs/` that the README does not link. In a project that has markdownlint and its configuration, the hook also reports what markdownlint finds. When it reports `path:line rule`, fix each reported line, then continue the task where you stopped. Silence means the mechanical rules pass, the rules above still apply.
